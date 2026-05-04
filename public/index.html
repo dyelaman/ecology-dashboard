@@ -252,6 +252,22 @@ input[type=file]{display:none}
     <option value="2022">2022</option>
     <option value="2021">2021</option>
   </select>
+  <span class="fbar-label">Месяц</span>
+  <select id="gMonth" onchange="onGlobalFilter()">
+    <option value="all">Все</option>
+    <option value="01">Янв</option>
+    <option value="02">Фев</option>
+    <option value="03">Мар</option>
+    <option value="04">Апр</option>
+    <option value="05">Май</option>
+    <option value="06">Июн</option>
+    <option value="07">Июл</option>
+    <option value="08">Авг</option>
+    <option value="09">Сен</option>
+    <option value="10">Окт</option>
+    <option value="11">Ноя</option>
+    <option value="12">Дек</option>
+  </select>
   <span id="fbarCmpWrap" style="display:none;align-items:center;gap:4px">
     <span class="fbar-label" style="color:var(--amber)">vs</span>
     <select id="gYearCmp" onchange="onGlobalFilter()" style="font-size:11px;padding:5px 10px;border-radius:20px;border:1px solid var(--amber);background:var(--surface);color:var(--amber);font-weight:600;cursor:pointer;width:100px">
@@ -1525,6 +1541,7 @@ let _ORG_CROSS=null; // drill-down по организациям
 let _kgsLandCharts={};
 let _kgsCharts={};
 let _tzInited=false;
+let _EMERG_RAW=null;
 // ── СКОРОСТЬ ЗАКРЫТИЯ ОБРАЩЕНИЙ ──────────────────────────────────────────────
 function renderClosingSpeed(filterReg, filterType, filterYear) {
   const cs = _DATA && _DATA.summary && _DATA.summary.appeals && _DATA.summary.appeals.closing_speed;
@@ -3378,7 +3395,9 @@ function _rechartOnFilter(){
       const byReg=_CROSS?.[cat]?.by_region||{};
       lateData=Object.entries(byReg).map(([n,d])=>({name:n,late:d.late||0})).filter(d=>d.late>0).sort((a,b)=>b.late-a.late).slice(0,15);
     } else {
-      lateData=Object.entries(REAL_ECO).map(([n,d])=>({name:n,late:d.late||0})).filter(d=>d.late>0).sort((a,b)=>b.late-a.late).slice(0,15);
+      const yearV=document.getElementById('gYear')?.value||'all';
+      const regSrc = yearV!=='all'&&_YEAR_CROSS?.[yearV] ? _YEAR_CROSS[yearV].by_region : REAL_ECO;
+      lateData=Object.entries(regSrc).map(([n,d])=>({name:n,late:d.late||0})).filter(d=>d.late>0).sort((a,b)=>b.late-a.late).slice(0,15);
     }
     if(!lateData.length)return;
     const colors=lateData.map(d=>d.name===reg?'#d97706':'#dc2626');
@@ -3474,6 +3493,10 @@ function _rechartOnFilter(){
     });
     _chartType.update();
   }
+
+  // Обновить карту по временным фильтрам
+  updateEmergLayer();
+  updateChoropleth();
 }
 
 function renderRegLateChart(){
@@ -3993,7 +4016,7 @@ function resetGlobalFilter(){
   _gDupActive = false;
   const ds = document.getElementById('gDupSel');
   if(ds) ds.value = 'all';
-  ['gYear','gReg','gStatus','gType','gCatF','gIssueF','gSubF','gCGO','gMIO'].forEach(id=>{
+  ['gYear','gMonth','gReg','gStatus','gType','gCatF','gIssueF','gSubF','gCGO','gMIO'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='all';
   });
   ['appCatFilter','appIssFilter','appSubFilter','prvCat','prvIss','prvSub'].forEach(id=>{
@@ -4135,29 +4158,66 @@ function addEmergLayer(){
   if(!mapMainInst) return;
   if(emergLayerMain){ emergLayerMain.clearLayers(); }
   else { emergLayerMain=L.layerGroup().addTo(mapMainInst); }
+  if(_EMERG_RAW){
+    updateEmergLayer();
+    const cb=document.getElementById('mlyrEmerg');
+    if(cb && !cb.checked) mapMainInst.removeLayer(emergLayerMain);
+    return;
+  }
   fetch('/data/emergency_emissions.json')
     .then(r=>r.json())
     .then(objs=>{
-      objs.forEach(o=>{
-        const color = o.closed ? '#6b7280' : '#eab308';
-        L.circleMarker([o.lat,o.lon],{
-          radius:5, color:'#fff', weight:1,
-          fillColor:color, fillOpacity:0.9
-        })
-        .bindPopup(
-          `<b style="font-size:12px">Аварийный выброс #${o.id}</b><br>`+
-          `<span style="font-size:11px;color:${color}">● ${o.closed?'Закрыт':'Активен'}</span><br>`+
-          `<span style="font-size:10px;color:#6b7280">${o.date}</span><br>`+
-          (o.point?`<span style="font-size:10px">${o.point}</span><br>`:'') +
-          (o.pollutants.length?`<span style="font-size:9px;color:#6b7280">${o.pollutants.slice(0,3).join(', ')}</span>`:''),
-          {maxWidth:220}
-        )
-        .addTo(emergLayerMain);
-      });
+      _EMERG_RAW=objs;
+      updateEmergLayer();
       const cb=document.getElementById('mlyrEmerg');
       if(cb && !cb.checked) mapMainInst.removeLayer(emergLayerMain);
     })
     .catch(e=>console.warn('Emergency load failed:',e.message));
+}
+
+function updateEmergLayer(){
+  if(!emergLayerMain||!_EMERG_RAW) return;
+  emergLayerMain.clearLayers();
+  const year=document.getElementById('gYear')?.value||'all';
+  const month=document.getElementById('gMonth')?.value||'all';
+  const visible=_EMERG_RAW.filter(o=>{
+    if(year!=='all'&&!o.date.startsWith(year)) return false;
+    if(month!=='all'&&o.date.slice(5,7)!==month) return false;
+    return true;
+  });
+  visible.forEach(o=>{
+    const color = o.closed ? '#6b7280' : '#eab308';
+    L.circleMarker([o.lat,o.lon],{
+      radius:5, color:'#fff', weight:1,
+      fillColor:color, fillOpacity:0.9
+    })
+    .bindPopup(
+      `<b style="font-size:12px">Аварийный выброс #${o.id}</b><br>`+
+      `<span style="font-size:11px;color:${color}">● ${o.closed?'Закрыт':'Активен'}</span><br>`+
+      `<span style="font-size:10px;color:#6b7280">${o.date}</span><br>`+
+      (o.point?`<span style="font-size:10px">${o.point}</span><br>`:'') +
+      (o.pollutants.length?`<span style="font-size:9px;color:#6b7280">${o.pollutants.slice(0,3).join(', ')}</span>`:''),
+      {maxWidth:220}
+    )
+    .addTo(emergLayerMain);
+  });
+}
+
+function updateChoropleth(){
+  if(!geoLayerMain) return;
+  const year=document.getElementById('gYear')?.value||'all';
+  const yearByReg = year!=='all'&&_YEAR_CROSS?.[year] ? _YEAR_CROSS[year].by_region : null;
+  const src = yearByReg || REAL_ECO;
+  const maxVal = Math.max(...Object.values(src).map(d=>d.total||0), 1);
+  geoLayerMain.setStyle(f=>{
+    const ecoKey=GEO_TO_ECO[f.properties.name_ru];
+    const d=ecoKey&&src[ecoKey];
+    if(ACTIVE_REGION){
+      const isActive=ecoKey===ACTIVE_REGION;
+      return{fillColor:isActive?'#16a34a':'#334155',weight:isActive?2.5:0.5,color:isActive?'#14532d':'#94a3b8',fillOpacity:isActive?0.18:0.06,opacity:1};
+    }
+    return{fillColor:choroplethColor(d?.total,maxVal),weight:1,color:'#ffffff',fillOpacity:0.82,opacity:1};
+  });
 }
 
 // ── КАРТА НБД СОС ────────────────────────────────────────────────────────────
