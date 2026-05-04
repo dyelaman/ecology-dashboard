@@ -1,0 +1,22 @@
+{"type":"FeatureCollection","features":[
+{"type":"Feature","properties":{"name_ru":"Астана"},"geometry":{"type":"Polygon","coordinates":[[[71.15,51.05],[71.85,51.05],[71.85,51.45],[71.15,51.45],[71.15,51.05]]]}},
+{"type":"Feature","properties":{"name_ru":"Алматы"},"geometry":{"type":"Polygon","coordinates":[[[76.55,43.05],[77.35,43.05],[77.35,43.55],[76.55,43.55],[76.55,43.05]]]}},
+{"type":"Feature","properties":{"name_ru":"Шымкент"},"geometry":{"type":"Polygon","coordinates":[[[69.25,42.15],[70.05,42.15],[70.05,42.55],[69.25,42.55],[69.25,42.15]]]}},
+{"type":"Feature","properties":{"name_ru":"Акмолинская"},"geometry":{"type":"Polygon","coordinates":[[[65.0,50.4],[72.0,50.4],[72.0,51.0],[71.9,51.0],[71.9,51.5],[72.0,51.5],[72.0,53.5],[65.0,53.5],[65.0,50.4]]]}},
+{"type":"Feature","properties":{"name_ru":"СКО"},"geometry":{"type":"Polygon","coordinates":[[[65.0,53.5],[76.5,53.5],[76.5,55.4],[65.0,55.4],[65.0,53.5]]]}},
+{"type":"Feature","properties":{"name_ru":"Костанайская"},"geometry":{"type":"Polygon","coordinates":[[[59.0,52.0],[65.0,52.0],[65.0,55.4],[59.0,55.4],[59.0,52.0]]]}},
+{"type":"Feature","properties":{"name_ru":"Павлодарская"},"geometry":{"type":"Polygon","coordinates":[[[76.5,50.4],[83.5,50.4],[83.5,55.4],[76.5,55.4],[76.5,50.4]]]}},
+{"type":"Feature","properties":{"name_ru":"Актюбинская"},"geometry":{"type":"Polygon","coordinates":[[[53.0,47.0],[62.5,47.0],[62.5,52.5],[53.0,52.5],[53.0,47.0]]]}},
+{"type":"Feature","properties":{"name_ru":"ЗКО"},"geometry":{"type":"Polygon","coordinates":[[[49.5,49.5],[53.0,49.5],[53.0,52.5],[59.0,52.5],[59.0,52.0],[49.5,52.0],[49.5,49.5]]]}},
+{"type":"Feature","properties":{"name_ru":"Атырауская"},"geometry":{"type":"Polygon","coordinates":[[[49.5,46.0],[57.0,46.0],[57.0,49.5],[49.5,49.5],[49.5,46.0]]]}},
+{"type":"Feature","properties":{"name_ru":"Мангистауская"},"geometry":{"type":"Polygon","coordinates":[[[49.5,41.5],[57.5,41.5],[57.5,46.0],[49.5,46.0],[49.5,41.5]]]}},
+{"type":"Feature","properties":{"name_ru":"Кызылординская"},"geometry":{"type":"Polygon","coordinates":[[[58.0,43.5],[66.5,43.5],[66.5,48.5],[58.0,48.5],[58.0,43.5]]]}},
+{"type":"Feature","properties":{"name_ru":"Улытауская"},"geometry":{"type":"Polygon","coordinates":[[[62.5,47.0],[68.5,47.0],[68.5,50.4],[62.5,50.4],[62.5,47.0]]]}},
+{"type":"Feature","properties":{"name_ru":"Карагандинская"},"geometry":{"type":"Polygon","coordinates":[[[68.5,46.0],[79.5,46.0],[79.5,50.4],[72.0,50.4],[72.0,51.0],[71.9,51.0],[71.9,51.5],[72.0,51.5],[68.5,51.5],[68.5,46.0]]]}},
+{"type":"Feature","properties":{"name_ru":"Жамбылская"},"geometry":{"type":"Polygon","coordinates":[[[69.5,42.5],[76.5,42.5],[76.5,46.0],[69.5,46.0],[69.5,42.5]]]}},
+{"type":"Feature","properties":{"name_ru":"Туркестанская"},"geometry":{"type":"Polygon","coordinates":[[[65.5,40.5],[70.0,40.5],[70.0,42.1],[69.25,42.1],[69.25,42.55],[70.05,42.55],[70.05,42.5],[72.0,42.5],[72.0,46.0],[65.5,46.0],[65.5,43.5],[66.5,43.5],[66.5,40.5]]]}},
+{"type":"Feature","properties":{"name_ru":"Алматинская обл."},"geometry":{"type":"Polygon","coordinates":[[[76.5,43.5],[79.5,43.5],[79.5,46.0],[76.5,46.0],[76.5,43.5]]]}},
+{"type":"Feature","properties":{"name_ru":"Жетысуская"},"geometry":{"type":"Polygon","coordinates":[[[79.5,43.0],[84.5,43.0],[84.5,46.5],[79.5,46.5],[79.5,43.0]]]}},
+{"type":"Feature","properties":{"name_ru":"Абайская"},"geometry":{"type":"Polygon","coordinates":[[[79.5,47.5],[83.5,47.5],[83.5,50.4],[79.5,50.4],[79.5,47.5]]]}},
+{"type":"Feature","properties":{"name_ru":"ВКО"},"geometry":{"type":"Polygon","coordinates":[[[83.5,47.0],[87.5,47.0],[87.5,51.5],[83.5,51.5],[83.5,47.0]]]}}
+]}

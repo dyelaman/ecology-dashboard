@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Карта обращений — МЭПР РК</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f4;color:#1a1a1a}
+.hdr{background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.1);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.hdr-title{font-size:15px;font-weight:600}
+.hdr-sub{font-size:11px;color:#6b7280;margin-top:2px}
+.back-btn{font-size:12px;padding:6px 12px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.2);background:#fff;color:#1a1a1a;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.back-btn:hover{background:#f5f5f4}
+.controls{background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.1);padding:10px 20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.controls select{font-size:11px;padding:5px 8px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.2);background:#fff;color:#1a1a1a}
+.upload-btn{font-size:11px;padding:5px 12px;border-radius:8px;border:0.5px solid rgba(0,0,0,0.2);background:#fff;color:#1a1a1a;cursor:pointer;font-weight:500}
+.upload-btn:hover{background:#f5f5f4}
+.stats{background:#fff;border-bottom:0.5px solid rgba(0,0,0,0.1);padding:8px 20px;display:flex;gap:16px;flex-wrap:wrap}
+.stat{display:flex;flex-direction:column}
+.stat-lbl{font-size:10px;color:#6b7280}
+.stat-val{font-size:16px;font-weight:600;color:#1a1a1a}
+#map{width:100%;height:calc(100vh - 180px)}
+.info-panel{padding:8px 12px;font-size:12px;background:white;border-radius:8px;border:0.5px solid rgba(0,0,0,0.15)}
+.info-panel h4{font-size:13px;font-weight:600;margin-bottom:6px;color:#1a1a1a}
+.info-panel .row{display:flex;justify-content:space-between;gap:12px;margin-bottom:3px}
+.info-panel .lbl{color:#6b7280}
+.info-panel .val{font-weight:500}
+.sb{font-size:10px;padding:2px 6px;border-radius:10px;font-weight:500;display:inline-block;margin:2px}
+.s-done{background:#d1fae5;color:#065f46}
+.s-work{background:#dbeafe;color:#1e40af}
+.s-late{background:#fee2e2;color:#991b1b}
+.s-wait{background:#fef3c7;color:#92400e}
+.legend{position:absolute;bottom:30px;right:10px;z-index:1000;background:white;border-radius:8px;padding:10px 12px;font-size:11px;border:0.5px solid rgba(0,0,0,0.15);min-width:140px}
+.leg-row{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.leg-row:last-child{margin-bottom:0}
+.leg-sq{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+.source-tabs{display:flex;gap:4px}
+.src-tab{font-size:11px;padding:4px 10px;border-radius:6px;border:0.5px solid rgba(0,0,0,0.15);background:#f5f5f4;cursor:pointer;color:#6b7280}
+.src-tab.active{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+input[type=file]{display:none}
+.layer-panel{background:#fff;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.15);padding:10px 12px;font-size:12px;min-width:180px;pointer-events:auto}
+.layer-panel-title{font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.layer-row{display:flex;align-items:center;gap:7px;padding:4px 0;cursor:pointer;user-select:none}
+.layer-row.disabled{cursor:default;opacity:.45}
+.layer-row input[type=checkbox]{width:14px;height:14px;cursor:pointer;accent-color:#7c3aed;flex-shrink:0}
+.layer-row.disabled input[type=checkbox]{cursor:default}
+.layer-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.layer-name{flex:1;color:#1a1a1a;font-size:12px}
+.layer-soon{font-size:9px;background:#f3f4f6;color:#9ca3af;border-radius:4px;padding:1px 5px;font-weight:500}
+.hydro-popup .leaflet-popup-content-wrapper{border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.15)}
+.hydro-popup .leaflet-popup-content{margin:10px 14px;font-size:12px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <div class="hdr-title">Карта обращений — МЭПР РК</div>
+    <div class="hdr-sub">Е-обращения · Таза Казахстан · iKomek звонки</div>
+  </div>
+  <a href="/" class="back-btn">← Главный дашборд</a>
+</div>
+
+<div class="controls">
+  <div class="source-tabs">
+    <div class="src-tab active" onclick="setSource('appeals',this)">Е-обращения</div>
+    <div class="src-tab" onclick="setSource('taza',this)">Таза КЗ</div>
+    <div class="src-tab" onclick="setSource('ikomek',this)">iKomek</div>
+    <div class="src-tab" onclick="setSource('all',this)">Все источники</div>
+  </div>
+  <select id="statusFilter" onchange="updateMap()">
+    <option value="all">Все статусы</option>
+    <option value="done">Исполнено</option>
+    <option value="work">В работе</option>
+    <option value="late">Просрочено</option>
+  </select>
+  <select id="yearFilter" onchange="updateMap()">
+    <option value="all">Все годы</option>
+    <option value="2026">2026</option>
+    <option value="2025">2025</option>
+    <option value="2024">2024</option>
+  </select>
+  <label class="upload-btn" for="fileAppeals">+ Загрузить Е-обращения CSV</label>
+  <input type="file" id="fileAppeals" accept=".csv" onchange="loadCSV(event,'appeals')">
+  <label class="upload-btn" for="fileTaza">+ Таза КЗ CSV</label>
+  <input type="file" id="fileTaza" accept=".csv" onchange="loadCSV(event,'taza')">
+  <label class="upload-btn" for="fileIkomek">+ iKomek CSV</label>
+  <input type="file" id="fileIkomek" accept=".csv" onchange="loadCSV(event,'ikomek')">
+</div>
+
+<div class="stats">
+  <div class="stat"><span class="stat-lbl">Всего обращений</span><span class="stat-val" id="stTotal">—</span></div>
+  <div class="stat"><span class="stat-lbl">Регионов</span><span class="stat-val" id="stRegions">—</span></div>
+  <div class="stat"><span class="stat-lbl">Исполнено</span><span class="stat-val" id="stDone" style="color:#065f46">—</span></div>
+  <div class="stat"><span class="stat-lbl">Просрочено</span><span class="stat-val" id="stLate" style="color:#991b1b">—</span></div>
+  <div class="stat"><span class="stat-lbl">iKomek звонков</span><span class="stat-val" id="stIkomek">—</span></div>
+</div>
+
+<div style="position:relative">
+  <div id="map"></div>
+  <div id="layerPanel" style="position:absolute;top:10px;right:10px;z-index:9999;background:#fff;border-radius:10px;box-shadow:0 2px 16px rgba(0,0,0,0.18);padding:12px 14px;font-size:12px;min-width:186px;pointer-events:auto">
+    <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.6px;margin-bottom:9px">Слои карты</div>
+    <label style="display:flex;align-items:center;gap:7px;padding:4px 0;cursor:pointer">
+      <input type="checkbox" id="lyrAppeals" checked style="width:14px;height:14px;accent-color:#16a34a;flex-shrink:0" onchange="toggleAppeals(this.checked)">
+      <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;flex-shrink:0"></span>
+      <span style="color:#1a1a1a">Обращения граждан</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:7px;padding:4px 0;cursor:pointer">
+      <input type="checkbox" id="lyrHydro" checked style="width:14px;height:14px;accent-color:#7c3aed;flex-shrink:0" onchange="toggleHydro(this.checked)">
+      <span style="width:10px;height:10px;border-radius:50%;background:#7c3aed;flex-shrink:0"></span>
+      <span style="color:#1a1a1a">Посты Казгидромета</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:7px;padding:4px 0;opacity:.4">
+      <input type="checkbox" disabled style="width:14px;height:14px;flex-shrink:0">
+      <span style="width:10px;height:10px;border-radius:50%;background:#f97316;flex-shrink:0"></span>
+      <span style="color:#1a1a1a;flex:1">Промобъекты</span>
+      <span style="font-size:9px;background:#f3f4f6;color:#9ca3af;border-radius:4px;padding:1px 6px">скоро</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:7px;padding:4px 0;opacity:.4">
+      <input type="checkbox" disabled style="width:14px;height:14px;flex-shrink:0">
+      <span style="width:10px;height:10px;border-radius:50%;background:#3b82f6;flex-shrink:0"></span>
+      <span style="color:#1a1a1a;flex:1">Водоёмы</span>
+      <span style="font-size:9px;background:#f3f4f6;color:#9ca3af;border-radius:4px;padding:1px 6px">скоро</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:7px;padding:4px 0;opacity:.4">
+      <input type="checkbox" disabled style="width:14px;height:14px;flex-shrink:0">
+      <span style="width:10px;height:10px;border-radius:50%;background:#16a34a;flex-shrink:0"></span>
+      <span style="color:#1a1a1a;flex:1">Парки и ООПТ</span>
+      <span style="font-size:9px;background:#f3f4f6;color:#9ca3af;border-radius:4px;padding:1px 6px">скоро</span>
+    </label>
+  </div>
+</div>
+
+<script>
+const REGION_MAP = {
+  'Карагандинская область':'Карагандинская','Карагандинская':'Карагандинская',
+  'город Алматы':'Алматы','Алматы':'Алматы','г. Алматы':'Алматы',
+  'Атырауская область':'Атырауская','Атырауская':'Атырауская',
+  'город Астана':'Астана','Астана':'Астана','г. Астана':'Астана','Нур-Султан':'Астана',
+  'Павлодарская область':'Павлодарская','Павлодарская':'Павлодарская',
+  'Восточно-Казахстанская область':'ВКО','ВКО':'ВКО','Восточно-Казахстанская':'ВКО',
+  'Актюбинская область':'Актюбинская','Актюбинская':'Актюбинская',
+  'Туркестанская область':'Туркестанская','Туркестанская':'Туркестанская',
+  'город Шымкент':'Шымкент','Шымкент':'Шымкент','г. Шымкент':'Шымкент',
+  'Западно-Казахстанская область':'ЗКО','ЗКО':'ЗКО','Западно-Казахстанская':'ЗКО',
+  'Костанайская область':'Костанайская','Костанайская':'Костанайская',
+  'Акмолинская область':'Акмолинская','Акмолинская':'Акмолинская',
+  'Алматинская область':'Алматинская обл.','Алматинская':'Алматинская обл.',
+  'Мангистауская область':'Мангистауская','Мангистауская':'Мангистауская',
+  'Кызылординская область':'Кызылординская','Кызылординская':'Кызылординская',
+  'Жамбылская область':'Жамбылская','Жамбылская':'Жамбылская',
+  'Северо-Казахстанская область':'СКО','СКО':'СКО','Северо-Казахстанская':'СКО',
+  'Жетысуская область':'Жетысуская','Жетысуская':'Жетысуская',
+  'Абайская область':'Абайская','Абайская':'Абайская',
+  'Улытауская область':'Улытауская','Улытауская':'Улытауская',
+};
+
+const STATUS_MAP = {
+  'Исполнено':'done','Выполнено':'done','исполнено':'done',
+  'В работе':'work','в работе':'work','На рассмотрении':'work',
+  'Просрочено':'late','просрочено':'late',
+  'Выполнено с просрочкой':'latedone','с просрочкой':'latedone',
+};
+
+const KAZHYDROMET = [
+  {name:'Алматы-1', lat:43.222, lng:76.851},
+  {name:'Алматы-2', lat:43.238, lng:76.945},
+  {name:'Астана-1', lat:51.128, lng:71.430},
+  {name:'Астана-2', lat:51.180, lng:71.446},
+  {name:'Шымкент',  lat:42.317, lng:69.590},
+  {name:'Актобе',   lat:50.300, lng:57.154},
+  {name:'Павлодар', lat:52.285, lng:76.940},
+  {name:'Атырау',   lat:47.107, lng:51.923},
+  {name:'Актау',    lat:43.652, lng:51.198},
+  {name:'Усть-Каменогорск', lat:49.948, lng:82.628},
+  {name:'Темиртау', lat:50.059, lng:72.963},
+  {name:'Балхаш',   lat:46.848, lng:74.995},
+  {name:'Жезказган',lat:47.803, lng:67.714},
+  {name:'Петропавловск', lat:54.866, lng:69.153},
+  {name:'Костанай', lat:53.214, lng:63.632},
+  {name:'Кызылорда',lat:44.853, lng:65.509},
+  {name:'Тараз',    lat:42.900, lng:71.378},
+  {name:'Уральск',  lat:51.233, lng:51.366},
+  {name:'Семей',    lat:50.411, lng:80.226},
+  {name:'Экибастуз',lat:51.724, lng:75.324}
+];
+
+let DATA = {appeals:[], taza:[], ikomek:[]};
+let currentSource = 'appeals';
+let map, geojsonLayer, info, hydroLayer;
+
+function setSource(src, el) {
+  currentSource = src;
+  document.querySelectorAll('.src-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  updateMap();
+}
+
+function loadCSV(event, type) {
+  const file = event.target.files[0];
+  if (!file) return;
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: function(results) {
+      DATA[type] = results.data;
+      updateStats();
+      updateMap();
+      const names = {appeals:'Е-обращения',taza:'Таза КЗ',ikomek:'iKomek'};
+      alert(`${names[type]}: загружено ${results.data.length} записей`);
+    }
+  });
+}
+
+function getRegionData() {
+  let records = [];
+  if (currentSource === 'all') {
+    records = [...DATA.appeals, ...DATA.taza];
+  } else if (currentSource === 'ikomek') {
+    return getIkomekData();
+  } else {
+    records = DATA[currentSource];
+  }
+
+  const statusF = document.getElementById('statusFilter').value;
+  const yearF = document.getElementById('yearFilter').value;
+
+  const byRegion = {};
+  records.forEach(r => {
+    const rawReg = r.region || '';
+    const reg = REGION_MAP[rawReg] || rawReg;
+    if (!reg) return;
+
+    const status = STATUS_MAP[r.current_working_state] || 'work';
+    if (statusF !== 'all' && status !== statusF) return;
+
+    const year = r.start_dt ? r.start_dt.substring(0,4) : '';
+    if (yearF !== 'all' && year !== yearF) return;
+
+    if (!byRegion[reg]) byRegion[reg] = {total:0,done:0,work:0,late:0,latedone:0,issues:{}};
+    byRegion[reg].total++;
+    byRegion[reg][status]++;
+
+    const issue = r.issue || r.category || '';
+    if (issue) byRegion[reg].issues[issue] = (byRegion[reg].issues[issue]||0)+1;
+  });
+  return byRegion;
+}
+
+function getIkomekData() {
+  const yearF = document.getElementById('yearFilter').value;
+  const byRegion = {};
+  DATA.ikomek.forEach(r => {
+    const rawReg = r.region || '';
+    const reg = REGION_MAP[rawReg] || rawReg;
+    if (!reg) return;
+    if (yearF !== 'all' && r.year !== yearF) return;
+    if (!byRegion[reg]) byRegion[reg] = {total:0,done:0,work:0,late:0,latedone:0,issues:{}};
+    const cnt = parseInt(r.cnt) || 0;
+    byRegion[reg].total += cnt;
+    const char = r.character || '';
+    if (char) byRegion[reg].issues[char] = (byRegion[reg].issues[char]||0)+cnt;
+  });
+  return byRegion;
+}
+
+function updateStats() {
+  const total = DATA.appeals.length + DATA.taza.length;
+  document.getElementById('stTotal').textContent = total.toLocaleString('ru-RU');
+  const regions = new Set([...DATA.appeals.map(r=>r.region),...DATA.taza.map(r=>r.region)]).size;
+  document.getElementById('stRegions').textContent = regions;
+  const done = DATA.appeals.filter(r=>STATUS_MAP[r.current_working_state]==='done').length;
+  document.getElementById('stDone').textContent = Math.round(done/Math.max(total,1)*100)+'%';
+  const late = DATA.appeals.filter(r=>STATUS_MAP[r.current_working_state]==='late').length;
+  document.getElementById('stLate').textContent = Math.round(late/Math.max(total,1)*100)+'%';
+  const ikomekTotal = DATA.ikomek.reduce((s,r)=>s+(parseInt(r.cnt)||0),0);
+  document.getElementById('stIkomek').textContent = ikomekTotal.toLocaleString('ru-RU');
+}
+
+function getColor(val, max) {
+  if (!val || val === 0) return '#E5E7EB';
+  const t = Math.sqrt(val / max);
+  const r = Math.round(219 + t*(29-219));
+  const g = Math.round(234 + t*(158-234));
+  const b = Math.round(254 + t*(117-254));
+  return `rgb(${r},${g},${b})`;
+}
+
+function updateMap() {
+  if (!geojsonLayer) return;
+  const data = getRegionData();
+  const vals = Object.values(data).map(d=>d.total);
+  const max = Math.max(...vals, 1);
+
+  geojsonLayer.eachLayer(layer => {
+    const name = layer.feature.properties.NAME_1 ||
+                 layer.feature.properties.name ||
+                 layer.feature.properties.NAME || '';
+    const reg = REGION_MAP[name] || name;
+    const d = data[reg] || {total:0};
+    layer.setStyle({
+      fillColor: getColor(d.total, max),
+      fillOpacity: 0.8,
+      color: '#fff',
+      weight: 1.5
+    });
+    layer._regionData = d;
+    layer._regionName = reg || name;
+  });
+}
+
+function initMap() {
+  map = L.map('map', {zoomControl:true}).setView([48.0, 66.0], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'© OpenStreetMap contributors',
+    maxZoom:10
+  }).addTo(map);
+
+  info = L.control({position:'topright'});
+  info.onAdd = function() {
+    this._div = L.DomUtil.create('div','info-panel');
+    this._div.innerHTML = '<h4>Наведите на регион</h4>';
+    return this._div;
+  };
+  info.update = function(name, d) {
+    if (!d || !name) {
+      this._div.innerHTML = '<h4>Наведите на регион</h4>';
+      return;
+    }
+    const topIssues = Object.entries(d.issues||{})
+      .sort((a,b)=>b[1]-a[1]).slice(0,3)
+      .map(([k,v])=>`<div class="row"><span class="lbl">${k}</span><span class="val">${v.toLocaleString('ru-RU')}</span></div>`).join('');
+    const pd = d.total ? Math.round(d.done/d.total*100) : 0;
+    const pl = d.total ? Math.round(d.late/d.total*100) : 0;
+    this._div.innerHTML = `
+      <h4>${name}</h4>
+      <div class="row"><span class="lbl">Всего</span><span class="val"><b>${(d.total||0).toLocaleString('ru-RU')}</b></span></div>
+      <div style="margin:4px 0">
+        <span class="sb s-done">Исполнено ${pd}%</span>
+        <span class="sb s-late">Просрочено ${pl}%</span>
+      </div>
+      ${topIssues ? '<div style="margin-top:4px;font-size:10px;color:#6b7280">Топ темы:</div>'+topIssues : ''}`;
+  };
+  info.addTo(map);
+
+  // ── KAZHYDROMET MARKERS ──
+  const hydroIcon = L.divIcon({
+    className:'',
+    html:'<div style="width:12px;height:12px;background:#7c3aed;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(124,58,237,.5)"></div>',
+    iconSize:[12,12], iconAnchor:[6,6]
+  });
+  hydroLayer = L.layerGroup(
+    KAZHYDROMET.map(s => L.marker([s.lat, s.lng], {icon:hydroIcon})
+      .bindPopup(
+        `<div style="font-size:13px;font-weight:600;margin-bottom:4px">${s.name}</div>`+
+        `<div style="font-size:11px;display:flex;align-items:center;gap:5px">`+
+          `<span style="width:7px;height:7px;background:#22c55e;border-radius:50%;display:inline-block"></span>`+
+          `<span style="color:#16a34a;font-weight:500">Онлайн</span>`+
+        `</div>`+
+        `<div style="font-size:10px;color:#6b7280;margin-top:4px">Пост автоматического контроля</div>`,
+        {className:'hydro-popup', maxWidth:200}
+      )
+    )
+  ).addTo(map);
+
+  const legend = L.control({position:'bottomright'});
+  legend.onAdd = function() {
+    const d = L.DomUtil.create('div','legend');
+    d.innerHTML = `<b style="font-size:11px;font-weight:600;margin-bottom:6px;display:block">Обращений</b>
+      <div class="leg-row"><span class="leg-sq" style="background:#E5E7EB"></span>Нет данных</div>
+      <div class="leg-row"><span class="leg-sq" style="background:#c7e9d0"></span>Мало</div>
+      <div class="leg-row"><span class="leg-sq" style="background:#74c89a"></span>Средне</div>
+      <div class="leg-row"><span class="leg-sq" style="background:#1D9E75"></span>Много</div>`;
+    return d;
+  };
+  legend.addTo(map);
+
+  fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+    .then(()=>{})
+    .catch(()=>{});
+
+  fetch('https://raw.githubusercontent.com/datasets/geo-boundaries-world-110m/master/countries.geojson')
+    .catch(()=>{});
+
+  loadKazakhstanGeoJSON();
+}
+
+function loadKazakhstanGeoJSON() {
+  const url = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+  fetch('https://cdn.jsdelivr.net/gh/datasets/geo-countries@master/data/countries.geojson')
+    .then(r => r.json())
+    .then(data => {
+      const kaz = {type:'FeatureCollection', features: data.features.filter(f =>
+        f.properties.ADMIN === 'Kazakhstan' || f.properties.name === 'Kazakhstan'
+      )};
+      if (kaz.features.length) {
+        addRegionsApprox();
+      }
+    })
+    .catch(() => addRegionsApprox());
+}
+
+function addRegionsApprox() {
+  const regions = [
+    {n:'Карагандинская',coords:[[67,46],[76,46],[76,51],[67,51]]},
+    {n:'Алматы',coords:[[76,43],[77.5,43],[77.5,43.5],[76,43.5]]},
+    {n:'Атырауская',coords:[[50,46],[55,46],[55,49],[50,49]]},
+    {n:'Астана',coords:[[70.5,50.5],[72,50.5],[72,51.5],[70.5,51.5]]},
+    {n:'Павлодарская',coords:[[75,51],[82,51],[82,54],[75,54]]},
+    {n:'ВКО',coords:[[79,48],[87,48],[87,52],[79,52]]},
+    {n:'Актюбинская',coords:[[55,47],[62,47],[62,51],[55,51]]},
+    {n:'Туркестанская',coords:[[65,41],[72,41],[72,44],[65,44]]},
+    {n:'Шымкент',coords:[[69,42],[70,42],[70,42.5],[69,42.5]]},
+    {n:'ЗКО',coords:[[49,49],[55,49],[55,52],[49,52]]},
+    {n:'Костанайская',coords:[[61,51],[68,51],[68,55],[61,55]]},
+    {n:'Акмолинская',coords:[[67,51],[73,51],[73,54],[67,54]]},
+    {n:'Алматинская обл.',coords:[[76,43.5],[84,43.5],[84,47],[76,47]]},
+    {n:'Мангистауская',coords:[[50,42],[57,42],[57,46],[50,46]]},
+    {n:'Кызылординская',coords:[[59,43],[67,43],[67,47],[59,47]]},
+    {n:'Жамбылская',coords:[[70,42],[76,42],[76,44],[70,44]]},
+    {n:'СКО',coords:[[66,53],[73,53],[73,56],[66,56]]},
+    {n:'Жетысуская',coords:[[78,44],[84,44],[84,47],[78,47]]},
+    {n:'Абайская',coords:[[79,48],[84,48],[84,51],[79,51]]},
+    {n:'Улытауская',coords:[[62,46],[68,46],[68,50],[62,50]]},
+  ];
+
+  const features = regions.map(r => ({
+    type:'Feature',
+    properties:{NAME_1: r.n, name: r.n},
+    geometry:{
+      type:'Polygon',
+      coordinates:[r.coords.map(([lon,lat])=>[lon,lat]).concat([r.coords[0]])]
+    }
+  }));
+
+  geojsonLayer = L.geoJSON({type:'FeatureCollection',features}, {
+    style: {fillColor:'#E5E7EB',fillOpacity:0.8,color:'#fff',weight:1.5},
+    onEachFeature: (feature, layer) => {
+      layer.on({
+        mouseover: e => {
+          e.target.setStyle({weight:2.5,color:'#378ADD'});
+          info.update(layer._regionName || feature.properties.NAME_1, layer._regionData || {total:0});
+        },
+        mouseout: e => {
+          geojsonLayer.resetStyle(e.target);
+          updateMap();
+          info.update(null, null);
+        },
+        click: e => {
+          map.fitBounds(e.target.getBounds());
+          const d = layer._regionData || {total:0};
+          const name = layer._regionName || feature.properties.NAME_1;
+          showDetail(name, d);
+        }
+      });
+      const c = layer.getBounds ? layer.getBounds().getCenter() : null;
+      if (c) {
+        L.tooltip({permanent:true,direction:'center',className:'region-label'})
+          .setContent(`<span style="font-size:9px;font-weight:500;color:#1a1a1a">${feature.properties.NAME_1}</span>`)
+          .setLatLng(c)
+          .addTo(map);
+      }
+    }
+  }).addTo(map);
+
+  updateMap();
+}
+
+function showDetail(name, d) {
+  const topIssues = Object.entries(d.issues||{}).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxI = topIssues[0] ? topIssues[0][1] : 1;
+  const pd = d.total ? Math.round(d.done/d.total*100) : 0;
+  const pw = d.total ? Math.round(d.work/d.total*100) : 0;
+  const pl = d.total ? Math.round(d.late/d.total*100) : 0;
+  const pld = d.total ? Math.round((d.latedone||0)/d.total*100) : 0;
+
+  const popup = L.popup({maxWidth:320})
+    .setContent(`
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px">${name}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+        <div style="background:#f5f5f4;border-radius:6px;padding:6px 8px"><div style="font-size:9px;color:#6b7280">Всего</div><div style="font-size:15px;font-weight:600">${(d.total||0).toLocaleString('ru-RU')}</div></div>
+        <div style="background:#f5f5f4;border-radius:6px;padding:6px 8px"><div style="font-size:9px;color:#6b7280">Просрочено</div><div style="font-size:15px;font-weight:600;color:#991b1b">${pl}%</div></div>
+      </div>
+      <div style="margin-bottom:8px">
+        <span class="sb s-done">Исполнено ${pd}%</span>
+        <span class="sb s-work">В работе ${pw}%</span>
+        <span class="sb s-late">Просрочено ${pl}%</span>
+        <span class="sb s-wait">С просрочкой ${pld}%</span>
+      </div>
+      ${topIssues.length ? `
+        <div style="font-size:10px;font-weight:500;color:#6b7280;margin-bottom:5px">Топ темы обращений</div>
+        ${topIssues.map(([k,v])=>`
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span style="font-size:10px;color:#1a1a1a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${k}</span>
+            <div style="width:60px;height:4px;background:#E5E7EB;border-radius:2px;flex-shrink:0"><div style="width:${Math.round(v/maxI*100)}%;height:100%;background:#378ADD;border-radius:2px"></div></div>
+            <span style="font-size:10px;color:#6b7280;width:30px;text-align:right;flex-shrink:0">${v.toLocaleString('ru-RU')}</span>
+          </div>`).join('')}` : ''}
+    `);
+
+  map.openPopup(popup.setLatLng(map.getCenter()));
+}
+
+function toggleAppeals(on) {
+  if (!geojsonLayer) return;
+  on ? map.addLayer(geojsonLayer) : map.removeLayer(geojsonLayer);
+}
+
+function toggleHydro(on) {
+  if (!hydroLayer) return;
+  on ? map.addLayer(hydroLayer) : map.removeLayer(hydroLayer);
+}
+
+initMap();
+</script>
+</body>
+</html>
