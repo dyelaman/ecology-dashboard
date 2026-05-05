@@ -3499,6 +3499,67 @@ function _rechartOnFilter(){
   updateChoropleth();
 }
 
+function showAppealDetail(idx){
+  const r=_prvCurrentSlice[idx]; if(!r) return;
+  const isDup=isTrueVal(r.is_duplicate);
+  const isFwd=isTrueVal(r.is_forward);
+  const isExt=isTrueVal(r.is_ext_forward);
+  const org=r.org_name_ru||r.org_name||'—';
+  const isLate=(r.status_overdue||'').toLowerCase().includes('просроч')||(r.status_overdue||'').toLowerCase().includes('нарушен');
+  const bdg=(txt,col,bg)=>`<span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${bg};color:${col};margin:0 4px 4px 0">${txt}</span>`;
+  const badges=[
+    appStatusBadge(r.current_working_state),
+    isDup?bdg('Повтор','#92400e','rgba(251,191,36,0.22)'):'',
+    isFwd?bdg('Перенаправлено','#6d28d9','rgba(124,58,237,0.15)'):'',
+    isExt?bdg('Перенапр. частично','#0e7490','rgba(8,145,178,0.15)'):'',
+  ].filter(Boolean).join('');
+  const crumb=[r.issue_category_name_ru,r.issue,r.subissue].filter(Boolean).join(' › ');
+  const field2=(l1,v1,l2,v2)=>`<div style="display:flex;border-bottom:1px solid var(--border)">
+    <div style="flex:1;padding:10px 16px"><div style="font-size:10px;color:var(--text3);margin-bottom:2px">${l1}</div><div style="font-size:12px;color:var(--text1);font-weight:500">${v1||'—'}</div></div>
+    ${l2?`<div style="flex:1;padding:10px 16px;border-left:1px solid var(--border)"><div style="font-size:10px;color:var(--text3);margin-bottom:2px">${l2}</div><div style="font-size:12px;color:var(--text1);font-weight:500">${v2||'—'}</div></div>`:''}
+  </div>`;
+  document.getElementById('appealModalContent').innerHTML=`
+    <div style="padding:20px 22px 14px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">
+        <div>
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px;text-transform:uppercase;letter-spacing:0.4px">Рег. номер</div>
+          <div style="font-family:monospace;font-size:15px;font-weight:700;color:var(--text1)">${r.reg_number||'—'}</div>
+        </div>
+        <button onclick="document.getElementById('appealModal').style.display='none'" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--text3);line-height:1;padding:0;margin-top:-2px;flex-shrink:0">×</button>
+      </div>
+      <div>${badges}</div>
+    </div>
+    <div style="padding:14px 22px;background:var(--surface2);border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.4px">Тема обращения</div>
+      <div style="font-size:13px;color:var(--text1);line-height:1.55">${crumb||'—'}</div>
+    </div>
+    ${field2('Тип обращения',r.type_name_ru||r.appeal_type,'Заявитель',r.applicant_type)}
+    ${field2('Регион',r.region,'Район',r.raion)}
+    <div style="padding:10px 16px;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:2px">Исполнитель</div>
+      <div style="font-size:12px;color:var(--text1);font-weight:500;line-height:1.45">${org}</div>
+    </div>
+    <div style="padding:16px 22px">
+      <div style="font-size:10px;color:var(--text3);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.4px">Хронология</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <div style="padding:10px;text-align:center;border-right:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3)">Подано</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text1);margin-top:3px">${r.created_date||r.start_dt||'—'}</div>
+        </div>
+        <div style="padding:10px;text-align:center;border-right:1px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3)">Срок</div>
+          <div style="font-size:12px;font-weight:600;color:${isLate?'#dc2626':'var(--text1)'};margin-top:3px">${r.deadline||'—'}</div>
+          ${isLate?'<div style="font-size:9px;color:#dc2626;margin-top:1px">просрочено</div>':''}
+        </div>
+        <div style="padding:10px;text-align:center">
+          <div style="font-size:10px;color:var(--text3)">Закрыто</div>
+          <div style="font-size:12px;font-weight:600;color:var(--text1);margin-top:3px">${r.finish_dt||'—'}</div>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('appealModal').style.display='flex';
+}
+
 function renderRegLateChart(){
   const el=document.getElementById('cRegLate');
   if(!el) return;
@@ -4608,6 +4669,7 @@ async function fetchSocial(){
 // ── APPEALS TABLE ──
 let _appAllRows=[], _appFiltered=[], _appPage=0;
 let _prvFiltered=[], _prvPage=0, _prvLoaded=false;
+let _prvCurrentSlice=[];
 const PRV_PAGE_SIZE=20;
 const APP_PAGE_SIZE=50;
 
@@ -4756,15 +4818,16 @@ function renderPrvTable(){
   const src=_prvLoaded?_prvFiltered:_appAllRows;
   const start=_prvPage*PRV_PAGE_SIZE;
   const slice=src.slice(start,start+PRV_PAGE_SIZE);
+  _prvCurrentSlice=slice;
   const total=src.length;
   if(!slice.length){tbody.innerHTML='<tr><td colspan="17" style="text-align:center;color:var(--text3);padding:20px">Нет данных</td></tr>';}
   else{
-    tbody.innerHTML=slice.map(r=>{
+    tbody.innerHTML=slice.map((r,i)=>{
       const isDup=isTrueVal(r.is_duplicate);
       const isFwd=isTrueVal(r.is_forward);
       const isExt=isTrueVal(r.is_ext_forward);
       const rowBg=isDup?'background:rgba(251,191,36,0.10);':isFwd?'background:rgba(124,58,237,0.08);':isExt?'background:rgba(8,145,178,0.07);':'';
-      return `<tr style="${rowBg}">
+      return `<tr onclick="showAppealDetail(${i})" style="cursor:pointer;${rowBg}" onmouseover="this.style.outline='1px solid var(--accent)'" onmouseout="this.style.outline=''">
         <td style="font-family:monospace;font-size:10px;white-space:nowrap">${r.reg_number||'—'}</td>
         <td style="white-space:nowrap">${r.created_date||r.start_dt||'—'}</td>
         <td>${isDup?'<span class="sb s-warn">Повтор</span>':'<span style="color:var(--text3);font-size:10px">—</span>'}</td>
@@ -5165,6 +5228,12 @@ async function initNews(){newsInit=true;setStatus('loading','Проверка к
   <div id="aiInputRow">
     <textarea id="aiInput" rows="1" placeholder="Задайте вопрос по данным дашборда..." onkeydown="aiKeyDown(event)"></textarea>
     <button id="aiSend" onclick="sendAIMsg()">&#8593;</button>
+  </div>
+</div>
+<!-- ── APPEAL DETAIL MODAL ── -->
+<div id="appealModal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,0.5);align-items:center;justify-content:center">
+  <div style="background:var(--surface);border-radius:16px;max-width:560px;width:95%;box-shadow:0 12px 48px rgba(0,0,0,0.28);position:relative;max-height:88vh;overflow-y:auto">
+    <div id="appealModalContent"></div>
   </div>
 </div>
 <!-- ── ORG DRILL-DOWN MODAL ── -->
