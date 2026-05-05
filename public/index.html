@@ -268,18 +268,6 @@ input[type=file]{display:none}
     <option value="11">Ноя</option>
     <option value="12">Дек</option>
   </select>
-  <span id="fbarCmpWrap" style="display:none;align-items:center;gap:4px">
-    <span class="fbar-label" style="color:var(--amber)">vs</span>
-    <select id="gYearCmp" onchange="onGlobalFilter()" style="font-size:11px;padding:5px 10px;border-radius:20px;border:1px solid var(--amber);background:var(--surface);color:var(--amber);font-weight:600;cursor:pointer;width:100px">
-      <option value="none">— не сравн.</option>
-      <option value="2025">2025</option>
-      <option value="2024">2024</option>
-      <option value="2023">2023</option>
-      <option value="2022">2022</option>
-      <option value="2021">2021</option>
-    </select>
-  </span>
-
   <div class="fbar-sep"></div>
   <span class="fbar-label">Регион</span>
   <select id="gReg" onchange="cascadeIssueFilter();onGlobalFilter()">
@@ -488,7 +476,10 @@ input[type=file]{display:none}
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
       <div>
         <div class="card-title" style="margin:0">Общая информация по обращениям</div>
-        <div style="font-size:10px;color:var(--text3);font-style:italic;margin-top:2px">Репрезентативная выборка: 1 944 из 352 641 обращений</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">
+          <span style="font-size:10px;color:var(--text3);font-style:italic">Репрезентативная выборка: 1 944 из 352 641 обращений</span>
+          <span id="prvChunkBadge" style="display:none;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(8,145,178,0.12);color:#0891B2;border:1px solid rgba(8,145,178,0.3)"></span>
+        </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <input type="text" id="prvSearch" placeholder="Поиск..." oninput="filterPrvTable()" style="border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;width:130px;background:var(--surface2);color:var(--text1)">
@@ -1633,12 +1624,10 @@ function renderClosingSpeed(filterReg, filterType, filterYear) {
   const yearCtx = document.getElementById('csYearChart');
   if (yearCtx && cs.by_year) {
     const ex = Chart.getChart(yearCtx); if (ex) ex.destroy();
-    const cmpYear = document.getElementById('gYearCmp')?.value || 'none';
     const allYears = Object.keys(cs.by_year).sort();
     const medians  = allYears.map(y => cs.by_year[y].median);
     const bgColors = allYears.map(y => {
       if (year !== 'all' && y === year) return '#16a34a';
-      if (cmpYear !== 'none' && y === cmpYear) return '#d97706';
       const v = cs.by_year[y].median;
       return v <= 12 ? 'rgba(22,163,74,.35)' : v <= 14 ? 'rgba(217,119,6,.35)' : 'rgba(220,38,38,.35)';
     });
@@ -1857,6 +1846,7 @@ function renderMainCharts() {
       const tzEl = document.getElementById('kpiTaza');
       if(tzEl) tzEl.textContent = tzData.total.toLocaleString('ru-RU');
     }
+    fetch('/data/chunks/manifest.json').then(r=>r.json()).then(m=>{_CHUNK_MANIFEST=m;}).catch(()=>{});
     renderHearingsTab(summary.appeals);
     // Populate global filter dropdowns from real data
     (function populateFilters(a){
@@ -3228,30 +3218,6 @@ function _renderCAppSub(){
 
 // ── Кросс-фильтрация: обновить все чарты при изменении фильтра ────────────
 // ── Сравнение периодов: дельта на KPI ────────────────────────────────────────
-function _applyPeriodComparison(){
-  const year = document.getElementById('gYear')?.value||'all';
-  const cmpYear = document.getElementById('gYearCmp')?.value||'none';
-  if(year==='all'||cmpYear==='none'||!_YEAR_CROSS) return;
-  const curr = _YEAR_CROSS[year];
-  const prev = _YEAR_CROSS[cmpYear];
-  if(!curr||!prev) return;
-  const delta = curr.total - prev.total;
-  const deltaPct = prev.total > 0 ? Math.round(delta/prev.total*100) : 0;
-  const sign = delta >= 0 ? '+' : '';
-  const color = delta > 0 ? '#dc2626' : '#16a34a'; // больше жалоб = плохо
-  let badge = document.getElementById('kpiCmpBadge');
-  if(!badge){
-    badge = document.createElement('div');
-    badge.id = 'kpiCmpBadge';
-    badge.style.cssText='font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid;margin-top:6px;font-weight:600;text-align:center;grid-column:1/-1';
-    document.querySelector('.kpi-grid')?.appendChild(badge);
-  }
-  badge.style.color = color;
-  badge.style.borderColor = color;
-  badge.style.background = delta > 0 ? '#fef2f2' : '#f0fdf4';
-  badge.textContent = `${year} vs ${cmpYear}: ${sign}${delta.toLocaleString('ru-RU')} обращений (${sign}${deltaPct}%)`;
-}
-
 // ── Org drill-down modal ─────────────────────────────────────────────────────
 function showOrgDrilldown(orgName){
   if(!_ORG_CROSS) return;
@@ -3295,14 +3261,6 @@ function _rechartOnFilter(){
   const cat=document.getElementById('gCatF')?.value||'all';
   const iss=document.getElementById('gIssueF')?.value||'all';
   const sub=document.getElementById('gSubF')?.value||'all';
-
-  // Show/hide "Сравнить с" year picker
-  const gYearVal=document.getElementById('gYear')?.value||'all';
-  const cmpWrap=document.getElementById('fbarCmpWrap');
-  if(cmpWrap) cmpWrap.style.display = gYearVal!=='all' ? 'flex' : 'none';
-
-  // Period comparison delta on KPIs
-  _applyPeriodComparison();
 
   _renderC3();
   _renderCAppSub();
@@ -3497,6 +3455,62 @@ function _rechartOnFilter(){
   // Обновить карту по временным фильтрам
   updateEmergLayer();
   updateChoropleth();
+}
+
+function loadChunkForFilters(){
+  if(!_CHUNK_MANIFEST){ filterPrvTable(); return; }
+  const reg  = document.getElementById('gReg')?.value  || 'all';
+  const cat  = document.getElementById('gCatF')?.value || 'all';
+  const type = document.getElementById('gType')?.value || 'all';
+  const year = document.getElementById('gYear')?.value || 'all';
+
+  let file=null, key=null;
+  // Приоритет: регион > категория > тип > год
+  if(reg!=='all' && _CHUNK_MANIFEST.reg?.[reg]){
+    file=_CHUNK_MANIFEST.reg[reg]; key='reg:'+reg;
+  } else if(cat!=='all' && _CHUNK_MANIFEST.cat?.[cat]){
+    file=_CHUNK_MANIFEST.cat[cat]; key='cat:'+cat;
+  } else if(type!=='all' && _CHUNK_MANIFEST.type?.[type]){
+    file=_CHUNK_MANIFEST.type[type]; key='type:'+type;
+  } else if(year!=='all' && _CHUNK_MANIFEST.year?.[year]){
+    file=_CHUNK_MANIFEST.year[year]; key='year:'+year;
+  }
+
+  if(!file){
+    _chunkBaseRows=null; _activeChunkKey=null;
+    _updateChunkBadge(null);
+    filterPrvTable(); return;
+  }
+  // Тот же чанк — просто перефильтруем
+  if(key===_activeChunkKey){ filterPrvTable(); return; }
+  // Кешировано
+  if(_CHUNK_CACHE[key]){
+    _chunkBaseRows=_CHUNK_CACHE[key]; _activeChunkKey=key;
+    _updateChunkBadge(key, _CHUNK_CACHE[key].length);
+    filterPrvTable(); return;
+  }
+  // Загрузить с сервера
+  const tbody=document.getElementById('appTblPreview');
+  if(tbody) tbody.innerHTML='<tr><td colspan="17" style="text-align:center;color:var(--text3);padding:18px;font-size:12px">Загрузка данных…</td></tr>';
+  fetch('/data/chunks/'+file)
+    .then(r=>r.json())
+    .then(rows=>{
+      _CHUNK_CACHE[key]=rows; _chunkBaseRows=rows; _activeChunkKey=key;
+      _updateChunkBadge(key, rows.length);
+      filterPrvTable();
+    })
+    .catch(e=>{ console.warn('Chunk load failed:',e); _chunkBaseRows=null; _activeChunkKey=null; filterPrvTable(); });
+}
+
+function _updateChunkBadge(key, total){
+  const el=document.getElementById('prvChunkBadge'); if(!el) return;
+  if(!key){ el.style.display='none'; el.textContent=''; return; }
+  const label = key.startsWith('reg:') ? '📍 '+key.slice(4)
+              : key.startsWith('cat:') ? '🏷 '+key.slice(4)
+              : key.startsWith('type:')? '📋 '+key.slice(5)
+              : key.startsWith('year:')? '📅 '+key.slice(5) : key;
+  el.textContent=label+' · '+total.toLocaleString('ru-RU')+' записей';
+  el.style.display='inline-block';
 }
 
 function showAppealDetail(idx){
@@ -3880,7 +3894,7 @@ function onGlobalFilter(){
   const at=document.getElementById('appTypeFilter');
   if(at) at.value=typeVal==='all'?'':typeVal;
   filterAppTable();
-  filterPrvTable();
+  loadChunkForFilters();
   applyFilter();
   applyGlobalFiltersToCharts();
 }
@@ -3907,7 +3921,6 @@ function applyGlobalFiltersToCharts(){
 
   if(allDefault){
     // Remove comparison badge if filters reset
-    const b=document.getElementById('kpiCmpBadge'); if(b)b.remove();
     applyRealKPIs();
     const ar=document.getElementById('appealsRegion');if(ar)ar.value='all';
     applyAppealFilter();
@@ -4069,7 +4082,6 @@ function applyGlobalFiltersToCharts(){
 let _gDupActive = false;
 function onDupFilter(){
   _gDupActive = (document.getElementById('gDupSel')?.value || 'all') === 'dup';
-  filterPrvTable();
   onGlobalFilter();
 }
 
@@ -4086,7 +4098,7 @@ function resetGlobalFilter(){
   const at=document.getElementById('appTypeFilter');if(at)at.value='';
   _doCascadeMid('gCatF','gIssueF','gSubF');
   filterAppTable();
-  filterPrvTable();
+  loadChunkForFilters();
   applyFilter();
   applyGlobalFiltersToCharts();
 }
@@ -4670,6 +4682,7 @@ async function fetchSocial(){
 let _appAllRows=[], _appFiltered=[], _appPage=0;
 let _prvFiltered=[], _prvPage=0, _prvLoaded=false;
 let _prvCurrentSlice=[];
+let _CHUNK_MANIFEST=null, _CHUNK_CACHE={}, _chunkBaseRows=null, _activeChunkKey=null;
 const PRV_PAGE_SIZE=20;
 const APP_PAGE_SIZE=50;
 
@@ -4775,7 +4788,7 @@ function filterPrvTable(){
   const lCatV=document.getElementById('prvCat')?.value||'all';
   const lIssV=document.getElementById('prvIss')?.value||'all';
   const lSubV=document.getElementById('prvSub')?.value||'all';
-  _prvFiltered=_appAllRows.filter(r=>{
+  _prvFiltered=(_chunkBaseRows||_appAllRows).filter(r=>{
     if(regSearch&&(r.region||'').indexOf(regSearch)===-1) return false;
     if(gRegV!=='all'&&(r.region||'').indexOf(gRegV)===-1) return false;
     if(typeF&&(r.type_name_ru||'').toLowerCase().indexOf(typeF)===-1) return false;

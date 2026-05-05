@@ -9,6 +9,7 @@
 
 import json
 import os
+import re
 import sys
 from datetime import datetime
 
@@ -39,6 +40,7 @@ TAZA_CATS_CSV       = f"{TAZA_DIR}/request_category_share_202604281650.csv"
 TAZA_COMPLAINTS_CSV = f"{TAZA_DIR}/report_complaint_share_202604281650.csv"
 TAZA_SAT_CSV        = f"{TAZA_DIR}/report_satisfaction_share_202604281650.csv"
 OUT_DIR     = os.path.join(os.path.dirname(__file__), "..", "public", "data")
+CHUNKS_DIR  = os.path.join(OUT_DIR, "chunks")
 
 # ── МАППИНГ СТАТУСОВ ──────────────────────────────────────────────────────────
 STATUS_MAP = {
@@ -1477,6 +1479,100 @@ def process_accumulation_waste(df):
     }
 
 
+# ── DRILL-DOWN CHUNKS ────────────────────────────────────────────────────────
+def _slugify(s, max_len=44):
+    s = re.sub(r'[^\w]', '_', str(s).lower().strip())
+    s = re.sub(r'_+', '_', s).strip('_')
+    return s[:max_len]
+
+def make_chunks(df, limit=500):
+    """Генерирует JSON-чанки по регионам/категориям/типам/годам для drill-down таблицы."""
+    print(f"\nГенерация drill-down чанков...")
+    os.makedirs(CHUNKS_DIR, exist_ok=True)
+
+    base_cols = [
+        "reg_number", "start_dt", "appeal_type", "applicant_type",
+        "category", "issue", "subissue", "region", "raion",
+        "org_name", "current_working_state", "status_overdue",
+        "deadline", "finish_dt", "is_duplicate", "is_forward", "is_ext_forward",
+    ]
+    cols = [c for c in base_cols if c in df.columns]
+
+    def to_rows(sub_df, n=limit):
+        out = (sub_df.sort_values("start_dt", ascending=False, na_position="last")
+                     .head(n)[cols].fillna("")
+                     .rename(columns={
+                         "start_dt":    "created_date",
+                         "appeal_type": "type_name_ru",
+                         "category":    "issue_category_name_ru",
+                     })).copy()
+        out["category_short"] = out["issue_category_name_ru"].map(
+            lambda x: CATEGORY_SHORT.get(str(x), str(x))
+        )
+        out["subissue_short"] = out["subissue"].map(
+            lambda x: SUBISSUE_SHORT.get(str(x), str(x)[:55]) if str(x) else ""
+        )
+        return out.to_dict(orient="records")
+
+    manifest = {"reg": {}, "cat": {}, "type": {}, "year": {}}
+    count = 0
+
+    # По регионам
+    if "_region" in df.columns:
+        for reg, grp in df.groupby("_region"):
+            slug = f"reg_{_slugify(reg)}.json"
+            with open(os.path.join(CHUNKS_DIR, slug), "w", encoding="utf-8") as f:
+                json.dump(to_rows(grp), f, ensure_ascii=False)
+            manifest["reg"][str(reg)] = slug
+            count += 1
+
+    # По категориям (short names — те же значения что в gCatF)
+    if "_category" in df.columns:
+        for cat, grp in df.groupby("_category"):
+            if len(grp) < 30:
+                continue
+            slug = f"cat_{_slugify(cat)}.json"
+            with open(os.path.join(CHUNKS_DIR, slug), "w", encoding="utf-8") as f:
+                json.dump(to_rows(grp), f, ensure_ascii=False)
+            manifest["cat"][str(cat)] = slug
+            count += 1
+
+    # По типам обращений
+    if "appeal_type" in df.columns:
+        for atype, grp in df.groupby("appeal_type"):
+            if len(grp) < 50:
+                continue
+            slug = f"type_{_slugify(atype)}.json"
+            with open(os.path.join(CHUNKS_DIR, slug), "w", encoding="utf-8") as f:
+                json.dump(to_rows(grp), f, ensure_ascii=False)
+            manifest["type"][str(atype)] = slug
+            count += 1
+
+    # По годам (лимит выше — полезно видеть все обращения за год)
+    if "start_dt" in df.columns:
+        df2 = df.copy()
+        df2["_year_s"] = pd.to_datetime(df2["start_dt"], errors="coerce").dt.year.astype("Int64").astype(str)
+        for year, grp in df2.groupby("_year_s"):
+            if not year or year in ("nan", "<NA>", "NA"):
+                continue
+            slug = f"year_{year}.json"
+            with open(os.path.join(CHUNKS_DIR, slug), "w", encoding="utf-8") as f:
+                json.dump(to_rows(grp, n=1000), f, ensure_ascii=False)
+            manifest["year"][str(year)] = slug
+            count += 1
+
+    with open(os.path.join(CHUNKS_DIR, "manifest.json"), "w", encoding="utf-8") as f:
+        json.dump(manifest, f, ensure_ascii=False, indent=2)
+
+    reg_count  = len(manifest["reg"])
+    cat_count  = len(manifest["cat"])
+    type_count = len(manifest["type"])
+    year_count = len(manifest["year"])
+    print(f"  Чанков: {count} (регионы: {reg_count}, категории: {cat_count}, типы: {type_count}, годы: {year_count})")
+    print(f"  Манифест: {CHUNKS_DIR}/manifest.json")
+    return manifest
+
+
 # ── MAIN ─────────────────────────────────────────────────────────────────────
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -1501,6 +1597,7 @@ def main():
     appeals_data = process_appeals(df_appeals)
     ikomek_data  = process_ikomek(df_ikomek)
     preview      = make_preview(df_appeals)
+    make_chunks(df_appeals)
     pek_objects  = process_pek(df_pek)
     emerg_data   = process_emergency(df_emerg)
     air_data     = process_air_emissions(df_air_m, df_air_dev, df_air_sum, df_air_efl, df_air_em)
