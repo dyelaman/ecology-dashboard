@@ -468,22 +468,34 @@ def process_appeals(df):
     except Exception as e:
         print(f"  by_org_cross — ошибка: {e}")
 
-    # ── Месячный тренд ─────────────────────────────────────────────────────
+    # ── Месячный тренд (по start_dt) ───────────────────────────────────────
     monthly = []
-    if "year" in df.columns and "month_name" in df.columns:
-        trend = (df.groupby(["year", "month_name"], sort=False)
-                   .size()
-                   .reset_index(name="count"))
-        trend = trend.dropna(subset=["year", "month_name"])
-        trend["_mo"] = trend["month_name"].map(MONTH_ORDER).fillna(0).astype(int)
-        trend["year"] = trend["year"].astype(str)
-        trend = trend.sort_values(["year", "_mo"])
+    _MO_LABELS = ["Янв","Фев","Мар","Апр","Май","Июн","Июл","Авг","Сен","Окт","Ноя","Дек"]
+    if "start_dt" in df.columns:
+        df["_dt"]  = pd.to_datetime(df["start_dt"], errors="coerce")
+        df["_ym"]  = df["_dt"].dt.to_period("M").astype(str)
+        trend = (df[df["_ym"] != "NaT"]
+                   .groupby("_ym")
+                   .agg(
+                       total=("_ym",     "count"),
+                       done =("_status", lambda x: x.isin(["done","latedone"]).sum()),
+                       late =("_status", lambda x: x.isin(["late","latedone"]).sum()),
+                   )
+                   .reset_index()
+                   .sort_values("_ym"))
         for _, row in trend.iterrows():
+            ym = str(row["_ym"])          # "2024-03"
+            if len(ym) < 7: continue
+            yr  = ym[:4]
+            mo  = int(ym[5:7])
             monthly.append({
-                "year":  row["year"],
-                "month": row["month_name"],
-                "mo":    int(row["_mo"]),
-                "total": int(row["count"]),
+                "ym":    ym,
+                "year":  yr,
+                "mo":    mo,
+                "label": f"{_MO_LABELS[mo-1]} {yr}",
+                "total": int(row["total"]),
+                "done":  int(row["done"]),
+                "late":  int(row["late"]),
             })
 
     return {

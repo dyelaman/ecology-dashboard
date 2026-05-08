@@ -471,6 +471,18 @@ input[type=file]{display:none}
     </div>
   </div>
 
+  <!-- ДИНАМИКА ПО ВРЕМЕНИ -->
+  <div class="r2" style="margin-bottom:14px">
+    <div class="card" style="flex:2">
+      <div class="card-title">Динамика обращений по месяцам</div>
+      <div class="cw" style="height:180px"><canvas id="cMonthly"></canvas></div>
+    </div>
+    <div class="card" style="flex:1">
+      <div class="card-title">По годам <span id="cYearDynSubtitle" style="font-size:10px;font-weight:400;color:var(--text3)"></span></div>
+      <div class="cw" style="height:180px"><canvas id="cYearDyn"></canvas></div>
+    </div>
+  </div>
+
   <!-- PREVIEW TABLE -->
   <div class="card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
@@ -1726,6 +1738,116 @@ function renderApplicantDemo(){
   ],'58%');
 }
 
+let _cMonthlyChart=null, _cYearDynChart=null;
+
+function renderTimeDynamics(filterYear){
+  if(!_DATA) return;
+  const a = _DATA.summary.appeals;
+  if(!a.monthly || !a.monthly.length) return;
+  const activeYear = filterYear || document.getElementById('gYear')?.value || 'all';
+
+  // ── Месячный тренд ───────────────────────────────────────────────────────
+  const mCtx = document.getElementById('cMonthly'); if(!mCtx) return;
+  const sorted = [...a.monthly].sort((a,b)=>a.ym<b.ym?-1:1);
+  const labels  = sorted.map(m=>m.label);
+  const totals  = sorted.map(m=>m.total);
+  const lateArr = sorted.map(m=>m.late||0);
+  const pointR  = sorted.map(m=>activeYear!=='all'&&m.year===activeYear ? 4 : 0);
+  const lineClr = sorted.map(m=>activeYear!=='all'&&m.year===activeYear ? '#16a34a' : 'rgba(8,145,178,0.4)');
+
+  if(_cMonthlyChart) _cMonthlyChart.destroy();
+  _cMonthlyChart = new Chart(mCtx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'Обращений',
+          data:totals,
+          borderColor:'#0891B2',
+          backgroundColor:'rgba(8,145,178,0.08)',
+          borderWidth:1.5,
+          fill:true,
+          tension:0.3,
+          pointRadius:pointR,
+          pointBackgroundColor:'#16a34a',
+          segment:{borderColor:ctx=>activeYear!=='all'&&sorted[ctx.p0DataIndex]?.year===activeYear?'#16a34a':'#0891B2'},
+        },
+        {
+          label:'Просрочено',
+          data:lateArr,
+          borderColor:'rgba(220,38,38,0.6)',
+          backgroundColor:'rgba(220,38,38,0.06)',
+          borderWidth:1,
+          fill:true,
+          tension:0.3,
+          pointRadius:0,
+        },
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{size:10},color:'#9ca3af',boxWidth:10,padding:8}},
+        tooltip:{callbacks:{title:([t])=>labels[t.dataIndex],label:c=>`${c.dataset.label}: ${c.raw.toLocaleString('ru-RU')}`}},
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:8},color:'#9ca3af',maxTicksLimit:18,maxRotation:45}},
+        y:{grid:{color:'rgba(128,128,128,0.07)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>v>=1000?(v/1000).toFixed(0)+'к':v}},
+      },
+    }
+  });
+
+  // ── По годам ─────────────────────────────────────────────────────────────
+  const yCtx = document.getElementById('cYearDyn'); if(!yCtx) return;
+  const yc = a.by_year_cross || (_DATA.summary.appeals._YEAR_CROSS);
+  // Build from monthly data if by_year_cross unavailable
+  const ycSrc = _YEAR_CROSS || {};
+  const years = Object.keys(ycSrc).sort();
+  if(!years.length){
+    // Fallback: aggregate from monthly
+    const byYr = {};
+    a.monthly.forEach(m=>{byYr[m.year]=(byYr[m.year]||0)+m.total;});
+    const yrs = Object.keys(byYr).sort();
+    const bgColors = yrs.map(y=>y===activeYear?'#16a34a':'rgba(8,145,178,0.55)');
+    if(_cYearDynChart) _cYearDynChart.destroy();
+    _cYearDynChart = new Chart(yCtx,{type:'bar',
+      data:{labels:yrs,datasets:[{label:'Обращений',data:yrs.map(y=>byYr[y]),backgroundColor:bgColors,borderRadius:4}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toLocaleString('ru-RU')}}},
+        scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{color:'rgba(128,128,128,0.07)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>v>=1000?(v/1000).toFixed(0)+'к':v}}}}});
+    return;
+  }
+  const bgColors = years.map(y=>y===activeYear?'#16a34a':'rgba(8,145,178,0.55)');
+  const doneArr  = years.map(y=>{ const yc=ycSrc[y]; return yc&&yc.total>0?Math.round(yc.done/yc.total*100):0; });
+  const lateYArr = years.map(y=>{ const yc=ycSrc[y]; return yc?yc.late:0; });
+
+  if(_cYearDynChart) _cYearDynChart.destroy();
+  _cYearDynChart = new Chart(yCtx,{
+    type:'bar',
+    data:{
+      labels:years,
+      datasets:[
+        {label:'Обращений', data:years.map(y=>(ycSrc[y]?.total||0)), backgroundColor:bgColors, borderRadius:4, yAxisID:'y'},
+        {label:'Просрочено', data:lateYArr, backgroundColor:'rgba(220,38,38,0.5)', borderRadius:4, yAxisID:'y'},
+        {label:'Исп. %', data:doneArr, type:'line', borderColor:'#16a34a', borderWidth:1.5, pointRadius:3, tension:0.2, yAxisID:'y2', fill:false},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'top',labels:{font:{size:9},color:'#9ca3af',boxWidth:10,padding:6}},
+        tooltip:{callbacks:{label:c=>c.dataset.label==='Исп. %'?`${c.raw}%`:c.raw.toLocaleString('ru-RU')}}},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}},
+        y:{grid:{color:'rgba(128,128,128,0.07)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>v>=1000?(v/1000).toFixed(0)+'к':v},stacked:true},
+        y2:{position:'right',grid:{display:false},ticks:{font:{size:9},color:'#16a34a',callback:v=>v+'%'},min:90,max:101},
+      }
+    }
+  });
+
+  const sub = document.getElementById('cYearDynSubtitle');
+  if(sub) sub.textContent = activeYear!=='all'?`· выбран ${activeYear}`:'· 2021–2026';
+}
+
 function renderMainCharts() {
   if (ACTIVE_REGION) return;
   const a = _DATA ? _DATA.summary.appeals : null;
@@ -1828,6 +1950,7 @@ function renderMainCharts() {
     Object.keys(byRegion).forEach(r => { REAL_ECO[r] = byRegion[r]; });
     applyRealKPIs();
     renderMainCharts();
+    renderTimeDynamics();
     renderClosingSpeed();
     renderApplicantDemo();
     if (preview.length) {
@@ -3452,9 +3575,11 @@ function _rechartOnFilter(){
     _chartType.update();
   }
 
-  // Обновить карту по временным фильтрам
+  // Обновить карту и динамику по временным фильтрам
   updateEmergLayer();
   updateChoropleth();
+  const _yrV = document.getElementById('gYear')?.value||'all';
+  renderTimeDynamics(_yrV);
 }
 
 function loadChunkForFilters(){
