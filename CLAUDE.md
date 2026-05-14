@@ -1,6 +1,6 @@
 # Eco Dashboard — МЭПР РК / Таза Казахстан
 
-**Продакшн:** https://eco-dashboard-psi.vercel.app  
+**Продакшн:** https://taza-eco.vercel.app  
 **Проект:** /Users/alprasalam/Desktop/Кейс по экологии/eco-dashboard  
 **Деплой:** `cd "/Users/alprasalam/Desktop/Кейс по экологии/eco-dashboard" && vercel --prod`  
 **Данные:** `cd "/Users/alprasalam/Desktop/Кейс по экологии/eco-dashboard" && python3 scripts/process_data.py`

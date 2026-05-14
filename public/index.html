@@ -1680,13 +1680,6 @@ function renderClosingSpeed(filterReg, filterType, filterYear) {
       return v <= 12 ? 'rgba(22,163,74,.35)' : v <= 14 ? 'rgba(217,119,6,.35)' : 'rgba(220,38,38,.35)';
     });
     const datasets = [{ data: medians, backgroundColor: bgColors, borderRadius: 4 }];
-    if (cmpYear !== 'none' && cs.by_year[cmpYear] && year !== 'all') {
-      datasets.push({
-        type: 'line', data: allYears.map(() => cs.by_year[cmpYear].median),
-        borderColor: '#d97706', borderDash: [4,3], borderWidth: 1.5,
-        pointRadius: 0, fill: false
-      });
-    }
     new Chart(yearCtx, {
       type: 'bar',
       data: { labels: allYears, datasets },
