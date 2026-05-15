@@ -380,7 +380,7 @@ input[type=file]{display:none}
   <!-- ДИНАМИКА ПО ВРЕМЕНИ -->
   <div class="r2" style="margin-bottom:14px">
     <div class="card" style="flex:2">
-      <div class="card-title">Динамика по месяцам</div>
+      <div class="card-title">Динамика по месяцам <span id="cMonthlySubtitle" style="font-size:10px;font-weight:400;color:var(--text3)"></span></div>
       <div class="cw" style="height:210px"><canvas id="cMonthly"></canvas></div>
     </div>
     <div class="card" style="flex:1">
@@ -1879,6 +1879,10 @@ function renderTimeDynamics(filterYear){
   const a = _DATA.summary.appeals;
   if(!a.monthly || !a.monthly.length) return;
 
+  // Регион из глобального фильтра
+  const regSel = document.getElementById('gReg')?.value || 'all';
+  const regActive = regSel !== 'all';
+
   const _crosshairPlugin = {
     id:'_crosshair',
     afterDraw(chart){
@@ -1911,7 +1915,10 @@ function renderTimeDynamics(filterYear){
   // ── Месячный тренд — ВЕСЬ ПЕРИОД ─────────────────────────────────────────
   const mCtx = document.getElementById('cMonthly'); if(!mCtx) return;
   const MO_RU = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-  const allMonths = [...a.monthly].sort((x,y)=>x.ym.localeCompare(y.ym));
+  const monthlySrc = (regActive && a.monthly_by_region?.[regSel]) ? a.monthly_by_region[regSel] : a.monthly;
+  const allMonths = [...monthlySrc].sort((x,y)=>x.ym.localeCompare(y.ym));
+  const mSub = document.getElementById('cMonthlySubtitle');
+  if(mSub) mSub.textContent = regActive ? '· '+regSel : '';
   const mLabels = allMonths.map(m=>`${MO_RU[m.mo-1]} ${String(m.year).slice(2)}`);
   const mTotals = allMonths.map(m=>m.total);
   const mLate   = allMonths.map(m=>m.late||0);
@@ -1974,8 +1981,14 @@ function renderTimeDynamics(filterYear){
   const yCtx = document.getElementById('cYearDyn'); if(!yCtx) return;
   const ycSrc = _YEAR_CROSS || {};
   const years = Object.keys(ycSrc).sort();
-  const totalYArr = years.map(y=>(ycSrc[y]?.total||0));
-  const lateYArr  = years.map(y=>(ycSrc[y]?.late||0));
+  const _yVal = y => {
+    const yc = ycSrc[y];
+    if(!yc) return {total:0,late:0};
+    if(regActive) return yc.by_region?.[regSel] || {total:0,late:0};
+    return yc;
+  };
+  const totalYArr = years.map(y=>(_yVal(y).total||0));
+  const lateYArr  = years.map(y=>(_yVal(y).late||0));
 
   const existingY = Chart.getChart(yCtx);
   if(existingY) existingY.destroy();
@@ -2032,7 +2045,7 @@ function renderTimeDynamics(filterYear){
   });
 
   const sub = document.getElementById('cYearDynSubtitle');
-  if(sub) sub.textContent = '';
+  if(sub) sub.textContent = regActive ? '· '+regSel : '';
 }
 
 function renderMainCharts() {

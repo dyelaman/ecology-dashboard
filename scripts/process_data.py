@@ -498,6 +498,33 @@ def process_appeals(df):
                 "late":  int(row["late"]),
             })
 
+    # ── Месячный тренд по регионам ─────────────────────────────────────────
+    monthly_by_region = {}
+    if "start_dt" in df.columns and "_ym" in df.columns:
+        rtrend = (df[df["_ym"] != "NaT"]
+                    .groupby(["_region", "_ym"], sort=False)
+                    .agg(
+                        total=("_ym",     "count"),
+                        done =("_status", lambda x: x.isin(["done","latedone"]).sum()),
+                        late =("_status", lambda x: x.isin(["late","latedone"]).sum()),
+                    )
+                    .reset_index()
+                    .sort_values(["_region", "_ym"]))
+        for _, row in rtrend.iterrows():
+            ym = str(row["_ym"])
+            if len(ym) < 7: continue
+            reg = str(row["_region"])
+            mo  = int(ym[5:7])
+            monthly_by_region.setdefault(reg, []).append({
+                "ym":    ym,
+                "year":  ym[:4],
+                "mo":    mo,
+                "total": int(row["total"]),
+                "done":  int(row["done"]),
+                "late":  int(row["late"]),
+            })
+        print(f"  monthly_by_region: {len(monthly_by_region)} регионов")
+
     return {
         "total":         total,
         "done":          done,
@@ -514,7 +541,8 @@ def process_appeals(df):
         "top_issues":    top_issues,
         "top_subissues": top_subissues,
         "top_orgs":      top_orgs,
-        "monthly":        monthly,
+        "monthly":          monthly,
+        "monthly_by_region": monthly_by_region,
         "hierarchy":      hierarchy,
         "cross":          cross,
         "issue_cross":    issue_cross,
