@@ -48,6 +48,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .fbar-chip.active{background:#f0fdf4;border-color:var(--green);color:var(--green);font-weight:600}
 .fbar-reset{font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;margin-left:auto}
 .fbar-reset:hover{color:var(--red);border-color:var(--red)}
+.fchip{font-size:10px;padding:3px 4px 3px 8px;border-radius:14px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.fchip b{font-weight:600}
+.fchip-x{cursor:pointer;color:#16a34a;font-weight:700;font-size:11px;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;opacity:.55}
+.fchip-x:hover{opacity:1;color:#fff;background:#dc2626}
+.tip{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:var(--border2);color:var(--text3);font-size:9px;font-weight:700;cursor:help;position:relative;vertical-align:middle}
+.tip:hover{background:var(--green);color:#fff}
+.tip:hover::after{content:attr(data-tip);position:absolute;bottom:160%;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;font-size:10px;font-weight:400;line-height:1.45;padding:7px 10px;border-radius:6px;white-space:normal;width:210px;text-align:left;z-index:9999;box-shadow:0 6px 18px rgba(0,0,0,.22);pointer-events:none}
+.synthetic-zone{background:repeating-linear-gradient(45deg,#fffbeb,#fffbeb 14px,#fef6e0 14px,#fef6e0 28px);border:2px dashed #fcd34d;border-radius:10px;padding:14px}
 .tab{padding:10px 14px;font-size:12px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:5px}
 .tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:600}
 .tab:hover:not(.active){color:var(--text)}
@@ -233,8 +241,8 @@ input[type=file]{display:none}
 <div class="tabs">
   <div class="tab active" onclick="switchTab('main',this)"><span data-i18n="tab_main">Обращения граждан</span></div>
   <div class="tab" onclick="switchTab('taza',this)"><span>🧹 Таза Казахстан</span></div>
-  <div class="tab" onclick="switchTab('emissions',this)"><span>Мониторинг НБД СОС</span></div>
-  <div class="tab" onclick="switchTab('kgs',this)"><span>🛰 КГС</span></div>
+  <div class="tab" onclick="switchTab('emissions',this)"><span>Мониторинг НБД СОС <span class="tip" data-tip="НБД СОС — Национальный банк данных состояния окружающей среды">?</span></span></div>
+  <div class="tab" onclick="switchTab('kgs',this)"><span>🛰 КГС <span class="tip" data-tip="КГС — «Казахстан Гарыш Сапары», спутниковый мониторинг территории">?</span></span></div>
   <div class="tab" onclick="switchTab('waste',this)" style="display:none"><span data-i18n="tab_waste">Отходы</span></div>
   <div class="tab" onclick="switchTab('hearings',this)"><span data-i18n="tab_hear">Социальное напряжение</span></div>
   <div class="tab" id="tabNews" onclick="switchTab('news',this)"><span data-i18n="tab_news">Новости</span> <span id="newsDot" style="display:none" class="tab-dot"></span></div>
@@ -290,36 +298,6 @@ input[type=file]{display:none}
     </select>
 
     <div class="fbar-sep"></div>
-    <span class="fbar-label">Категория</span>
-    <select id="gCatF" onchange="cascadeIssueFilter();onGlobalFilter()">
-      <option value="all">Все категории</option>
-    </select>
-
-    <div class="fbar-sep"></div>
-    <span class="fbar-label">Подкатегория</span>
-    <select id="gIssueF" onchange="cascadeSubFilter();onGlobalFilter()">
-      <option value="all">Все</option>
-    </select>
-
-    <div class="fbar-sep"></div>
-    <span class="fbar-label">Характер вопроса</span>
-    <select id="gSubF" onchange="onGlobalFilter()">
-      <option value="all">Все</option>
-    </select>
-
-    <div class="fbar-sep"></div>
-    <span class="fbar-label">ЦГО</span>
-    <select id="gCGO" onchange="onGlobalFilter()">
-      <option value="all">Все ЦГО</option>
-    </select>
-
-    <div class="fbar-sep"></div>
-    <span class="fbar-label">МИО</span>
-    <select id="gMIO" onchange="onGlobalFilter()">
-      <option value="all">Все МИО</option>
-    </select>
-
-    <div class="fbar-sep"></div>
     <span class="fbar-label">Статус</span>
     <select id="gStatus" onchange="onGlobalFilter()">
       <option value="all">Все статусы</option>
@@ -334,7 +312,44 @@ input[type=file]{display:none}
       <option value="all">Все</option>
       <option value="dup">Только повторные</option>
     </select>
+
+    <div class="fbar-sep"></div>
+    <button class="fbar-chip" id="fbarMoreBtn" onclick="toggleAdvancedFilters()">Доп. фильтры ▾</button>
+
+    <span id="fbarAdvanced" style="display:none">
+      <div class="fbar-sep"></div>
+      <span class="fbar-label">Категория</span>
+      <select id="gCatF" onchange="cascadeIssueFilter();onGlobalFilter()">
+        <option value="all">Все категории</option>
+      </select>
+
+      <div class="fbar-sep"></div>
+      <span class="fbar-label">Подкатегория</span>
+      <select id="gIssueF" onchange="cascadeSubFilter();onGlobalFilter()">
+        <option value="all">Все</option>
+      </select>
+
+      <div class="fbar-sep"></div>
+      <span class="fbar-label">Характер вопроса</span>
+      <select id="gSubF" onchange="onGlobalFilter()">
+        <option value="all">Все</option>
+      </select>
+
+      <div class="fbar-sep"></div>
+      <span class="fbar-label">ЦГО <span class="tip" data-tip="Центральные государственные органы">?</span></span>
+      <select id="gCGO" onchange="onGlobalFilter()">
+        <option value="all">Все ЦГО</option>
+      </select>
+
+      <div class="fbar-sep"></div>
+      <span class="fbar-label">МИО <span class="tip" data-tip="Местные исполнительные органы">?</span></span>
+      <select id="gMIO" onchange="onGlobalFilter()">
+        <option value="all">Все МИО</option>
+      </select>
+    </span>
   </span>
+
+  <span id="fbarActive" style="display:inline-flex;gap:5px;flex-wrap:wrap;align-items:center"></span>
 
   <button class="fbar-reset" onclick="resetGlobalFilter()">✕ Сбросить</button>
 </div>
@@ -346,7 +361,7 @@ input[type=file]{display:none}
 
   <!-- KPIs -->
   <div class="kpi-grid" style="margin-bottom:14px">
-    <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_eco">Обращений (Экология)</div><div class="kpi-val" id="kpiEco">352 641</div><div class="kpi-d nu">с 01.07.2021</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_eco">Всего обращений</div><div class="kpi-val" id="kpiEco">352 641</div><div class="kpi-d nu">с 01.07.2021</div></div>
     <div class="kpi" style="cursor:pointer" onclick="switchTab('taza',document.querySelector('[onclick*=\'taza\']'))"><div class="kpi-lbl" data-i18n="kpi_taza">Таза Казахстан</div><div class="kpi-val" id="kpiTaza">42 644</div><div class="kpi-d nu">заявок · июн 2024–апр 2026</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_ikom">iKomek звонков</div><div class="kpi-val" id="kpiIkom">16 103</div><div class="kpi-d nu">с 01.04.2019</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_done">Закрыто</div><div class="kpi-val" id="kpiDone" style="color:#16A34A">98%</div><div class="kpi-d nu" title="Статус 'закрыто' включает административное завершение без гарантии фактического решения">⚠️ вкл. адм. закрытие</div></div>
@@ -402,7 +417,7 @@ input[type=file]{display:none}
     <button class="subtab active" onclick="switchMainSubTab('eobr',this)">еОбр</button>
     <button class="subtab" onclick="switchMainSubTab('ikomek',this)">📞 iKomek</button>
     <button class="subtab" onclick="switchMainSubTab('speed',this)">Скорость закрытия</button>
-    <button class="subtab" onclick="switchMainSubTab('profile',this)">Профиль заявителя</button>
+    <button class="subtab" onclick="switchMainSubTab('profile',this)">Профиль заявителя <span style="color:#d97706">⚠</span></button>
   </div>
 
   <!-- subpanel: eОбр -->
@@ -573,14 +588,16 @@ input[type=file]{display:none}
   </div><!-- /subpanel-speed -->
 
   <!-- subpanel: Профиль заявителя -->
-  <div id="subpanel-profile" style="display:none">
+  <div id="subpanel-profile" class="synthetic-zone" style="display:none">
 
   <!-- АНАЛИТИКА ЗАЯВИТЕЛЕЙ (синтетические данные) -->
-  <div class="block-title" style="display:flex;align-items:center;gap:10px;margin-top:4px">
-    Профиль заявителей
-    <span style="font-size:9px;font-weight:600;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;letter-spacing:.2px">⚠ СИНТЕТИЧЕСКИЕ ДАННЫЕ · ДЕМО-РЕЖИМ</span>
+  <div style="background:#f59e0b;color:#fff;border-radius:8px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px">
+    <span style="font-size:26px;line-height:1">⚠️</span>
+    <div>
+      <div style="font-size:13px;font-weight:800;letter-spacing:.3px">ДЕМОНСТРАЦИОННЫЕ ДАННЫЕ — НЕ РЕАЛЬНЫЕ</div>
+      <div style="font-size:11px;opacity:.95;margin-top:2px">Персональные сведения заявителей недоступны в открытом доступе. Все цифры ниже сгенерированы для демонстрации возможностей системы и не отражают действительность.</div>
+    </div>
   </div>
-  <div style="font-size:10px;color:var(--text3);margin:-10px 0 12px">Персональные сведения заявителей недоступны в открытом доступе. Ниже — демонстрация возможностей системы на сгенерированных данных.</div>
 
   <!-- Строка 1: Возраст + Пол -->
   <div class="r2" style="margin-bottom:14px">
@@ -1504,7 +1521,7 @@ const LANG={
     badge:'Прототип',
     tab_main:'Обращения граждан', tab_em:'Выбросы', tab_waste:'Отходы', tab_hear:'Слушания',
     tab_app:'Обращения', tab_map:'Карта обращений', tab_news:'Новости',
-    kpi_eco:'Обращений (Экология)', kpi_taza:'Таза Казахстан', kpi_ikom:'iKomek звонков',
+    kpi_eco:'Всего обращений', kpi_taza:'Таза Казахстан', kpi_ikom:'iKomek звонков',
     kpi_done:'Исполнено', kpi_work:'В работе', kpi_late:'Просрочено',
     kpi_pek:'Объекты ПЭК', kpi_emerg:'Аварийных выбросов',
     real_data:'реальные данные', high_rate:'высокий показатель',
@@ -1521,7 +1538,7 @@ const LANG={
     tab_main:'Азаматтардың өтініштері', tab_em:'Шығарындылар', tab_waste:'Қалдықтар',
     tab_hear:'Тыңдаулар', tab_app:'Өтініштер', tab_map:'Өтініштер картасы',
     tab_news:'Жаңалықтар',
-    kpi_eco:'Өтініштер (Экология)', kpi_taza:'Таза Қазақстан', kpi_ikom:'iKomek қоңыраулары',
+    kpi_eco:'Барлық өтініштер', kpi_taza:'Таза Қазақстан', kpi_ikom:'iKomek қоңыраулары',
     kpi_done:'Орындалды', kpi_work:'Жұмыста', kpi_late:'Мерзімі өтті',
     kpi_pek:'ӨЭБ объектілері', kpi_emerg:'Авариялық шығарындылар',
     real_data:'нақты деректер', high_rate:'жоғары көрсеткіш',
@@ -4214,6 +4231,65 @@ function cascadeLocalSubFilter(){ _doCascadeSub('appCatFilter','appIssFilter','a
 function cascadePrvIssFilter(){ _doCascadeMid('prvCat','prvIss','prvSub'); }
 function cascadePrvSubFilter(){ _doCascadeSub('prvCat','prvIss','prvSub'); }
 
+function toggleAdvancedFilters(){
+  const adv=document.getElementById('fbarAdvanced');
+  const btn=document.getElementById('fbarMoreBtn');
+  if(!adv) return;
+  const open = adv.style.display==='none' || !adv.style.display;
+  adv.style.display = open ? 'contents' : 'none';
+  if(btn) btn.textContent = open ? 'Доп. фильтры ▴' : 'Доп. фильтры ▾';
+}
+
+const _FCHIP_DEFS=[
+  {id:'gYear',  label:'Год'},
+  {id:'gMonth', label:'Месяц'},
+  {id:'gReg',   label:'Регион'},
+  {id:'gType',  label:'Тип'},
+  {id:'gStatus',label:'Статус'},
+  {id:'gCatF',  label:'Категория'},
+  {id:'gIssueF',label:'Подкатегория'},
+  {id:'gSubF',  label:'Характер'},
+  {id:'gCGO',   label:'ЦГО'},
+  {id:'gMIO',   label:'МИО'},
+  {id:'gDupSel',label:'Повторные'},
+];
+const _FCHIP_ADV=['gCatF','gIssueF','gSubF','gCGO','gMIO'];
+
+function updateFilterChips(){
+  const box=document.getElementById('fbarActive');
+  if(!box) return;
+  const chips=[]; let advActive=false;
+  _FCHIP_DEFS.forEach(d=>{
+    const el=document.getElementById(d.id);
+    if(!el) return;
+    const v=el.value;
+    if(v==='all'||v==='') return;
+    let txt=el.options[el.selectedIndex]?.text||v;
+    if(_FCHIP_ADV.includes(d.id)) advActive=true;
+    if(txt.length>22) txt=txt.slice(0,21)+'…';
+    chips.push(`<span class="fchip"><b>${d.label}:</b> ${txt}<span class="fchip-x" title="Убрать" onclick="clearOneFilter('${d.id}')">✕</span></span>`);
+  });
+  box.innerHTML=chips.join('');
+  // авто-раскрытие доп. фильтров, если среди активных есть скрытый
+  if(advActive){
+    const adv=document.getElementById('fbarAdvanced');
+    const btn=document.getElementById('fbarMoreBtn');
+    if(adv && (adv.style.display==='none'||!adv.style.display)){
+      adv.style.display='contents';
+      if(btn) btn.textContent='Доп. фильтры ▴';
+    }
+  }
+}
+
+function clearOneFilter(id){
+  const reset=el=>{ if(el) el.selectedIndex=0; };
+  reset(document.getElementById(id));
+  if(id==='gCatF'){ reset(document.getElementById('gIssueF')); reset(document.getElementById('gSubF')); }
+  if(id==='gIssueF'){ reset(document.getElementById('gSubF')); }
+  if(['gReg','gType','gCatF'].includes(id)) _doCascadeMid('gCatF','gIssueF','gSubF');
+  if(id==='gDupSel'){ onDupFilter(); } else { onGlobalFilter(); }
+}
+
 function onGlobalFilter(){
   const typeVal=document.getElementById('gType')?.value||'all';
   const at=document.getElementById('appTypeFilter');
@@ -4222,6 +4298,7 @@ function onGlobalFilter(){
   loadChunkForFilters();
   applyFilter();
   applyGlobalFiltersToCharts();
+  updateFilterChips();
 }
 
 function applyGlobalFiltersToCharts(){
@@ -4426,6 +4503,12 @@ function resetGlobalFilter(){
   loadChunkForFilters();
   applyFilter();
   applyGlobalFiltersToCharts();
+  updateFilterChips();
+  // свернуть доп. фильтры
+  const adv=document.getElementById('fbarAdvanced');
+  if(adv) adv.style.display='none';
+  const mb=document.getElementById('fbarMoreBtn');
+  if(mb) mb.textContent='Доп. фильтры ▾';
 }
 
 function goNews(cat){
