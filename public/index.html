@@ -54,7 +54,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .fchip-x:hover{opacity:1;color:#fff;background:#dc2626}
 .tip{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:var(--border2);color:var(--text3);font-size:9px;font-weight:700;cursor:help;position:relative;vertical-align:middle}
 .tip:hover{background:var(--green);color:#fff}
-.tip:hover::after{content:attr(data-tip);position:absolute;top:170%;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;font-size:10px;font-weight:400;line-height:1.45;padding:7px 10px;border-radius:6px;white-space:normal;width:210px;text-align:left;z-index:9999;box-shadow:0 6px 18px rgba(0,0,0,.22);pointer-events:none}
 .synthetic-zone{background:repeating-linear-gradient(45deg,#fffbeb,#fffbeb 14px,#fef6e0 14px,#fef6e0 28px);border:2px dashed #fcd34d;border-radius:10px;padding:14px}
 .tab{padding:10px 14px;font-size:12px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:5px}
 .tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:600}
@@ -241,8 +240,8 @@ input[type=file]{display:none}
 <div class="tabs">
   <div class="tab active" onclick="switchTab('main',this)"><span data-i18n="tab_main">Обращения граждан</span></div>
   <div class="tab" onclick="switchTab('taza',this)"><span>Таза Казахстан</span></div>
-  <div class="tab" onclick="switchTab('emissions',this)"><span>Мониторинг НБД СОС <span class="tip" data-tip="НБД СОС — Национальный банк данных состояния окружающей среды">?</span></span></div>
-  <div class="tab" onclick="switchTab('kgs',this)"><span>КГС <span class="tip" data-tip="КГС — «Казахстан Гарыш Сапары», спутниковый мониторинг территории">?</span></span></div>
+  <div class="tab" onclick="switchTab('emissions',this)"><span>Мониторинг НБД СОС <span class="tip" title="НБД СОС — Национальный банк данных состояния окружающей среды">?</span></span></div>
+  <div class="tab" onclick="switchTab('kgs',this)"><span>КГС <span class="tip" title="КГС — «Казахстан Гарыш Сапары», спутниковый мониторинг территории">?</span></span></div>
   <div class="tab" onclick="switchTab('waste',this)" style="display:none"><span data-i18n="tab_waste">Отходы</span></div>
   <div class="tab" onclick="switchTab('hearings',this)"><span data-i18n="tab_hear">Социальное напряжение</span></div>
   <div class="tab" id="tabNews" onclick="switchTab('news',this)"><span data-i18n="tab_news">Новости</span> <span id="newsDot" style="display:none" class="tab-dot"></span></div>
@@ -336,13 +335,13 @@ input[type=file]{display:none}
       </select>
 
       <div class="fbar-sep"></div>
-      <span class="fbar-label">ЦГО <span class="tip" data-tip="Центральные государственные органы">?</span></span>
+      <span class="fbar-label">ЦГО <span class="tip" title="Центральные государственные органы">?</span></span>
       <select id="gCGO" onchange="onGlobalFilter()">
         <option value="all">Все ЦГО</option>
       </select>
 
       <div class="fbar-sep"></div>
-      <span class="fbar-label">МИО <span class="tip" data-tip="Местные исполнительные органы">?</span></span>
+      <span class="fbar-label">МИО <span class="tip" title="Местные исполнительные органы">?</span></span>
       <select id="gMIO" onchange="onGlobalFilter()">
         <option value="all">Все МИО</option>
       </select>
