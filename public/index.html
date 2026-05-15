@@ -401,6 +401,8 @@ input[type=file]{display:none}
   <div class="subtabs" style="margin-bottom:14px;margin-top:4px">
     <button class="subtab active" onclick="switchMainSubTab('eobr',this)">еОбр</button>
     <button class="subtab" onclick="switchMainSubTab('ikomek',this)">📞 iKomek</button>
+    <button class="subtab" onclick="switchMainSubTab('speed',this)">Скорость закрытия</button>
+    <button class="subtab" onclick="switchMainSubTab('profile',this)">Профиль заявителя</button>
   </div>
 
   <!-- subpanel: eОбр -->
@@ -454,36 +456,6 @@ input[type=file]{display:none}
     <span id="sTotal"></span><span id="sDone"></span><span id="sWork"></span><span id="sLate"></span>
     <span id="sIkomekWrap"><span id="sIkomek"></span></span>
     <span id="sTopIssues"><span id="sIssuesList"></span></span>
-  </div>
-
-  <!-- СКОРОСТЬ ЗАКРЫТИЯ ОБРАЩЕНИЙ -->
-  <div class="block-title">Скорость закрытия обращений <span style="font-size:10px;color:var(--text3);font-weight:400">· eObr · 345 304 закрытых обращений</span></div>
-
-  <div class="stat-row" style="margin-bottom:14px">
-    <div class="stat-box"><div class="lbl">Медиана закрытия</div><div class="val" id="csMedian">13</div><div style="font-size:10px;color:var(--text3)">дней</div></div>
-    <div class="stat-box"><div class="lbl">Закрыто вовремя</div><div class="val" style="color:#16a34a" id="csOnTime">98.7%</div><div style="font-size:10px;color:var(--text3)">из 345 304</div></div>
-    <div class="stat-box"><div class="lbl">Быстрейший регион</div><div class="val" style="color:#16a34a;font-size:14px" id="csFastest">Костанайская</div><div style="font-size:10px;color:#16a34a" id="csFastestVal">7 дн.</div></div>
-    <div class="stat-box"><div class="lbl">Медленнейший регион</div><div class="val" style="color:#d97706;font-size:14px" id="csSlowest">ЗКО</div><div style="font-size:10px;color:#d97706" id="csSlowestVal">16 дн.</div></div>
-  </div>
-
-  <div class="r2" style="margin-bottom:14px">
-    <div class="card">
-      <div class="card-title">Медиана закрытия по регионам (дней) <span style="font-size:9px;color:var(--text3);font-weight:400">от быстрых к медленным</span></div>
-      <div id="csRegBars" style="padding:4px 0"></div>
-    </div>
-    <div class="r2" style="flex-direction:column;gap:12px">
-      <div class="card">
-        <div class="card-title">Распределение по срокам закрытия</div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="cw" style="height:160px;flex:1"><canvas id="csBuckets"></canvas></div>
-          <div id="csBucketsLeg" style="font-size:11px;display:flex;flex-direction:column;gap:4px;min-width:100px"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Медиана по годам (дней)</div>
-        <div class="cw" style="height:130px"><canvas id="csYearChart"></canvas></div>
-      </div>
-    </div>
   </div>
 
   <!-- PREVIEW TABLE -->
@@ -564,8 +536,47 @@ input[type=file]{display:none}
     </div>
   </div>
 
+  </div><!-- /subpanel-eobr -->
+
+  <!-- subpanel: Скорость закрытия -->
+  <div id="subpanel-speed" style="display:none">
+
+  <div class="block-title">Скорость закрытия обращений <span style="font-size:10px;color:var(--text3);font-weight:400">· eObr · 345 304 закрытых обращений</span></div>
+
+  <div class="stat-row" style="margin-bottom:14px">
+    <div class="stat-box"><div class="lbl">Медиана закрытия</div><div class="val" id="csMedian">13</div><div style="font-size:10px;color:var(--text3)">дней</div></div>
+    <div class="stat-box"><div class="lbl">Закрыто вовремя</div><div class="val" style="color:#16a34a" id="csOnTime">98.7%</div><div style="font-size:10px;color:var(--text3)">из 345 304</div></div>
+    <div class="stat-box"><div class="lbl">Быстрейший регион</div><div class="val" style="color:#16a34a;font-size:14px" id="csFastest">Костанайская</div><div style="font-size:10px;color:#16a34a" id="csFastestVal">7 дн.</div></div>
+    <div class="stat-box"><div class="lbl">Медленнейший регион</div><div class="val" style="color:#d97706;font-size:14px" id="csSlowest">ЗКО</div><div style="font-size:10px;color:#d97706" id="csSlowestVal">16 дн.</div></div>
+  </div>
+
+  <div class="r2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="card-title">Медиана закрытия по регионам (дней) <span style="font-size:9px;color:var(--text3);font-weight:400">от быстрых к медленным</span></div>
+      <div id="csRegBars" style="padding:4px 0"></div>
+    </div>
+    <div class="r2" style="flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="card-title">Распределение по срокам закрытия</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="cw" style="height:160px;flex:1"><canvas id="csBuckets"></canvas></div>
+          <div id="csBucketsLeg" style="font-size:11px;display:flex;flex-direction:column;gap:4px;min-width:100px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Медиана по годам (дней)</div>
+        <div class="cw" style="height:130px"><canvas id="csYearChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /subpanel-speed -->
+
+  <!-- subpanel: Профиль заявителя -->
+  <div id="subpanel-profile" style="display:none">
+
   <!-- АНАЛИТИКА ЗАЯВИТЕЛЕЙ (синтетические данные) -->
-  <div class="block-title" style="display:flex;align-items:center;gap:10px;margin-top:14px">
+  <div class="block-title" style="display:flex;align-items:center;gap:10px;margin-top:4px">
     Профиль заявителей
     <span style="font-size:9px;font-weight:600;padding:2px 8px;border-radius:20px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;letter-spacing:.2px">⚠ СИНТЕТИЧЕСКИЕ ДАННЫЕ · ДЕМО-РЕЖИМ</span>
   </div>
@@ -633,7 +644,7 @@ input[type=file]{display:none}
     </div>
   </div>
 
-  </div><!-- /subpanel-eobr -->
+  </div><!-- /subpanel-profile -->
 
   <!-- subpanel: iKomek -->
   <div id="subpanel-ikomek" style="display:none">
@@ -1773,9 +1784,15 @@ let _ikomekMainInited = false;
 function switchMainSubTab(id, btn) {
   document.querySelectorAll('#panel-main .subtabs .subtab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('subpanel-eobr').style.display  = id==='eobr'   ? '' : 'none';
-  document.getElementById('subpanel-ikomek').style.display = id==='ikomek' ? '' : 'none';
+  const panels = {eobr:'subpanel-eobr', ikomek:'subpanel-ikomek', speed:'subpanel-speed', profile:'subpanel-profile'};
+  Object.entries(panels).forEach(([k,elId])=>{
+    const el=document.getElementById(elId);
+    if(el) el.style.display = (k===id) ? '' : 'none';
+  });
   if(id==='ikomek' && !_ikomekMainInited){ renderIkomekMainTab(); _ikomekMainInited=true; }
+  // Ре-рендер при открытии — canvas получает корректный размер только видимым
+  if(id==='speed')   renderClosingSpeed();
+  if(id==='profile') renderApplicantDemo();
 }
 
 function renderIkomekMainTab(){
@@ -2122,8 +2139,7 @@ function renderMainCharts() {
     if(summary.appeals.by_year_cross) _YEAR_CROSS = summary.appeals.by_year_cross;
     renderMainCharts();
     renderTimeDynamics();
-    renderClosingSpeed();
-    renderApplicantDemo();
+    // renderClosingSpeed / renderApplicantDemo вызываются лениво при открытии подвкладки
     if (preview.length) {
       window._APP_REAL = preview;
       initAppTable();
