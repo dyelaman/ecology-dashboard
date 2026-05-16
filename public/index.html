@@ -55,6 +55,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tip{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:var(--border2);color:var(--text3);font-size:9px;font-weight:700;cursor:help;position:relative;vertical-align:middle}
 .tip:hover{background:var(--green);color:#fff}
 .synthetic-zone{background:repeating-linear-gradient(45deg,#fffbeb,#fffbeb 14px,#fef6e0 14px,#fef6e0 28px);border:2px dashed #fcd34d;border-radius:10px;padding:14px}
+.oil-marker{background:none;border:none}
+.oil-dot{width:18px;height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer}
+.map-legend{background:rgba(255,255,255,.95);border-radius:8px;padding:8px 10px;font-size:10px;color:#374151;box-shadow:0 2px 8px rgba(0,0,0,.18);line-height:1.7}
+.map-legend div{display:flex;align-items:center;gap:6px}
+.lg-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
+#oilPanel{position:fixed;top:0;right:0;width:340px;height:100vh;background:var(--surface);box-shadow:-4px 0 24px rgba(0,0,0,.18);z-index:9000;transform:translateX(100%);transition:transform .25s ease;overflow-y:auto;display:flex;flex-direction:column}
+#oilPanel.open{transform:translateX(0)}
+.oilp-head{padding:16px 16px 14px;color:#fff;position:relative;flex-shrink:0}
+.oilp-close{position:absolute;top:13px;left:13px;cursor:pointer;font-size:15px;opacity:.85;line-height:1}
+.oilp-close:hover{opacity:1}
+.oilp-sec{padding:12px 16px;border-bottom:1px solid var(--border)}
+.oilp-sec-t{font-size:10px;font-weight:700;letter-spacing:.4px;color:var(--text3);margin-bottom:8px}
+.oilp-row{display:flex;justify-content:space-between;gap:14px;font-size:12px;padding:3px 0}
+.oilp-row span{color:var(--text3);flex-shrink:0}
+.oilp-row b{color:var(--text);text-align:right}
 .tab{padding:10px 14px;font-size:12px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:5px}
 .tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:600}
 .tab:hover:not(.active){color:var(--text)}
@@ -385,6 +400,10 @@ input[type=file]{display:none}
         <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
           <input type="checkbox" id="mlyrAppeals" checked style="width:11px;height:11px;accent-color:#16a34a" onchange="toggleMainLayer('appeals',this.checked)">
           <span style="width:7px;height:7px;border-radius:50%;background:#22c55e"></span>Обращения
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
+          <input type="checkbox" id="mlyrOil" checked style="width:11px;height:11px;accent-color:#E53935" onchange="toggleMainLayer('oil',this.checked)">
+          <span style="width:7px;height:7px;border-radius:50%;background:#E53935"></span>🛢️ Месторождения (15)
         </label>
       </div>
     </div>
@@ -4064,9 +4083,87 @@ let mapNbdInst=null, nbdPekLayer=null, nbdEmergLayer=null, nbdFireLayer=null;
 let mapKgsInst=null, kgsMapWaste=null, kgsMapLand=null, kgsMapNedra=null;
 let _KGS_MAP=null;
 
+const OILFIELDS = [
+  {id:1,name:'Кашаган',nameEn:'Kashagan',lat:46.0,lng:53.0,region:'Атырауская обл.',type:'Нефтегазовое',operator:'NCOC (Shell, Total, ExxonMobil, ENI, CNPC, Inpex, КМГ)',reserves:'2 млрд т (извлекаемые)',production:'18 млн т/год',opened:2000,depth:'4 500 м',risk:'high',riskLabel:'Высокий — H₂S, шельф Каспия',fact:'Входит в топ-10 крупнейших месторождений мира. Содержание сероводорода до 25% — сложнейшее экологически.',color:'#E53935'},
+  {id:2,name:'Тенгиз',nameEn:'Tengiz',lat:45.4,lng:53.1,region:'Атырауская обл.',type:'Нефтегазовое',operator:'Тенгизшевройл (Chevron 50%, ExxonMobil 25%, КМГ 20%)',reserves:'3.2 млрд т',production:'27 млн т/год',opened:1979,depth:'4 000 м',risk:'high',riskLabel:'Высокий — факельные выбросы, сернистый газ',fact:'Самое глубокое нефтяное месторождение-гигант в мире. Даёт 30% всей добычи нефти Казахстана.',color:'#E53935'},
+  {id:3,name:'Карачаганак',nameEn:'Karachaganak',lat:51.6,lng:53.1,region:'ЗКО',type:'Нефтегазоконденсатное',operator:'КПО (Shell 29%, ENI 29%, Chevron 18%, ЛУКОЙЛ 13.5%, КМГ 10%)',reserves:'320 млн т жидких + 450 млрд м³ газа',production:'14 млн т/год',opened:1979,depth:'5 000 м',risk:'high',riskLabel:'Высокий — факельные выбросы, жалобы жителей Аксая',fact:'Крупнейшее нефтегазоконденсатное в СНГ. 90% газа добычи Казахстана — отсюда.',color:'#E53935'},
+  {id:4,name:'Узень',nameEn:'Uzen',lat:43.6,lng:53.3,region:'Мангистауская обл.',type:'Нефтегазовое',operator:'Озенмунайгаз (КМГ)',reserves:'110 млн т',production:'5 млн т/год',opened:1961,depth:'1 000–2 500 м',risk:'medium',riskLabel:'Средний — загрязнение почв, старые скважины',fact:'Одно из старейших крупных месторождений. Нефть высокозастывающая — трубопровод специально подогревают.',color:'#FB8C00'},
+  {id:5,name:'Жанажол',nameEn:'Zhanazhol',lat:47.3,lng:56.0,region:'Актюбинская обл.',type:'Нефтегазоконденсатное',operator:'CNPC (Китай)',reserves:'200 млн т нефти + газ',production:'3.5 млн т/год',opened:1978,depth:'3 500 м',risk:'medium',riskLabel:'Средний — выбросы попутного газа',fact:'Основное месторождение Актюбинской области. Оператор — китайская CNPC.',color:'#FB8C00'},
+  {id:6,name:'Каламкас',nameEn:'Kalamkas',lat:43.9,lng:52.4,region:'Мангистауская обл.',type:'Нефтегазовое',operator:'Мангистаумунайгаз (КМГ + CNPC)',reserves:'130 млн т',production:'3 млн т/год',opened:1976,depth:'800–1 500 м',risk:'medium',riskLabel:'Средний — разливы нефти на мелководье',fact:'Плюс проект Каламкас-море на шельфе Каспия — старт добычи планируется в 2030 году.',color:'#FB8C00'},
+  {id:7,name:'Кенкияк',nameEn:'Kenkiyak',lat:48.7,lng:56.5,region:'Актюбинская обл.',type:'Нефтегазовое',operator:'CNPC',reserves:'70 млн т',production:'1.5 млн т/год',opened:1959,depth:'500–4 500 м',risk:'medium',riskLabel:'Средний',fact:'Два горизонта — надсолевой и глубокий подсолевой. Подсолевая нефть открыта в 2000-х.',color:'#FB8C00'},
+  {id:8,name:'Каражанбас',nameEn:'Karazhanbas',lat:43.8,lng:52.1,region:'Мангистауская обл.',type:'Нефтегазовое',operator:'Каражанбасмунай (КМГ 50% + CITIC 50%)',reserves:'90 млн т',production:'1.8 млн т/год',opened:1974,depth:'200–800 м',risk:'medium',riskLabel:'Средний — высоковязкая нефть, термическое воздействие',fact:'Высоковязкая нефть требует паротепловых методов добычи — высокое энергопотребление.',color:'#FB8C00'},
+  {id:9,name:'Кумколь',nameEn:'Kumkol',lat:45.3,lng:65.8,region:'Улытауская обл.',type:'Нефтегазовое',operator:'ПетроКазахстан (CNPC 67% + КМГ 33%)',reserves:'130 млн т (извлекаемые)',production:'240 тыс. т/год',opened:1984,depth:'900–1 400 м',risk:'low',riskLabel:'Низкий — зрелое, добыча снижается',fact:'Единственное крупное месторождение в центре страны. Нефть экспортируется в Китай по трубопроводу Кумколь-Атасу-Алашанькоу.',color:'#43A047'},
+  {id:10,name:'Северные Бузачи',nameEn:'Severnye Buzachi',lat:44.6,lng:51.5,region:'Мангистауская обл.',type:'Нефтегазовое',operator:'Казахойл Актобе (КМГ)',reserves:'100 млн т',production:'1.2 млн т/год',opened:1984,depth:'200–600 м',risk:'medium',riskLabel:'Средний — сверхвязкая нефть, паровое воздействие',fact:'Сверхвязкая нефть — добывается паротепловым воздействием. Высокий углеродный след на тонну добычи.',color:'#FB8C00'},
+  {id:11,name:'Алибекмола',nameEn:'Alibekmola',lat:48.5,lng:57.2,region:'Актюбинская обл.',type:'Нефтегазоконденсатное',operator:'Казахойл Актобе (КМГ)',reserves:'50 млн т',production:'0.8 млн т/год',opened:1978,depth:'4 000–5 000 м',risk:'low',riskLabel:'Низкий',fact:'Глубокое залегание — разработка технически сложная. Перспективный резерв Актюбинской области.',color:'#43A047'},
+  {id:12,name:'Центральная и Восточная Прорва',nameEn:'Prорва',lat:46.2,lng:53.8,region:'Атырауская обл.',type:'Нефтегазовое',operator:'Жилыоймунайгаз (КМГ)',reserves:'21 млн т',production:'1 млн т/год',opened:1987,depth:'1 500–3 000 м',risk:'high',riskLabel:'Высокий — прибрежная зона Каспия',fact:'Расположено в экологически чувствительной прибрежной зоне Каспия.',color:'#E53935'},
+  {id:13,name:'Жетыбай',nameEn:'Zhetybai',lat:43.5,lng:52.5,region:'Мангистауская обл.',type:'Нефтегазовое',operator:'Мангистаумунайгаз (КМГ + CNPC)',reserves:'53 млн т',production:'1.5 млн т/год',opened:1961,depth:'1 000–2 000 м',risk:'medium',riskLabel:'Средний — высокозастывающая нефть',fact:'Открыто одновременно с Узенем в 1961 году. Нефть требует подогрева трубопровода.',color:'#FB8C00'},
+  {id:14,name:'Кенбай',nameEn:'Kenbay',lat:47.1,lng:53.5,region:'Атырауская обл.',type:'Нефтегазовое',operator:'КМГ',reserves:'15 млн т',production:'0.5 млн т/год',opened:2005,depth:'2 000–3 500 м',risk:'high',riskLabel:'Высокий — шельфовый проект Каспия',fact:'Шельфовый проект на Каспии. Экологически чувствительная зона.',color:'#E53935'},
+  {id:15,name:'Королевское',nameEn:'Korolevskoe',lat:45.6,lng:53.4,region:'Атырауская обл.',type:'Нефтегазовое',operator:'Тенгизшевройл (Chevron, ExxonMobil, КМГ)',reserves:'60 млн т',production:'2 млн т/год',opened:1991,depth:'3 500–5 000 м',risk:'high',riskLabel:'Высокий — единая инфраструктура с Тенгизом',fact:'Разрабатывается совместно с Тенгизом. Часть единой инфраструктуры ТШО.',color:'#E53935'},
+];
+let oilLayerMain=null;
+
+function _renderOilLayer(){
+  if(!mapMainInst) return;
+  if(oilLayerMain){ mapMainInst.removeLayer(oilLayerMain); }
+  oilLayerMain = L.layerGroup();
+  OILFIELDS.forEach(f=>{
+    const icon = L.divIcon({
+      className:'oil-marker',
+      html:`<div class="oil-dot" style="background:${f.color}">🛢</div>`,
+      iconSize:[18,18], iconAnchor:[9,9],
+    });
+    L.marker([f.lat,f.lng],{icon})
+      .bindTooltip(`<b>${f.name}</b> · ${f.production}`,{direction:'top',offset:[0,-11]})
+      .on('click',()=>openOilPanel(f.id))
+      .addTo(oilLayerMain);
+  });
+  const cb=document.getElementById('mlyrOil');
+  if(!cb || cb.checked) oilLayerMain.addTo(mapMainInst);
+}
+
+function openOilPanel(id){
+  const f=OILFIELDS.find(x=>x.id===id); if(!f) return;
+  const riskName={high:'ВЫСОКИЙ',medium:'СРЕДНИЙ',low:'НИЗКИЙ'}[f.risk]||'—';
+  const head=document.getElementById('oilpHead');
+  if(head) head.style.background=f.color;
+  const t=document.getElementById('oilpTitle'); if(t) t.textContent='🛢️ '+f.name;
+  const s=document.getElementById('oilpSub'); if(s) s.textContent=`${f.region} · ${f.type}`;
+  const body=document.getElementById('oilpBody');
+  if(body) body.innerHTML=`
+    <div class="oilp-sec">
+      <div class="oilp-sec-t">📊 КЛЮЧЕВЫЕ ПОКАЗАТЕЛИ</div>
+      <div class="oilp-row"><span>Запасы</span><b>${f.reserves}</b></div>
+      <div class="oilp-row"><span>Добыча</span><b>${f.production}</b></div>
+      <div class="oilp-row"><span>Оператор</span><b>${f.operator}</b></div>
+      <div class="oilp-row"><span>Открыто</span><b>${f.opened} г.</b></div>
+      <div class="oilp-row"><span>Глубина</span><b>${f.depth}</b></div>
+    </div>
+    <div class="oilp-sec" style="background:${f.color}14">
+      <div class="oilp-sec-t" style="color:${f.color}">⚠️ ЭКОЛОГИЧЕСКИЙ РИСК: ${riskName}</div>
+      <div style="font-size:12px;color:var(--text2)">${f.riskLabel}</div>
+    </div>
+    <div class="oilp-sec">
+      <div class="oilp-sec-t">💡 ФАКТ</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.5">${f.fact}</div>
+    </div>
+    <div class="oilp-sec" style="border-bottom:none">
+      <div class="oilp-sec-t">📋 ДАННЫЕ ИЗ НБД <span style="font-weight:400;color:var(--text3)">· заглушка</span></div>
+      <div class="oilp-row"><span>Объектов ПЭК</span><b>—</b></div>
+      <div class="oilp-row"><span>Выбросов за 2025</span><b>— т</b></div>
+      <div class="oilp-row"><span>Обращений рядом</span><b>— шт</b></div>
+      <div class="oilp-row"><span>Нарушений</span><b>— шт</b></div>
+    </div>`;
+  const p=document.getElementById('oilPanel'); if(p) p.classList.add('open');
+}
+
+function closeOilPanel(){
+  const p=document.getElementById('oilPanel'); if(p) p.classList.remove('open');
+}
+
 function toggleMainLayer(type, on){
   if(type==='appeals' && geoLayerMain) on ? mapMainInst.addLayer(geoLayerMain) : mapMainInst.removeLayer(geoLayerMain);
   if(type==='hydro' && hydroLayerMain) on ? mapMainInst.addLayer(hydroLayerMain) : mapMainInst.removeLayer(hydroLayerMain);
+  if(type==='oil' && oilLayerMain) on ? mapMainInst.addLayer(oilLayerMain) : mapMainInst.removeLayer(oilLayerMain);
   if(type==='pek' && pekLayerMain) on ? mapMainInst.addLayer(pekLayerMain) : mapMainInst.removeLayer(pekLayerMain);
   if(type==='emerg' && emergLayerMain) on ? mapMainInst.addLayer(emergLayerMain) : mapMainInst.removeLayer(emergLayerMain);
   if(type==='waste') { if(on) _renderKgsWasteLayer(); else if(wasteLayerMain) mapMainInst.removeLayer(wasteLayerMain); }
@@ -4521,6 +4618,25 @@ function initMainMap(){
   mapMainInst=L.map('mapMain',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView(_rc?[_rc[0],_rc[1]]:[48.0,66.0],_rc?_rc[2]:4);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:ACTIVE_REGION?1.0:0.45}).addTo(mapMainInst);
   L.control.attribution({prefix:'🇰🇿 Таза Казахстан'}).addTo(mapMainInst);
+
+  // Слой месторождений
+  _renderOilLayer();
+
+  // Легенда (левый нижний угол)
+  const oilLegend=L.control({position:'bottomleft'});
+  oilLegend.onAdd=function(){
+    const div=L.DomUtil.create('div','map-legend');
+    div.innerHTML=
+      '<div><span class="lg-dot" style="background:#E53935"></span>Высокий экориск</div>'+
+      '<div><span class="lg-dot" style="background:#FB8C00"></span>Средний экориск</div>'+
+      '<div><span class="lg-dot" style="background:#43A047"></span>Низкий экориск</div>'+
+      '<div><span class="lg-dot" style="background:#7c3aed"></span>Пост Казгидромета</div>';
+    return div;
+  };
+  oilLegend.addTo(mapMainInst);
+
+  // Клик по пустой карте закрывает панель месторождения
+  mapMainInst.on('click', closeOilPanel);
   const maxVal=Math.max(...Object.values(REAL_ECO).map(d=>d.total),1);
   fetch(KAZ_GEO_URL)
     .then(r=>{if(!r.ok)throw new Error(r.status);return r.json();})
@@ -5662,6 +5778,15 @@ async function initNews(){newsInit=true;setStatus('loading','Проверка к
     <button onclick="document.getElementById('orgModal').style.display='none'" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3)">×</button>
     <div id="orgModalContent"></div>
   </div>
+</div>
+<!-- ── БОКОВАЯ ПАНЕЛЬ МЕСТОРОЖДЕНИЯ ── -->
+<div id="oilPanel">
+  <div class="oilp-head" id="oilpHead">
+    <span class="oilp-close" onclick="closeOilPanel()">✕</span>
+    <div id="oilpTitle" style="font-size:16px;font-weight:800;text-align:right">—</div>
+    <div id="oilpSub" style="font-size:11px;opacity:.92;text-align:right;margin-top:3px">—</div>
+  </div>
+  <div id="oilpBody"></div>
 </div>
 </body>
 </html>
