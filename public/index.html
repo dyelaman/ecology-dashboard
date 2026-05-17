@@ -401,10 +401,6 @@ input[type=file]{display:none}
           <input type="checkbox" id="mlyrAppeals" checked style="width:11px;height:11px;accent-color:#16a34a" onchange="toggleMainLayer('appeals',this.checked)">
           <span style="width:7px;height:7px;border-radius:50%;background:#22c55e"></span>Обращения
         </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
-          <input type="checkbox" id="mlyrOil" checked style="width:11px;height:11px;accent-color:#E53935" onchange="toggleMainLayer('oil',this.checked)">
-          <span style="width:7px;height:7px;border-radius:50%;background:#E53935"></span>🛢️ Месторождения (15)
-        </label>
       </div>
     </div>
     <div id="mapMain" style="height:420px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border)"></div>
@@ -743,6 +739,10 @@ input[type=file]{display:none}
         <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
           <input type="checkbox" id="nbdLyrFire" checked style="width:11px;height:11px;accent-color:#ea580c" onchange="toggleNbdLayer('fire',this.checked)">
           <span style="width:7px;height:7px;border-radius:50%;background:#ea580c"></span>Факелы
+        </label>
+        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
+          <input type="checkbox" id="nbdLyrOil" checked style="width:11px;height:11px;accent-color:#E53935" onchange="toggleNbdLayer('oil',this.checked)">
+          <span style="width:7px;height:7px;border-radius:50%;background:#E53935"></span>🛢️ Месторождения (15)
         </label>
       </div>
     </div>
@@ -4100,12 +4100,12 @@ const OILFIELDS = [
   {id:14,name:'Кенбай',nameEn:'Kenbay',lat:47.1,lng:53.5,region:'Атырауская обл.',type:'Нефтегазовое',operator:'КМГ',reserves:'15 млн т',production:'0.5 млн т/год',opened:2005,depth:'2 000–3 500 м',risk:'high',riskLabel:'Высокий — шельфовый проект Каспия',fact:'Шельфовый проект на Каспии. Экологически чувствительная зона.',color:'#E53935'},
   {id:15,name:'Королевское',nameEn:'Korolevskoe',lat:45.6,lng:53.4,region:'Атырауская обл.',type:'Нефтегазовое',operator:'Тенгизшевройл (Chevron, ExxonMobil, КМГ)',reserves:'60 млн т',production:'2 млн т/год',opened:1991,depth:'3 500–5 000 м',risk:'high',riskLabel:'Высокий — единая инфраструктура с Тенгизом',fact:'Разрабатывается совместно с Тенгизом. Часть единой инфраструктуры ТШО.',color:'#E53935'},
 ];
-let oilLayerMain=null;
+let oilLayerNbd=null;
 
 function _renderOilLayer(){
-  if(!mapMainInst) return;
-  if(oilLayerMain){ mapMainInst.removeLayer(oilLayerMain); }
-  oilLayerMain = L.layerGroup();
+  if(!mapNbdInst) return;
+  if(oilLayerNbd){ mapNbdInst.removeLayer(oilLayerNbd); }
+  oilLayerNbd = L.layerGroup();
   OILFIELDS.forEach(f=>{
     const icon = L.divIcon({
       className:'oil-marker',
@@ -4115,10 +4115,10 @@ function _renderOilLayer(){
     L.marker([f.lat,f.lng],{icon})
       .bindTooltip(`<b>${f.name}</b> · ${f.production}`,{direction:'top',offset:[0,-11]})
       .on('click',()=>openOilPanel(f.id))
-      .addTo(oilLayerMain);
+      .addTo(oilLayerNbd);
   });
-  const cb=document.getElementById('mlyrOil');
-  if(!cb || cb.checked) oilLayerMain.addTo(mapMainInst);
+  const cb=document.getElementById('nbdLyrOil');
+  if(!cb || cb.checked) oilLayerNbd.addTo(mapNbdInst);
 }
 
 function openOilPanel(id){
@@ -4163,7 +4163,6 @@ function closeOilPanel(){
 function toggleMainLayer(type, on){
   if(type==='appeals' && geoLayerMain) on ? mapMainInst.addLayer(geoLayerMain) : mapMainInst.removeLayer(geoLayerMain);
   if(type==='hydro' && hydroLayerMain) on ? mapMainInst.addLayer(hydroLayerMain) : mapMainInst.removeLayer(hydroLayerMain);
-  if(type==='oil' && oilLayerMain) on ? mapMainInst.addLayer(oilLayerMain) : mapMainInst.removeLayer(oilLayerMain);
   if(type==='pek' && pekLayerMain) on ? mapMainInst.addLayer(pekLayerMain) : mapMainInst.removeLayer(pekLayerMain);
   if(type==='emerg' && emergLayerMain) on ? mapMainInst.addLayer(emergLayerMain) : mapMainInst.removeLayer(emergLayerMain);
   if(type==='waste') { if(on) _renderKgsWasteLayer(); else if(wasteLayerMain) mapMainInst.removeLayer(wasteLayerMain); }
@@ -4618,25 +4617,6 @@ function initMainMap(){
   mapMainInst=L.map('mapMain',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView(_rc?[_rc[0],_rc[1]]:[48.0,66.0],_rc?_rc[2]:4);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:ACTIVE_REGION?1.0:0.45}).addTo(mapMainInst);
   L.control.attribution({prefix:'🇰🇿 Таза Казахстан'}).addTo(mapMainInst);
-
-  // Слой месторождений
-  _renderOilLayer();
-
-  // Легенда (левый нижний угол)
-  const oilLegend=L.control({position:'bottomleft'});
-  oilLegend.onAdd=function(){
-    const div=L.DomUtil.create('div','map-legend');
-    div.innerHTML=
-      '<div><span class="lg-dot" style="background:#E53935"></span>Высокий экориск</div>'+
-      '<div><span class="lg-dot" style="background:#FB8C00"></span>Средний экориск</div>'+
-      '<div><span class="lg-dot" style="background:#43A047"></span>Низкий экориск</div>'+
-      '<div><span class="lg-dot" style="background:#7c3aed"></span>Пост Казгидромета</div>';
-    return div;
-  };
-  oilLegend.addTo(mapMainInst);
-
-  // Клик по пустой карте закрывает панель месторождения
-  mapMainInst.on('click', closeOilPanel);
   const maxVal=Math.max(...Object.values(REAL_ECO).map(d=>d.total),1);
   fetch(KAZ_GEO_URL)
     .then(r=>{if(!r.ok)throw new Error(r.status);return r.json();})
@@ -4845,6 +4825,26 @@ function initNbdMap(){
   nbdFireLayer=L.layerGroup().addTo(mapNbdInst);
   if(_KGS_MAP) _addNbdFirePoints();
   else fetch('/data/kgs_map.json').then(r=>r.json()).then(d=>{_KGS_MAP=d;_addNbdFirePoints();}).catch(()=>{});
+
+  // Слой месторождений
+  _renderOilLayer();
+
+  // Легенда (левый нижний угол)
+  const oilLegend=L.control({position:'bottomleft'});
+  oilLegend.onAdd=function(){
+    const div=L.DomUtil.create('div','map-legend');
+    div.innerHTML=
+      '<div><span class="lg-dot" style="background:#E53935"></span>Высокий экориск</div>'+
+      '<div><span class="lg-dot" style="background:#FB8C00"></span>Средний экориск</div>'+
+      '<div><span class="lg-dot" style="background:#43A047"></span>Низкий экориск</div>'+
+      '<div><span class="lg-dot" style="background:#7c3aed"></span>Пост Казгидромета</div>';
+    return div;
+  };
+  oilLegend.addTo(mapNbdInst);
+
+  // Клик по пустой карте закрывает панель месторождения
+  mapNbdInst.on('click', closeOilPanel);
+
   setTimeout(()=>mapNbdInst.invalidateSize(),400);
 }
 function _addNbdFirePoints(){
@@ -4861,6 +4861,7 @@ function toggleNbdLayer(type,on){
   if(type==='pek')   nbdPekLayer   && (on?mapNbdInst.addLayer(nbdPekLayer)  :mapNbdInst.removeLayer(nbdPekLayer));
   if(type==='emerg') nbdEmergLayer && (on?mapNbdInst.addLayer(nbdEmergLayer):mapNbdInst.removeLayer(nbdEmergLayer));
   if(type==='fire')  nbdFireLayer  && (on?mapNbdInst.addLayer(nbdFireLayer) :mapNbdInst.removeLayer(nbdFireLayer));
+  if(type==='oil')   oilLayerNbd   && (on?mapNbdInst.addLayer(oilLayerNbd)  :mapNbdInst.removeLayer(oilLayerNbd));
 }
 
 // ── КАРТА КГС ─────────────────────────────────────────────────────────────────
