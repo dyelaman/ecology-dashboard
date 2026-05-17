@@ -290,6 +290,10 @@ input[type=file]{display:none}
     <option value="11">Ноя</option>
     <option value="12">Дек</option>
   </select>
+  <span class="fbar-label">День</span>
+  <select id="gDay" onchange="onGlobalFilter()">
+    <option value="all">Все</option>
+  </select>
   <div class="fbar-sep"></div>
   <span class="fbar-label">Регион</span>
   <select id="gReg" onchange="cascadeIssueFilter();onGlobalFilter()">
@@ -2205,6 +2209,16 @@ function renderMainCharts() {
       if(tzEl) tzEl.textContent = tzData.total.toLocaleString('ru-RU');
     }
     fetch('/data/chunks/manifest.json').then(r=>r.json()).then(m=>{_CHUNK_MANIFEST=m;}).catch(()=>{});
+    // Компактный per-appeal датасет — для фильтрации по месяцам/дням (загружаем в фоне)
+    fetch('/data/appeals_compact.json').then(r=>r.json()).then(ac=>{
+      _AC=ac;
+      if(timeFilterActive()) applyTimeEngine();
+    }).catch(e=>console.warn('appeals_compact load failed:',e.message));
+    // Заполняем фильтр «День» (1–31)
+    (function(){
+      const gd=document.getElementById('gDay');
+      if(gd) for(let d=1;d<=31;d++){const o=document.createElement('option');o.value=String(d);o.textContent=String(d);gd.appendChild(o);}
+    })();
     renderHearingsTab(summary.appeals);
     // Populate global filter dropdowns from real data
     (function populateFilters(a){
@@ -4338,6 +4352,7 @@ function toggleAdvancedFilters(){
 const _FCHIP_DEFS=[
   {id:'gYear',  label:'Год'},
   {id:'gMonth', label:'Месяц'},
+  {id:'gDay',   label:'День'},
   {id:'gReg',   label:'Регион'},
   {id:'gType',  label:'Тип'},
   {id:'gStatus',label:'Статус'},
@@ -4385,15 +4400,146 @@ function clearOneFilter(id){
   if(id==='gDupSel'){ onDupFilter(); } else { onGlobalFilter(); }
 }
 
+// ── ДВИЖОК ФИЛЬТРАЦИИ ПО МЕСЯЦАМ/ДНЯМ (per-appeal) ──────────────────────────
+let _AC=null;
+const _MO_RU3=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+
+function timeFilterActive(){
+  const m=document.getElementById('gMonth')?.value||'all';
+  const d=document.getElementById('gDay')?.value||'all';
+  return m!=='all'||d!=='all';
+}
+
+function _engSetChart(id,pairs,limit,truncN){
+  const cv=document.getElementById(id); if(!cv) return;
+  const ch=Chart.getChart(cv); if(!ch) return;
+  const top=pairs.slice(0,limit||pairs.length);
+  const tr=s=>(truncN&&s.length>truncN)?s.slice(0,truncN-1)+'…':s;
+  ch.data.labels=top.map(p=>tr(String(p[0])));
+  if(ch.data.datasets[0]) ch.data.datasets[0].data=top.map(p=>p[1]);
+  ch.update('none');
+}
+
+function applyTimeEngine(){
+  if(!_AC) return;
+  const F=id=>document.getElementById(id)?.value||'all';
+  const yF=F('gYear'),mF=F('gMonth'),dF=F('gDay');
+  const regF=F('gReg'),catF=F('gCatF'),typF=F('gType'),stF=F('gStatus');
+  const dupOnly=(typeof _gDupActive!=='undefined')&&_gDupActive;
+  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF, dN=dF==='all'?-1:+dF;
+  const regI=regF==='all'?-1:_AC.regions.indexOf(regF);
+  const catI=catF==='all'?-1:_AC.cats.indexOf(catF);
+  const typI=typF==='all'?-1:_AC.types.indexOf(typF);
+
+  const w=_AC.w,D=_AC.data,n=_AC.n;
+  const regTot=new Int32Array(_AC.regions.length), regLate=new Int32Array(_AC.regions.length);
+  const catTot=new Int32Array(_AC.cats.length), typTot=new Int32Array(_AC.types.length);
+  const subTot=new Int32Array(_AC.subs.length), orgTot=new Int32Array(_AC.orgs.length);
+  const dayCnt=new Map(), dayLate=new Map();
+  let total=0,closed=0,inwork=0,overdue=0,dup=0;
+
+  for(let i=0;i<n;i++){
+    const o=i*w, ymd=D[o];
+    const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100, dd=ymd%100;
+    if(yN>=0&&yy!==yN) continue;
+    if(mN>=0&&mm!==mN) continue;
+    if(dN>=0&&dd!==dN) continue;
+    const rr=D[o+1],cc=D[o+2],tt=D[o+3],ss=D[o+4],su=D[o+6],og=D[o+7],fl=D[o+8];
+    if(regI>=0&&rr!==regI) continue;
+    if(catI>=0&&cc!==catI) continue;
+    if(typI>=0&&tt!==typI) continue;
+    const isClosed=(ss===1||ss===3), isOverdue=(ss===2), isLate=(ss===2||ss===3);
+    if(stF==='done'&&!isClosed) continue;
+    if(stF==='work'&&!(ss===0||ss===2)) continue;
+    if(stF==='late'&&!isOverdue) continue;
+    if(dupOnly&&!(fl&1)) continue;
+    total++;
+    if(isClosed)closed++; else inwork++;
+    if(isOverdue)overdue++;
+    if(fl&1)dup++;
+    regTot[rr]++; if(isLate)regLate[rr]++;
+    catTot[cc]++; typTot[tt]++; subTot[su]++; orgTot[og]++;
+    dayCnt.set(ymd,(dayCnt.get(ymd)||0)+1);
+    if(isLate) dayLate.set(ymd,(dayLate.get(ymd)||0)+1);
+  }
+
+  const ru=v=>v.toLocaleString('ru-RU');
+  const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  setEl('kpiEco',ru(total));
+  setEl('kpiDone',(total?Math.round(closed/total*100):0)+'%');
+  setEl('kpiWork',ru(inwork));
+  setEl('kpiLate',ru(overdue));
+  setEl('kpiDup',ru(dup));
+  const dp=document.getElementById('kpiDupPct');
+  if(dp) dp.textContent=(total?(dup/total*100).toFixed(1):0)+'% от выборки';
+
+  const pairsOf=(arr,names)=>names.map((nm,i)=>[nm,arr[i]]).filter(p=>p[1]>0).sort((a,b)=>b[1]-a[1]);
+  _engSetChart('c12', pairsOf(regTot,_AC.regions), 10, 12);
+  _engSetChart('cRegLate', pairsOf(regLate,_AC.regions), 15, 13);
+  _engSetChart('cAppType', pairsOf(typTot,_AC.types), 8, 30);
+  _engSetChart('c3', pairsOf(catTot,_AC.cats), 8, 26);
+  _engSetChart('cAppSubCat', pairsOf(subTot,_AC.subs), 8, 24);
+
+  // Исполнители
+  const pl=document.getElementById('envPlants');
+  if(pl){
+    const orgs=pairsOf(orgTot,_AC.orgs).slice(0,10);
+    const shortName=s=>{s=s.replace(/^(Коммунальное государственное учреждение|Государственное учреждение|Республиканское государственное учреждение|Акционерное общество|Товарищество с ограниченной ответственностью)\s*/i,'');return s.length>55?s.slice(0,55)+'…':s;};
+    pl.innerHTML=orgs.map(([nm,cnt])=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border)"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${nm.replace(/"/g,'&quot;')}">${shortName(nm)}</span><span style="font-size:10px;color:var(--text2)">${ru(cnt)}</span></div>`).join('');
+  }
+
+  // Хороплет карты
+  if(geoLayerMain){
+    const src={};
+    _AC.regions.forEach((nm,i)=>{src[nm]={total:regTot[i],late:regLate[i]};});
+    const maxVal=Math.max(...Object.values(src).map(d=>d.total),1);
+    geoLayerMain.setStyle(f=>{
+      const ecoKey=GEO_TO_ECO[f.properties.name_ru];
+      const d=ecoKey&&src[ecoKey];
+      if(ACTIVE_REGION){
+        const isActive=ecoKey===ACTIVE_REGION;
+        return{fillColor:isActive?'#16a34a':'#334155',weight:isActive?2.5:0.5,color:isActive?'#14532d':'#94a3b8',fillOpacity:isActive?0.18:0.06,opacity:1};
+      }
+      return{fillColor:choroplethColor(d?.total,maxVal),weight:1,color:'#ffffff',fillOpacity:0.82,opacity:1};
+    });
+  }
+
+  // Динамика по дням — если выбран конкретный месяц и год
+  if(mN>=0&&yN>=0) _engRenderDaily(yN,mN,dayCnt,dayLate);
+}
+
+function _engRenderDaily(yN,mN,dayCnt,dayLate){
+  const cv=document.getElementById('cMonthly'); if(!cv) return;
+  const ch=Chart.getChart(cv); if(!ch) return;
+  const dim=new Date(yN,mN,0).getDate();
+  const labels=[],tot=[],late=[];
+  for(let d=1;d<=dim;d++){
+    const key=yN*10000+mN*100+d;
+    labels.push(String(d));
+    tot.push(dayCnt.get(key)||0);
+    late.push(dayLate.get(key)||0);
+  }
+  ch.data.labels=labels;
+  if(ch.data.datasets[0]) ch.data.datasets[0].data=tot;
+  if(ch.data.datasets[1]) ch.data.datasets[1].data=late;
+  ch.update('none');
+  const sub=document.getElementById('cMonthlySubtitle');
+  if(sub) sub.textContent=`· ${_MO_RU3[mN-1]} ${yN} · по дням`;
+}
+
 function onGlobalFilter(){
   const typeVal=document.getElementById('gType')?.value||'all';
   const at=document.getElementById('appTypeFilter');
   if(at) at.value=typeVal==='all'?'':typeVal;
+  // Сброс KPI к базовым значениям, если фильтр по месяцу/дню снят
+  // (движок мог оставить значения за месяц/день)
+  if(!timeFilterActive()) applyRealKPIs();
   filterAppTable();
   loadChunkForFilters();
   applyFilter();
   applyGlobalFiltersToCharts();
   updateFilterChips();
+  if(timeFilterActive()) applyTimeEngine();
 }
 
 function applyGlobalFiltersToCharts(){
@@ -4586,7 +4732,7 @@ function resetGlobalFilter(){
   _gDupActive = false;
   const ds = document.getElementById('gDupSel');
   if(ds) ds.value = 'all';
-  ['gYear','gMonth','gReg','gStatus','gType','gCatF','gIssueF','gSubF','gCGO','gMIO'].forEach(id=>{
+  ['gYear','gMonth','gDay','gReg','gStatus','gType','gCatF','gIssueF','gSubF','gCGO','gMIO'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='all';
   });
   ['appCatFilter','appIssFilter','appSubFilter','prvCat','prvIss','prvSub'].forEach(id=>{
@@ -5293,6 +5439,16 @@ function resetPrvFilters(){
   _prvPage=0;filterPrvTable();
 }
 
+function _rowYMD(r){
+  let s=String(r.created_date||r.start_dt||r.reg_date||'');
+  if(!s) return null;
+  let m=s.match(/^(\d{2})\.(\d{2})\.(\d{4})/);   // ДД.ММ.ГГГГ
+  if(m) return [+m[3],+m[2],+m[1]];
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);         // ГГГГ-ММ-ДД
+  if(m) return [+m[1],+m[2],+m[3]];
+  return null;
+}
+
 function filterPrvTable(){
   const search=(document.getElementById('prvSearch')?.value||'').toLowerCase();
   const typeF=(document.getElementById('prvType')?.value||'').toLowerCase();
@@ -5308,6 +5464,10 @@ function filterPrvTable(){
   const gIssV=document.getElementById('gIssueF')?.value||'all';
   const gSubV=document.getElementById('gSubF')?.value||'all';
   const gStatV=document.getElementById('gStatus')?.value||'all';
+  const gYearV=document.getElementById('gYear')?.value||'all';
+  const gMonthV=document.getElementById('gMonth')?.value||'all';
+  const gDayV=document.getElementById('gDay')?.value||'all';
+  const dateActive=gYearV!=='all'||gMonthV!=='all'||gDayV!=='all';
   // Локальные фильтры главной страницы
   const lCatV=document.getElementById('prvCat')?.value||'all';
   const lIssV=document.getElementById('prvIss')?.value||'all';
@@ -5332,6 +5492,13 @@ function filterPrvTable(){
     if(lCatV!=='all'&&(r.category_short||r.issue_category_name_ru||'').indexOf(lCatV)===-1) return false;
     if(lIssV!=='all'&&(r.issue||'').indexOf(lIssV)===-1) return false;
     if(lSubV!=='all'&&(r.subissue_short||r.subissue||'').indexOf(lSubV)===-1) return false;
+    if(dateActive){
+      const ymd=_rowYMD(r);
+      if(!ymd) return false;
+      if(gYearV!=='all'&&ymd[0]!==+gYearV) return false;
+      if(gMonthV!=='all'&&ymd[1]!==+gMonthV) return false;
+      if(gDayV!=='all'&&ymd[2]!==+gDayV) return false;
+    }
     if(search){
       const hay=(r.reg_number||'')+' '+(r.issue_category_name_ru||'')+' '+(r.org_name_ru||'')+' '+(r.region||'')+' '+(r.issue||'')+' '+(r.subissue||'');
       if(hay.toLowerCase().indexOf(search)===-1) return false;

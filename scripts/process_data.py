@@ -1613,6 +1613,65 @@ def make_chunks(df, limit=500):
     return manifest
 
 
+def make_appeals_compact(df, top_orgs):
+    """Компактный per-appeal датасет для клиентской фильтрации по дню/месяцу."""
+    print("\nКомпактный per-appeal датасет...")
+    import numpy as np
+    dt = pd.to_datetime(df["start_dt"], errors="coerce")
+    mask = dt.notna()
+    d = df[mask].copy()
+    dt = dt[mask]
+    ymd = (dt.dt.year * 10000 + dt.dt.month * 100 + dt.dt.day).astype("int64")
+
+    regions = sorted(d["_region"].dropna().astype(str).unique().tolist())
+    cats    = sorted(d["_category"].dropna().astype(str).unique().tolist())
+    types   = sorted(d["appeal_type"].dropna().astype(str).unique().tolist())
+    issues  = sorted(d["issue"].dropna().astype(str).unique().tolist())
+    subs    = sorted(d["_subissue"].dropna().astype(str).unique().tolist())
+    org_list = [str(o) for o, _ in top_orgs]
+    OTHER = len(org_list)
+
+    ri = {v: i for i, v in enumerate(regions)}
+    ci = {v: i for i, v in enumerate(cats)}
+    ti = {v: i for i, v in enumerate(types)}
+    ii = {v: i for i, v in enumerate(issues)}
+    si = {v: i for i, v in enumerate(subs)}
+    oi = {v: i for i, v in enumerate(org_list)}
+    st = {"work": 0, "done": 1, "late": 2, "latedone": 3}
+
+    reg_i = d["_region"].astype(str).map(ri).fillna(0).astype("int64")
+    cat_i = d["_category"].astype(str).map(ci).fillna(0).astype("int64")
+    typ_i = d["appeal_type"].astype(str).map(ti).fillna(0).astype("int64")
+    iss_i = d["issue"].astype(str).map(ii).fillna(0).astype("int64")
+    sub_i = d["_subissue"].astype(str).map(si).fillna(0).astype("int64")
+    org_i = d["org_name"].astype(str).map(lambda o: oi.get(o, OTHER)).astype("int64")
+    st_i  = d["_status"].astype(str).map(st).fillna(0).astype("int64")
+
+    def truthy(col):
+        if col in d.columns:
+            return d[col].astype(str).str.lower().isin(["y", "1", "true", "да"]).astype("int64")
+        return pd.Series(0, index=d.index, dtype="int64")
+    flags = truthy("is_duplicate") + truthy("is_forward") * 2 + truthy("is_ext_forward") * 4
+
+    mat = np.column_stack([
+        ymd.values, reg_i.values, cat_i.values, typ_i.values,
+        st_i.values, iss_i.values, sub_i.values, org_i.values, flags.values,
+    ]).astype("int64")
+
+    out = {
+        "n": int(mat.shape[0]),
+        "w": 9,
+        "fields": ["ymd", "region", "cat", "type", "status", "issue", "sub", "org", "flags"],
+        "regions": regions, "cats": cats, "types": types,
+        "issues": issues, "subs": subs, "orgs": org_list + ["Прочие исполнители"],
+        "data": mat.ravel().tolist(),
+    }
+    path = os.path.join(OUT_DIR, "appeals_compact.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"  appeals_compact.json → {os.path.getsize(path)/1024:,.0f} KB ({out['n']:,} обращений)")
+
+
 # ── MAIN ─────────────────────────────────────────────────────────────────────
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
@@ -1638,6 +1697,7 @@ def main():
     ikomek_data  = process_ikomek(df_ikomek)
     preview      = make_preview(df_appeals)
     make_chunks(df_appeals)
+    make_appeals_compact(df_appeals, appeals_data["top_orgs"])
     pek_objects  = process_pek(df_pek)
     emerg_data   = process_emergency(df_emerg)
     air_data     = process_air_emissions(df_air_m, df_air_dev, df_air_sum, df_air_efl, df_air_em)
