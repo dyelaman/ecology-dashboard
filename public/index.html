@@ -395,7 +395,7 @@ input[type=file]{display:none}
   <!-- КАРТА — полная ширина -->
   <div class="card" style="padding:12px;margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">
-      <div class="card-title" style="margin:0" id="mapCardTitle">Карта обращений по регионам</div>
+      <div class="card-title" style="margin:0" id="mapCardTitle">Карта обращений по регионам <span id="mapPeriodTag" style="font-size:10px;font-weight:400;color:#0891B2"></span></div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <div id="mapLegend" style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text2)">
           <span style="display:inline-block;width:50px;height:6px;background:linear-gradient(to right,#bbf7d0,#16A34A);border-radius:4px;border:0.5px solid var(--border)"></span>
@@ -4410,6 +4410,53 @@ function timeFilterActive(){
   return m!=='all'||d!=='all';
 }
 
+const _MO_NOM=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const _MO_GEN=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+
+function _periodLabel(){
+  const y=document.getElementById('gYear')?.value||'all';
+  const m=document.getElementById('gMonth')?.value||'all';
+  const d=document.getElementById('gDay')?.value||'all';
+  if(m!=='all'&&d!=='all') return `${+d} ${_MO_GEN[+m-1]}${y!=='all'?' '+y:''}`;
+  if(m!=='all') return `${_MO_NOM[+m-1]}${y!=='all'?' '+y:''}`;
+  if(d!=='all') return `${+d}-е числа${y!=='all'?' · '+y:''}`;
+  if(y!=='all') return `${y} год`;
+  return '';
+}
+
+function _updateMapPeriodTag(){
+  const el=document.getElementById('mapPeriodTag'); if(!el) return;
+  const lbl=_periodLabel();
+  el.textContent=lbl?'· '+lbl:'';
+}
+
+function _richRegionTooltip(ecoKey,displayName){
+  const d=ecoKey&&REAL_ECO[ecoKey];
+  if(!d||!d.total) return `<b>${displayName}</b>`;
+  const pct=Math.round(d.done/d.total*100);
+  const ti=Object.entries(d.issues||{}).sort((a,b)=>b[1]-a[1]).slice(0,4)
+    .map(([k,v])=>`<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:#6b7280">${k}</span><b>${v.toLocaleString('ru-RU')}</b></div>`).join('');
+  const ik=(typeof REAL_IKOMEK!=='undefined')&&REAL_IKOMEK[ecoKey];
+  const ikBlock=ik?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb"><div style="font-size:11px;font-weight:600;margin-bottom:4px;color:#0891B2">📞 iKomek — звонков: <b>${ik.total.toLocaleString('ru-RU')}</b></div>`+Object.entries(ik.issues).map(([k,v])=>`<div style="display:flex;justify-content:space-between;gap:12px;font-size:10px"><span style="color:#6b7280">${k}</span><b>${v.toLocaleString('ru-RU')}</b></div>`).join('')+`</div>`:'';
+  return `<div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#14532d">${displayName}</div><div style="font-size:11px;margin-bottom:6px;display:flex;gap:16px"><span>Обращений: <b>${d.total.toLocaleString('ru-RU')}</b></span><span>Исполнено: <b style="color:#16A34A">${pct}%</b></span></div><div style="font-size:10px;line-height:1.7">${ti}</div>${ikBlock}`;
+}
+
+function _periodRegionTooltip(name,total,closed,late,lbl){
+  const pct=total>0?Math.round(closed/total*100):0;
+  return `<div style="font-size:13px;font-weight:700;margin-bottom:4px;color:#14532d">${name}</div>`+
+    `<div style="font-size:11px;display:flex;gap:14px;margin-bottom:4px"><span>Обращений: <b>${total.toLocaleString('ru-RU')}</b></span><span>Исполнено: <b style="color:#16A34A">${pct}%</b></span></div>`+
+    `<div style="font-size:11px">Просрочено: <b style="color:#dc2626">${late.toLocaleString('ru-RU')}</b></div>`+
+    `<div style="font-size:9px;color:#0891B2;margin-top:5px;font-weight:600">за период: ${lbl}</div>`;
+}
+
+function _restoreRichTooltips(){
+  if(!geoLayerMain) return;
+  geoLayerMain.eachLayer(l=>{
+    const gk=l.feature?.properties?.name_ru; if(!gk||!l.getTooltip()) return;
+    l.setTooltipContent(_richRegionTooltip(GEO_TO_ECO[gk], gk.replace(' область','')));
+  });
+}
+
 function _engSetChart(id,pairs,limit,truncN){
   const cv=document.getElementById(id); if(!cv) return;
   const ch=Chart.getChart(cv); if(!ch) return;
@@ -4432,7 +4479,7 @@ function applyTimeEngine(){
   const typI=typF==='all'?-1:_AC.types.indexOf(typF);
 
   const w=_AC.w,D=_AC.data,n=_AC.n;
-  const regTot=new Int32Array(_AC.regions.length), regLate=new Int32Array(_AC.regions.length);
+  const regTot=new Int32Array(_AC.regions.length), regLate=new Int32Array(_AC.regions.length), regClosed=new Int32Array(_AC.regions.length);
   const catTot=new Int32Array(_AC.cats.length), typTot=new Int32Array(_AC.types.length);
   const subTot=new Int32Array(_AC.subs.length), orgTot=new Int32Array(_AC.orgs.length);
   const dayCnt=new Map(), dayLate=new Map();
@@ -4457,7 +4504,7 @@ function applyTimeEngine(){
     if(isClosed)closed++; else inwork++;
     if(isOverdue)overdue++;
     if(fl&1)dup++;
-    regTot[rr]++; if(isLate)regLate[rr]++;
+    regTot[rr]++; if(isLate)regLate[rr]++; if(isClosed)regClosed[rr]++;
     catTot[cc]++; typTot[tt]++; subTot[su]++; orgTot[og]++;
     dayCnt.set(ymd,(dayCnt.get(ymd)||0)+1);
     if(isLate) dayLate.set(ymd,(dayLate.get(ymd)||0)+1);
@@ -4488,10 +4535,10 @@ function applyTimeEngine(){
     pl.innerHTML=orgs.map(([nm,cnt])=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border)"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${nm.replace(/"/g,'&quot;')}">${shortName(nm)}</span><span style="font-size:10px;color:var(--text2)">${ru(cnt)}</span></div>`).join('');
   }
 
-  // Хороплет карты
+  // Хороплет карты + тултипы за период
   if(geoLayerMain){
     const src={};
-    _AC.regions.forEach((nm,i)=>{src[nm]={total:regTot[i],late:regLate[i]};});
+    _AC.regions.forEach((nm,i)=>{src[nm]={total:regTot[i],closed:regClosed[i],late:regLate[i]};});
     const maxVal=Math.max(...Object.values(src).map(d=>d.total),1);
     geoLayerMain.setStyle(f=>{
       const ecoKey=GEO_TO_ECO[f.properties.name_ru];
@@ -4501,6 +4548,15 @@ function applyTimeEngine(){
         return{fillColor:isActive?'#16a34a':'#334155',weight:isActive?2.5:0.5,color:isActive?'#14532d':'#94a3b8',fillOpacity:isActive?0.18:0.06,opacity:1};
       }
       return{fillColor:choroplethColor(d?.total,maxVal),weight:1,color:'#ffffff',fillOpacity:0.82,opacity:1};
+    });
+    const plbl=_periodLabel();
+    geoLayerMain.eachLayer(l=>{
+      const gk=l.feature?.properties?.name_ru; if(!gk||!l.getTooltip()) return;
+      const nm=gk.replace(' область','');
+      const d=src[GEO_TO_ECO[gk]];
+      l.setTooltipContent(d&&d.total
+        ? _periodRegionTooltip(nm,d.total,d.closed,d.late,plbl)
+        : `<div style="font-size:13px;font-weight:700;color:#14532d">${nm}</div><div style="font-size:10px;color:#6b7280;margin-top:3px">нет обращений за период: ${plbl}</div>`);
     });
   }
 
@@ -4540,6 +4596,7 @@ function onGlobalFilter(){
   applyGlobalFiltersToCharts();
   updateFilterChips();
   if(timeFilterActive()) applyTimeEngine();
+  _updateMapPeriodTag();
 }
 
 function applyGlobalFiltersToCharts(){
@@ -4794,30 +4851,7 @@ function initMainMap(){
             },
             click:()=>{if(ecoKey)openRegionNews(ecoKey);}
           });
-          if(d){
-            const pct=Math.round(d.done/d.total*100);
-            const ti=Object.entries(d.issues).sort((a,b)=>b[1]-a[1]).slice(0,4)
-              .map(([k,v])=>`<div style="display:flex;justify-content:space-between;gap:12px"><span style="color:#6b7280">${k}</span><b>${v.toLocaleString('ru-RU')}</b></div>`).join('');
-            const ik=REAL_IKOMEK[ecoKey];
-            const ikBlock=ik
-              ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e5e7eb">`+
-                `<div style="font-size:11px;font-weight:600;margin-bottom:4px;color:#0891B2">📞 iKomek — звонков: <b>${ik.total.toLocaleString('ru-RU')}</b></div>`+
-                Object.entries(ik.issues).map(([k,v])=>`<div style="display:flex;justify-content:space-between;gap:12px;font-size:10px"><span style="color:#6b7280">${k}</span><b>${v.toLocaleString('ru-RU')}</b></div>`).join('')+
-                `</div>`
-              : '';
-            layer.bindTooltip(
-              `<div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#14532d">${displayName}</div>`+
-              `<div style="font-size:11px;margin-bottom:6px;display:flex;gap:16px">`+
-                `<span>Обращений: <b>${d.total.toLocaleString('ru-RU')}</b></span>`+
-                `<span>Исполнено: <b style="color:#16A34A">${pct}%</b></span>`+
-              `</div>`+
-              `<div style="font-size:10px;line-height:1.7">${ti}</div>`+
-              ikBlock,
-              {sticky:true,maxWidth:260,className:''}
-            );
-          } else {
-            layer.bindTooltip(`<b>${displayName}</b>`,{sticky:true});
-          }
+          layer.bindTooltip(_richRegionTooltip(ecoKey,displayName),{sticky:true,maxWidth:260,className:''});
         }
       }).addTo(mapMainInst);
       mapMainInst.fitBounds(geoLayerMain.getBounds(),{padding:[8,8]});
@@ -4940,6 +4974,8 @@ function updateChoropleth(){
     }
     return{fillColor:choroplethColor(d?.total,maxVal),weight:1,color:'#ffffff',fillOpacity:0.82,opacity:1};
   });
+  // Тултипы: если фильтр по месяцу/дню не активен — восстанавливаем полные (за всё время)
+  if(!timeFilterActive()) _restoreRichTooltips();
 }
 
 // ── КАРТА НБД СОС ────────────────────────────────────────────────────────────
