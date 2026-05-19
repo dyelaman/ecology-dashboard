@@ -4135,6 +4135,75 @@ function _renderOilLayer(){
   if(!cb || cb.checked) oilLayerNbd.addTo(mapNbdInst);
 }
 
+// ── Сопоставление месторождений с объектами ПЭК ────────────────────────────
+let _PEK_OBJECTS=null, _oilfieldPekCache=null;
+
+function _haversine(la1,lo1,la2,lo2){
+  const R=6371, tr=x=>x*Math.PI/180;
+  const dla=tr(la2-la1), dlo=tr(lo2-lo1);
+  const a=Math.sin(dla/2)**2+Math.cos(tr(la1))*Math.cos(tr(la2))*Math.sin(dlo/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function _oilKeys(f){
+  const full=f.name.toLowerCase();
+  const keys=[full];
+  const parts=full.split(/\s+/);
+  if(parts.length>1){ const last=parts[parts.length-1]; if(last.length>=5) keys.push(last); }
+  return keys;
+}
+
+function _computeOilfieldPek(){
+  if(_oilfieldPekCache) return _oilfieldPekCache;
+  if(!_PEK_OBJECTS||!_PEK_OBJECTS.length) return null;
+  const RADIUS=45; // км — для месторождений с точными координатами
+  const map={}; OILFIELDS.forEach(f=>map[f.id]=[]);
+  const keys=OILFIELDS.map(f=>_oilKeys(f));
+  _PEK_OBJECTS.forEach(o=>{
+    if(o.lat==null||o.lon==null) return;
+    const hay=((o.name||'')+' '+(o.address||'')).toLowerCase();
+    let named=false;
+    OILFIELDS.forEach((f,fi)=>{
+      if(keys[fi].some(k=>hay.includes(k))){
+        map[f.id].push({name:o.name,cat:o.cat,dist:_haversine(f.lat,f.lng,o.lat,o.lon),byName:true});
+        named=true;
+      }
+    });
+    if(named) return;
+    let best=-1,bestD=1e9;
+    OILFIELDS.forEach((f,fi)=>{
+      const d=_haversine(f.lat,f.lng,o.lat,o.lon);
+      if(d<bestD){ bestD=d; best=fi; }
+    });
+    if(best>=0&&bestD<=RADIUS){
+      map[OILFIELDS[best].id].push({name:o.name,cat:o.cat,dist:bestD,byName:false});
+    }
+  });
+  Object.values(map).forEach(a=>a.sort((x,y)=>x.dist-y.dist));
+  _oilfieldPekCache=map;
+  return map;
+}
+
+function _oilPekSectionHTML(f){
+  const map=_computeOilfieldPek();
+  if(!map){
+    return `<div class="oilp-sec" style="border-bottom:none"><div class="oilp-sec-t">📋 ОБЪЕКТЫ ПЭК (НБД СОС)</div><div style="font-size:11px;color:var(--text3)">Загрузка данных НБД…</div></div>`;
+  }
+  const list=map[f.id]||[];
+  const c1=list.filter(o=>o.cat===1).length, c2=list.filter(o=>o.cat===2).length, c3=list.filter(o=>o.cat===3).length;
+  const rows=list.slice(0,50).map(o=>{
+    const cc=o.cat===1?'#ef4444':o.cat===2?'#f97316':'#9ca3af';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border)"><span style="width:6px;height:6px;border-radius:50%;background:${cc};flex-shrink:0"></span><span style="font-size:10px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(o.name||'').replace(/"/g,'&quot;')}">${o.name||'—'}</span><span style="font-size:9px;color:var(--text3);white-space:nowrap">${o.byName?'по названию':Math.round(o.dist)+' км'}</span></div>`;
+  }).join('');
+  return `<div class="oilp-sec" style="border-bottom:none">
+    <div class="oilp-sec-t">📋 ОБЪЕКТЫ ПЭК РЯДОМ <span style="font-weight:400;color:var(--text3)">· НБД СОС</span></div>
+    <div class="oilp-row"><span>Всего объектов</span><b>${list.length}</b></div>
+    <div class="oilp-row"><span>I / II / III категория</span><b>${c1} / ${c2} / ${c3}</b></div>
+    ${list.length?`<div style="margin-top:8px;max-height:230px;overflow-y:auto">${rows}${list.length>50?`<div style="font-size:9px;color:var(--text3);padding:5px 0">…ещё ${list.length-50}</div>`:''}</div>`:`<div style="font-size:11px;color:var(--text3);margin-top:6px">Объекты ПЭК рядом не найдены</div>`}
+    <div style="font-size:9px;color:var(--text3);margin-top:7px;font-style:italic;line-height:1.4">Принадлежность условная — по совпадению названия или близости (≤45 км от месторождения)</div>
+  </div>`;
+}
+
 function openOilPanel(id){
   const f=OILFIELDS.find(x=>x.id===id); if(!f) return;
   const riskName={high:'ВЫСОКИЙ',medium:'СРЕДНИЙ',low:'НИЗКИЙ'}[f.risk]||'—';
@@ -4160,14 +4229,15 @@ function openOilPanel(id){
       <div class="oilp-sec-t">💡 ФАКТ</div>
       <div style="font-size:12px;color:var(--text2);line-height:1.5">${f.fact}</div>
     </div>
-    <div class="oilp-sec" style="border-bottom:none">
-      <div class="oilp-sec-t">📋 ДАННЫЕ ИЗ НБД <span style="font-weight:400;color:var(--text3)">· заглушка</span></div>
-      <div class="oilp-row"><span>Объектов ПЭК</span><b>—</b></div>
-      <div class="oilp-row"><span>Выбросов за 2025</span><b>— т</b></div>
-      <div class="oilp-row"><span>Обращений рядом</span><b>— шт</b></div>
-      <div class="oilp-row"><span>Нарушений</span><b>— шт</b></div>
-    </div>`;
+    ${_oilPekSectionHTML(f)}`;
   const p=document.getElementById('oilPanel'); if(p) p.classList.add('open');
+  // Ленивая загрузка объектов ПЭК — если ещё не загружены, подтягиваем и перерисовываем
+  if(!_PEK_OBJECTS){
+    fetch('/data/pek_objects.json').then(r=>r.json()).then(d=>{
+      _PEK_OBJECTS=d.objects||[];
+      if(document.getElementById('oilPanel')?.classList.contains('open')) openOilPanel(id);
+    }).catch(e=>console.warn('PEK load for oilfields failed:',e.message));
+  }
 }
 
 function closeOilPanel(){
@@ -4987,6 +5057,7 @@ function initNbdMap(){
   // ПЭК объекты
   nbdPekLayer=L.layerGroup().addTo(mapNbdInst);
   fetch('/data/pek_objects.json').then(r=>r.json()).then(data=>{
+    _PEK_OBJECTS=data.objects||[];
     _renderPekLayer(data, nbdPekLayer);
     const cb=document.getElementById('nbdLyrPek');
     if(cb&&!cb.checked) mapNbdInst.removeLayer(nbdPekLayer);
