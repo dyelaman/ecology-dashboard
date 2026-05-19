@@ -2126,9 +2126,9 @@ function renderMainCharts() {
   const _typeBg=['#dc2626','#0891B2','#7c3aed','#16a34a','#d97706','#f59e0b','#06b6d4','#84cc16'];
   if (_chartType) { _chartType.destroy(); _chartType = null; }
   const typeData = types || [['Жалоба',121],['Заявление',89],['Запрос',34],['Предложение',18],['Сообщение',6]];
-  _chartType = mkC('cAppType','bar',typeData.map(([n])=>trunc(n,30)),
+  _chartType = mkC('cAppType','bar',typeData.map(([n])=>n),
     [{data:typeData.map(([,v])=>v),backgroundColor:typeData.map((_,i)=>_typeBg[i%_typeBg.length]),borderRadius:3}],
-    Object.assign({indexAxis:'y',scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}}},_clickOpts((i)=>{
+    Object.assign({indexAxis:'y',scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}}},_clickOpts((i)=>{
       const v=typeData[i]?.[0]||''; const el=document.getElementById('gType');
       if(el){el.value=v;onGlobalFilter();}
     })));
@@ -2142,14 +2142,14 @@ function renderMainCharts() {
     new Chart(subCatCtx, {
       type:'bar',
       data:{
-        labels: subCatData.map(([n])=>trunc(n,24)),
+        labels: subCatData.map(([n])=>n),
         datasets:[{data:subCatData.map(([,v])=>v), backgroundColor:subCatColors, borderRadius:3}]
       },
       options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toLocaleString('ru-RU')}}},
         scales:{
           x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>(v/1000).toFixed(0)+'k'}},
-          y:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af'}},
+          y:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af',callback:_truncTick}},
         }
       }
     });
@@ -3400,6 +3400,12 @@ const REG_COORDS={"Астана":[51.18,71.45],"Алматы":[43.25,76.9],"Ал
 const co = () => ({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{color:'#9ca3af',font:{size:10}}},y:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{color:'#9ca3af',font:{size:10}}}}});
 function mkC(id,type,labels,datasets,extra){const ctx=document.getElementById(id);if(!ctx)return null;return new Chart(ctx,{type,data:{labels,datasets},options:Object.assign({},co(),extra||{})});}
 
+// Обрезка подписи оси для отображения; полное имя остаётся в data.labels → видно в тултипе
+function _truncTick(value){
+  const l=this.getLabelForValue(value);
+  return (l&&l.length>20) ? l.slice(0,19)+'…' : l;
+}
+
 let c12Chart=null,c13Chart=null,cRegLateChart=null;
 
 // ── Drill-down chart для c3 ───────────────────────────────────────────────
@@ -3508,9 +3514,9 @@ function _renderC3(){
   }
   if(!data.length)return;
   _chartCat=new Chart(el,{type:'bar',
-    data:{labels:data.map(([n])=>trunc(n,26)),datasets:[{label:'Обращений',data:data.map(([,v])=>v),backgroundColor:color,borderRadius:3}]},
+    data:{labels:data.map(([n])=>n),datasets:[{label:'Обращений',data:data.map(([,v])=>v),backgroundColor:color,borderRadius:3}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}},
+      scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},
       onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},
       onClick:clickFn}});
 }
@@ -3665,11 +3671,11 @@ function _rechartOnFilter(){
     const d=srcData.slice(0,8);
     if(!d.length)return;
     new Chart(ctx,{type:'bar',
-      data:{labels:d.map(([n])=>trunc(n,24)),datasets:[{data:d.map(([,v])=>v),backgroundColor:colors,borderRadius:3}]},
+      data:{labels:d.map(([n])=>n),datasets:[{data:d.map(([,v])=>v),backgroundColor:colors,borderRadius:3}]},
       options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
         plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toLocaleString('ru-RU')}}},
         scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af'}},
-                y:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af'}}}}});
+                y:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af',callback:_truncTick}}}}});
   })();
 
   // c12: адаптируется под контекст фильтров
@@ -4594,9 +4600,9 @@ function applyTimeEngine(){
   const pairsOf=(arr,names)=>names.map((nm,i)=>[nm,arr[i]]).filter(p=>p[1]>0).sort((a,b)=>b[1]-a[1]);
   _engSetChart('c12', pairsOf(regTot,_AC.regions), 10, 12);
   _engSetChart('cRegLate', pairsOf(regLate,_AC.regions), 15, 13);
-  _engSetChart('cAppType', pairsOf(typTot,_AC.types), 8, 30);
-  _engSetChart('c3', pairsOf(catTot,_AC.cats), 8, 26);
-  _engSetChart('cAppSubCat', pairsOf(subTot,_AC.subs), 8, 24);
+  _engSetChart('cAppType', pairsOf(typTot,_AC.types), 8);
+  _engSetChart('c3', pairsOf(catTot,_AC.cats), 8);
+  _engSetChart('cAppSubCat', pairsOf(subTot,_AC.subs), 8);
 
   // Исполнители
   const pl=document.getElementById('envPlants');
