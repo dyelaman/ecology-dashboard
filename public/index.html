@@ -55,6 +55,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tip{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:var(--border2);color:var(--text3);font-size:9px;font-weight:700;cursor:help;position:relative;vertical-align:middle}
 .tip:hover{background:var(--green);color:#fff}
 #tipBox{position:fixed;background:#1f2937;color:#fff;font-size:10px;line-height:1.45;padding:7px 10px;border-radius:6px;max-width:230px;z-index:99999;box-shadow:0 6px 18px rgba(0,0,0,.28);pointer-events:none;display:none}
+.region-list-scroll{max-height:400px;overflow-y:auto;padding-right:6px}
+.region-list-scroll::-webkit-scrollbar{width:6px}
+.region-list-scroll::-webkit-scrollbar-track{background:transparent}
+.region-list-scroll::-webkit-scrollbar-thumb{background:#c4c4c4;border-radius:3px}
+.region-list-scroll::-webkit-scrollbar-thumb:hover{background:#999}
+.rc-host{position:relative}
 .synthetic-zone{background:repeating-linear-gradient(45deg,#fffbeb,#fffbeb 14px,#fef6e0 14px,#fef6e0 28px);border:2px dashed #fcd34d;border-radius:10px;padding:14px}
 .oil-marker{background:none;border:none}
 .oil-dot{width:18px;height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer}
@@ -470,11 +476,11 @@ input[type=file]{display:none}
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
     <div class="card" style="padding:12px">
       <div class="block-title" style="margin-top:0" id="c12Title">Топ регионов по обращениям</div>
-      <div class="cw" style="height:260px"><canvas id="c12"></canvas></div>
+      <div class="region-list-scroll"><div class="rc-host" style="height:260px"><canvas id="c12"></canvas></div></div>
     </div>
     <div class="card" style="padding:12px">
       <div class="block-title" style="margin-top:0">Просрочено по регионам</div>
-      <div class="cw" style="height:260px"><canvas id="cRegLate"></canvas></div>
+      <div class="region-list-scroll"><div class="rc-host" style="height:260px"><canvas id="cRegLate"></canvas></div></div>
     </div>
     <div class="card" style="padding:12px;display:flex;flex-direction:column">
       <div class="block-title" style="margin-top:0">Топ исполнителей</div>
@@ -3406,6 +3412,14 @@ function _truncTick(value){
   return (l&&l.length>20) ? l.slice(0,19)+'…' : l;
 }
 
+// Подгонка высоты canvas под число строк (30px на строку) — для скролл-блоков регионов
+function _fitRegionCanvas(id,n){
+  const cv=document.getElementById(id); if(!cv) return;
+  const host=cv.parentElement;
+  if(host) host.style.height=Math.max(240,(n||1)*30)+'px';
+  const ch=Chart.getChart(cv); if(ch) ch.resize();
+}
+
 let c12Chart=null,c13Chart=null,cRegLateChart=null;
 
 // ── Drill-down chart для c3 ───────────────────────────────────────────────
@@ -3684,7 +3698,7 @@ function _rechartOnFilter(){
   const year=document.getElementById('gYear')?.value||'all';
   if(c12Chart){
     const c12TitleEl=document.getElementById('c12Title');
-    const trunc12=n=>n.length>14?n.slice(0,13)+'..':n;
+    const trunc12=n=>n;
     if(reg!=='all'){
       // Регион выбран → показываем категории в этом регионе
       let cats;
@@ -3716,12 +3730,13 @@ function _rechartOnFilter(){
       c12Chart.data.datasets[0].data=byReg.map(([,d])=>d.total);
       if(c12TitleEl)c12TitleEl.textContent='Регионы · '+cat.slice(0,28);
     } else {
-      const topR=Object.entries(REAL_ECO).map(([n,d])=>[n,_gDupActive?(d.dup||0):(d.total||0)]).sort((a,b)=>b[1]-a[1]).slice(0,10);
+      const topR=Object.entries(REAL_ECO).map(([n,d])=>[n,_gDupActive?(d.dup||0):(d.total||0)]).sort((a,b)=>b[1]-a[1]);
       c12Chart.data.labels=topR.map(([n])=>trunc12(n));
       c12Chart.data.datasets[0].data=topR.map(([,v])=>v);
       if(c12TitleEl)c12TitleEl.textContent=_gDupActive?'Топ регионов — повторные':'Топ регионов по обращениям';
     }
     c12Chart.update();
+    _fitRegionCanvas('c12',c12Chart.data.labels.length);
   }
 
   // cRegLate: просрочка по регионам (выбранный регион подсвечивается)
@@ -3730,21 +3745,22 @@ function _rechartOnFilter(){
     let lateData;
     if(cat!=='all'){
       const byReg=_CROSS?.[cat]?.by_region||{};
-      lateData=Object.entries(byReg).map(([n,d])=>({name:n,late:d.late||0})).filter(d=>d.late>0).sort((a,b)=>b.late-a.late).slice(0,15);
+      lateData=Object.entries(byReg).map(([n,d])=>({name:n,late:d.late||0})).filter(d=>d.late>0).sort((a,b)=>b.late-a.late);
     } else {
       const yearV=document.getElementById('gYear')?.value||'all';
       const regSrc = yearV!=='all'&&_YEAR_CROSS?.[yearV] ? _YEAR_CROSS[yearV].by_region : REAL_ECO;
-      lateData=Object.entries(regSrc).map(([n,d])=>({name:n,late:d.late||0})).filter(d=>d.late>0).sort((a,b)=>b.late-a.late).slice(0,15);
+      lateData=Object.entries(regSrc).map(([n,d])=>({name:n,late:d.late||0})).filter(d=>d.late>0).sort((a,b)=>b.late-a.late);
     }
     if(!lateData.length)return;
-    const colors=lateData.map(d=>d.name===reg?'#d97706':'#dc2626');
+    const colors=lateData.map(d=>d.name===reg?'#FB8C00':'#E53935');
     if(cRegLateChart)cRegLateChart.destroy();
     cRegLateChart=new Chart(el,{type:'bar',data:{
-      labels:lateData.map(d=>d.name.length>13?d.name.slice(0,12)+'..':d.name),
+      labels:lateData.map(d=>d.name),
       datasets:[{label:'Просрочено',data:lateData.map(d=>d.late),backgroundColor:colors,borderRadius:3}]
     },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
       scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},
-              y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}}}});
+              y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}}}});
+    _fitRegionCanvas('cRegLate',lateData.length);
   })();
 
   // envPlants: исполнители (по категории)
@@ -3961,15 +3977,15 @@ function renderRegLateChart(){
   const data=Object.entries(REAL_ECO)
     .map(([name,d])=>({name,late:d.late||0}))
     .filter(d=>d.late>0)
-    .sort((a,b)=>b.late-a.late)
-    .slice(0,15);
+    .sort((a,b)=>b.late-a.late);
   if(cRegLateChart) cRegLateChart.destroy();
   cRegLateChart=new Chart(el,{type:'bar',data:{
-    labels:data.map(d=>d.name.length>13?d.name.slice(0,12)+'..':d.name),
-    datasets:[{label:'Просрочено',data:data.map(d=>d.late),backgroundColor:'#dc2626',borderRadius:3}]
+    labels:data.map(d=>d.name),
+    datasets:[{label:'Просрочено',data:data.map(d=>d.late),backgroundColor:'#E53935',borderRadius:3}]
   },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
     scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},
-            y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}}}});
+            y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}}}});
+  _fitRegionCanvas('cRegLate',data.length);
 }
 setTimeout(()=>{
   // Данные — фильтруем по региону если задан
@@ -4044,8 +4060,9 @@ setTimeout(()=>{
   // ── СОЦИАЛЬНОЕ НАПРЯЖЕНИЕ — рендерится из реальных данных после загрузки ──
 
   // Обращения — реальные данные
-  const topR=Object.entries(REAL_ECO).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
-  c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n.length>12?n.slice(0,11)+'..':n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;const gR=document.getElementById('gReg');if(gR){for(const o of gR.options){if(o.value===reg||o.text===reg){gR.value=o.value;break;}}onGlobalFilter();}}}});
+  const topR=Object.entries(REAL_ECO).sort((a,b)=>b[1].total-a[1].total);
+  c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;const gR=document.getElementById('gReg');if(gR){for(const o of gR.options){if(o.value===reg||o.text===reg){gR.value=o.value;break;}}onGlobalFilter();}}}});
+  _fitRegionCanvas('c12',topR.length);
   const allIssues={};Object.values(ecoSrc).forEach(d=>d.issues&&Object.entries(d.issues).forEach(([k,v])=>allIssues[k]=(allIssues[k]||0)+v));
   const ti2=Object.entries(allIssues).sort((a,b)=>b[1]-a[1]).slice(0,6);
   c13Chart=mkC('c13','bar',ti2.map(([n])=>n),[{label:'Обращений',data:ti2.map(([,v])=>v),backgroundColor:'#16A34A',borderRadius:3}],{indexAxis:'y',scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els,chart)=>{if(!els.length)return;const v=ti2[els[0].index]?.[0]||chart.data.labels[els[0].index];const el=document.getElementById('gSubF');if(el){el.value=v;onGlobalFilter();}}});
@@ -4598,8 +4615,12 @@ function applyTimeEngine(){
   if(dp) dp.textContent=(total?(dup/total*100).toFixed(1):0)+'% от выборки';
 
   const pairsOf=(arr,names)=>names.map((nm,i)=>[nm,arr[i]]).filter(p=>p[1]>0).sort((a,b)=>b[1]-a[1]);
-  _engSetChart('c12', pairsOf(regTot,_AC.regions), 10, 12);
-  _engSetChart('cRegLate', pairsOf(regLate,_AC.regions), 15, 13);
+  const _engRegPairs=pairsOf(regTot,_AC.regions);
+  const _engLatePairs=pairsOf(regLate,_AC.regions);
+  _engSetChart('c12', _engRegPairs);
+  _engSetChart('cRegLate', _engLatePairs);
+  _fitRegionCanvas('c12', _engRegPairs.length);
+  _fitRegionCanvas('cRegLate', _engLatePairs.length);
   _engSetChart('cAppType', pairsOf(typTot,_AC.types), 8);
   _engSetChart('c3', pairsOf(catTot,_AC.cats), 8);
   _engSetChart('cAppSubCat', pairsOf(subTot,_AC.subs), 8);
@@ -5817,8 +5838,9 @@ function applyAppealFilter(){
   const t1=document.getElementById('c12Title');
   const t2=document.getElementById('c13Title');
   if(region==='all'){
-    const topR=Object.entries(REAL_ECO).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
-    c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n.length>12?n.slice(0,11)+'..':n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3}]},options:Object.assign({},APPEAL_OPT,{onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;const gR=document.getElementById('gReg');if(gR){for(const o of gR.options){if(o.value===reg||o.text===reg){gR.value=o.value;break;}}onGlobalFilter();}}})});
+    const topR=Object.entries(REAL_ECO).sort((a,b)=>b[1].total-a[1].total);
+    c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3}]},options:Object.assign({},APPEAL_OPT,{scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;const gR=document.getElementById('gReg');if(gR){for(const o of gR.options){if(o.value===reg||o.text===reg){gR.value=o.value;break;}}onGlobalFilter();}}})});
+    _fitRegionCanvas('c12',topR.length);
     const ai={};Object.values(REAL_ECO).forEach(d=>Object.entries(d.issues).forEach(([k,v])=>ai[k]=(ai[k]||0)+v));
     const ti=Object.entries(ai).sort((a,b)=>b[1]-a[1]).slice(0,6);
     c13Chart=mkC('c13','bar',ti.map(([n])=>n),[{label:'Обращений',data:ti.map(([,v])=>v),backgroundColor:'#16A34A',borderRadius:3}],{indexAxis:'y',scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els,chart)=>{if(!els.length)return;const v=ti[els[0].index]?.[0]||chart.data.labels[els[0].index];const el=document.getElementById('gSubF');if(el){el.value=v;onGlobalFilter();}}});
@@ -5827,6 +5849,7 @@ function applyAppealFilter(){
   } else {
     const d=REAL_ECO[region]||{done:0,work:0,late:0,latedone:0,issues:{}};
     c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:['Исполнено','В работе','Просрочено','С просрочкой'],datasets:[{data:[d.done||0,d.work||0,d.late||0,d.latedone||0],backgroundColor:['#16A34A','#0891B2','#DC2626','#D97706'],borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}}}}});
+    _fitRegionCanvas('c12',5);
     const topics=Object.entries(d.issues||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
     c13Chart=mkC('c13','bar',topics.map(([n])=>n),[{label:'Обращений',data:topics.map(([,v])=>v),backgroundColor:'#16A34A',borderRadius:3}],{indexAxis:'y',scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els,chart)=>{if(!els.length)return;const v=topics[els[0].index]?.[0]||chart.data.labels[els[0].index];const el=document.getElementById('gSubF');if(el){el.value=v;onGlobalFilter();}}});
     if(t1)t1.textContent=`Статус исполнения: ${region}`;
