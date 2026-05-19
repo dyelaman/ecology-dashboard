@@ -61,6 +61,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .region-list-scroll::-webkit-scrollbar-thumb{background:#c4c4c4;border-radius:3px}
 .region-list-scroll::-webkit-scrollbar-thumb:hover{background:#999}
 .rc-host{position:relative}
+.qpresets{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px}
+.qp-title{font-size:12px;font-weight:700;color:var(--text2);margin-right:2px}
+.qp-btn{font-size:11px;font-weight:500;padding:6px 12px;border-radius:18px;border:1px solid var(--border2);background:var(--surface2);color:var(--text1);cursor:pointer;white-space:nowrap;transition:all .15s}
+.qp-btn:hover{box-shadow:0 2px 10px rgba(0,0,0,.13);border-color:var(--green)}
+.qp-btn.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
+.qp-reset{font-size:11px;padding:6px 12px;border-radius:18px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;margin-left:auto}
+.qp-reset:hover{color:var(--red);border-color:var(--red)}
+@keyframes pulse-highlight{0%,100%{box-shadow:0 0 0 0 rgba(27,122,58,0)}50%{box-shadow:0 0 0 8px rgba(27,122,58,0.3)}}
+.highlighted{animation:pulse-highlight 2s ease-in-out}
 .synthetic-zone{background:repeating-linear-gradient(45deg,#fffbeb,#fffbeb 14px,#fef6e0 14px,#fef6e0 28px);border:2px dashed #fcd34d;border-radius:10px;padding:14px}
 .oil-marker{background:none;border:none}
 .oil-dot{width:18px;height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer}
@@ -384,6 +393,9 @@ input[type=file]{display:none}
 <!-- ГЛАВНАЯ -->
 <div id="panel-main" class="panel active">
 
+  <!-- БЫСТРЫЕ СЦЕНАРИИ -->
+  <div class="qpresets" id="qpresets"></div>
+
   <!-- KPIs -->
   <div class="kpi-grid" style="margin-bottom:14px">
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_eco">Всего обращений</div><div class="kpi-val" id="kpiEco">352 641</div><div class="kpi-d nu">с 01.07.2021</div></div>
@@ -400,7 +412,7 @@ input[type=file]{display:none}
 
 
   <!-- КАРТА — полная ширина -->
-  <div class="card" style="padding:12px;margin-bottom:14px">
+  <div class="card" id="blkMap" style="padding:12px;margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">
       <div class="card-title" style="margin:0" id="mapCardTitle">Карта обращений по регионам <span id="mapPeriodTag" style="font-size:10px;font-weight:400;color:#0891B2"></span></div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -449,7 +461,7 @@ input[type=file]{display:none}
   <div id="subpanel-eobr">
 
   <!-- ══ АНАЛИТИКА ПО ОБРАЩЕНИЯМ eObr ══ -->
-  <div class="block-title">Аналитика обращений <span style="font-size:10px;color:var(--text3);font-weight:400">· eObr · 352 641 обращений с 01.07.2021</span></div>
+  <div class="block-title" id="blkAnalytics">Аналитика обращений <span style="font-size:10px;color:var(--text3);font-weight:400">· eObr · 352 641 обращений с 01.07.2021</span></div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
     <div class="card" style="padding:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -478,11 +490,11 @@ input[type=file]{display:none}
       <div class="block-title" style="margin-top:0" id="c12Title">Топ регионов по обращениям</div>
       <div class="region-list-scroll"><div class="rc-host" style="height:260px"><canvas id="c12"></canvas></div></div>
     </div>
-    <div class="card" style="padding:12px">
+    <div class="card" id="blkRegLate" style="padding:12px">
       <div class="block-title" style="margin-top:0">Просрочено по регионам</div>
       <div class="region-list-scroll"><div class="rc-host" style="height:260px"><canvas id="cRegLate"></canvas></div></div>
     </div>
-    <div class="card" style="padding:12px;display:flex;flex-direction:column">
+    <div class="card" id="blkExecutors" style="padding:12px;display:flex;flex-direction:column">
       <div class="block-title" style="margin-top:0">Топ исполнителей</div>
       <div id="envPlants" style="font-size:10px;display:flex;flex-direction:column;gap:3px;flex:1;overflow:auto"></div>
     </div>
@@ -499,7 +511,7 @@ input[type=file]{display:none}
   </div>
 
   <!-- PREVIEW TABLE -->
-  <div class="card">
+  <div class="card" id="blkTable">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
       <div>
         <div class="card-title" style="margin:0">Общая информация по обращениям</div>
@@ -4687,7 +4699,7 @@ function _engRenderDaily(yN,mN,dayCnt,dayLate){
   box.id='tipBox';
   document.body.appendChild(box);
   document.addEventListener('mouseover',e=>{
-    const t=e.target.closest&&e.target.closest('.tip');
+    const t=e.target.closest&&e.target.closest('[data-tip]');
     if(!t||!t.dataset.tip) return;
     box.textContent=t.dataset.tip;
     box.style.display='block';
@@ -4698,11 +4710,104 @@ function _engRenderDaily(yN,mN,dayCnt,dayLate){
     box.style.top=(r.bottom+8)+'px';
   });
   document.addEventListener('mouseout',e=>{
-    if(e.target.closest&&e.target.closest('.tip')) box.style.display='none';
+    if(e.target.closest&&e.target.closest('[data-tip]')) box.style.display='none';
   });
 })();
 
+// ── БЫСТРЫЕ СЦЕНАРИИ (пресеты фильтров) ─────────────────────────────────────
+const QUICK_PRESETS=[
+  {id:'fire',icon:'🔴',label:'Где горит',description:'Критические ситуации, требующие реакции — просроченные обращения за последний месяц данных (апрель 2026).',
+   apply:{status:'late',year:'2026',month:'04'},scrollTo:'blkRegLate'},
+  {id:'worst_regions',icon:'📍',label:'Худшие регионы',description:'Регионы с наибольшим числом обращений за последний месяц данных.',
+   apply:{year:'2026',month:'04'},scrollTo:'blkMap'},
+  {id:'top_violators',icon:'🏭',label:'Топ нарушителей',description:'Органы с худшими показателями — просроченные жалобы за последний месяц.',
+   apply:{type:'Жалоба',status:'late',year:'2026',month:'04'},scrollTo:'blkExecutors'},
+  {id:'repeat',icon:'🔄',label:'Повторные обращения',description:'Системные проблемы — граждане жалуются повторно.',
+   apply:{dup:true,year:'2026',month:'04'},scrollTo:'blkTable'},
+  {id:'ecology_core',icon:'🌳',label:'Чистая экология',description:'Только основная экологическая категория за текущий год.',
+   apply:{catKey:'природные ресурс',year:'2026'},scrollTo:'blkAnalytics'},
+  {id:'emergencies',icon:'⚠️',label:'ЧС и аварии',description:'Чрезвычайные ситуации экологического характера за текущий год.',
+   apply:{catKey:'чрезвыч',year:'2026'},scrollTo:'blkMap'},
+  {id:'taza',icon:'🌱',label:'Таза Казахстан',description:'Перейти к разделу программы «Таза Казахстан».',
+   apply:{tab:'taza'},scrollTo:null},
+];
+let _activePreset=null, _presetApplying=false;
+
+function _buildPresetPanel(){
+  const box=document.getElementById('qpresets'); if(!box) return;
+  let html='<span class="qp-title">⚡ Быстрые сценарии:</span>';
+  QUICK_PRESETS.forEach(p=>{
+    html+=`<button class="qp-btn" data-preset="${p.id}" data-tip="${p.description.replace(/"/g,'&quot;')}" onclick="applyPreset('${p.id}')">${p.icon} ${p.label}</button>`;
+  });
+  html+=`<button class="qp-reset" id="qpReset" style="display:none" onclick="resetPreset()">❌ Сбросить</button>`;
+  box.innerHTML=html;
+}
+
+function _setActivePreset(id){
+  _activePreset=id;
+  document.querySelectorAll('#qpresets .qp-btn').forEach(b=>b.classList.toggle('active',b.dataset.preset===id));
+  const r=document.getElementById('qpReset'); if(r) r.style.display=id?'':'none';
+}
+function _clearActivePreset(){
+  if(!_activePreset) return;
+  _activePreset=null;
+  document.querySelectorAll('#qpresets .qp-btn').forEach(b=>b.classList.remove('active'));
+  const r=document.getElementById('qpReset'); if(r) r.style.display='none';
+}
+function _resetFiltersSilent(){
+  ['gYear','gMonth','gDay','gReg','gStatus','gType','gCatF','gIssueF','gSubF','gCGO','gMIO'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.selectedIndex=0;
+  });
+  const ds=document.getElementById('gDupSel'); if(ds) ds.selectedIndex=0;
+  _gDupActive=false;
+}
+
+function applyPreset(presetId){
+  const p=QUICK_PRESETS.find(x=>x.id===presetId); if(!p) return;
+  if(p.apply.tab){
+    switchTab(p.apply.tab, document.querySelector(`.tab[onclick*="'${p.apply.tab}'"]`));
+    _setActivePreset(p.id);
+    return;
+  }
+  _resetFiltersSilent();
+  const a=p.apply;
+  const setV=(id,v)=>{const el=document.getElementById(id); if(el&&v!=null) el.value=v;};
+  if(a.year)   setV('gYear',a.year);
+  if(a.month)  setV('gMonth',a.month);
+  if(a.status) setV('gStatus',a.status);
+  if(a.type){
+    const sel=document.getElementById('gType');
+    if(sel){ for(const o of sel.options){ if(o.value===a.type||o.value.indexOf(a.type)===0){sel.value=o.value;break;} } }
+  }
+  if(a.catKey){
+    const sel=document.getElementById('gCatF');
+    if(sel){ for(const o of sel.options){ if(o.value.toLowerCase().includes(a.catKey)){sel.value=o.value;break;} } }
+  }
+  if(a.dup){ const ds=document.getElementById('gDupSel'); if(ds) ds.value='dup'; _gDupActive=true; }
+  _presetApplying=true;
+  onGlobalFilter();
+  _presetApplying=false;
+  _setActivePreset(p.id);
+  if(p.scrollTo){
+    setTimeout(()=>{
+      const el=document.getElementById(p.scrollTo);
+      if(!el) return;
+      el.scrollIntoView({behavior:'smooth',block:'center'});
+      el.classList.remove('highlighted'); void el.offsetWidth; el.classList.add('highlighted');
+      setTimeout(()=>el.classList.remove('highlighted'),2300);
+    },300);
+  }
+}
+
+function resetPreset(){
+  _clearActivePreset();
+  resetGlobalFilter();
+}
+
+_buildPresetPanel();
+
 function onGlobalFilter(){
+  if(!_presetApplying) _clearActivePreset();
   const typeVal=document.getElementById('gType')?.value||'all';
   const at=document.getElementById('appTypeFilter');
   if(at) at.value=typeVal==='all'?'':typeVal;
