@@ -2151,11 +2151,11 @@ function renderMainCharts() {
       if(el){el.value=v;onGlobalFilter();}
     })));
 
-  // Подкатегория — отдельный статичный чарт (top_subissues)
+  // Подкатегория — группировка по issue
   const subCatCtx = document.getElementById('cAppSubCat');
   if (subCatCtx) {
     const ex = Chart.getChart(subCatCtx); if(ex) ex.destroy();
-    const subCatData = a ? a.top_subissues.slice(0,8) : [];
+    const subCatData = a ? (a.top_issues||[]).slice(0,8) : [];
     const subCatColors = ['#0891B2','#16a34a','#d97706','#7c3aed','#dc2626','#f97316','#0d9488','#6b7280'];
     new Chart(subCatCtx, {
       type:'bar',
@@ -2231,7 +2231,7 @@ function renderMainCharts() {
     // Компактный per-appeal датасет — для фильтрации по месяцам/дням (загружаем в фоне)
     fetch('/data/appeals_compact.json').then(r=>r.json()).then(ac=>{
       _AC=ac;
-      if(timeFilterActive()) applyTimeEngine();
+      if(engineFilterActive()) applyTimeEngine();
     }).catch(e=>console.warn('appeals_compact load failed:',e.message));
     // Заполняем фильтр «День» (1–31)
     (function(){
@@ -3621,9 +3621,9 @@ function _renderCAppSub(){
   }
   if(!data.length)return;
   _chartSub=new Chart(el,{type:'bar',
-    data:{labels:data.map(([n])=>trunc(n,26)),datasets:[{data:data.map(([,v])=>v),backgroundColor:'#16a34a',borderRadius:3}]},
+    data:{labels:data.map(([n])=>n),datasets:[{data:data.map(([,v])=>v),backgroundColor:'#16a34a',borderRadius:3}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}},
+      scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},
       onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},
       onClick:(e,els,chart)=>{
         if(!els.length)return;
@@ -4575,32 +4575,58 @@ function _restoreRichTooltips(){
   });
 }
 
-function _engSetChart(id,pairs,limit,truncN){
+function engineFilterActive(){
+  const F=id=>document.getElementById(id)?.value||'all';
+  return F('gYear')!=='all'||F('gMonth')!=='all'||F('gDay')!=='all'||F('gReg')!=='all'
+    ||F('gType')!=='all'||F('gStatus')!=='all'||F('gCatF')!=='all'||F('gIssueF')!=='all'
+    ||F('gSubF')!=='all'||F('gCGO')!=='all'||F('gMIO')!=='all'
+    ||((typeof _gDupActive!=='undefined')&&_gDupActive);
+}
+
+function _engSetChart(id,pairs,limit,filterSelectId,resetIds){
   const cv=document.getElementById(id); if(!cv) return;
   const ch=Chart.getChart(cv); if(!ch) return;
   const top=pairs.slice(0,limit||pairs.length);
-  const tr=s=>(truncN&&s.length>truncN)?s.slice(0,truncN-1)+'…':s;
-  ch.data.labels=top.map(p=>tr(String(p[0])));
+  ch.data.labels=top.map(p=>String(p[0]));
   if(ch.data.datasets[0]) ch.data.datasets[0].data=top.map(p=>p[1]);
+  if(filterSelectId){
+    ch.options.onClick=(e,els)=>{
+      if(!els.length) return;
+      const v=ch.data.labels[els[0].index];
+      const sel=document.getElementById(filterSelectId);
+      if(!sel) return;
+      if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
+      sel.value=v;
+      (resetIds||[]).forEach(rid=>{const r=document.getElementById(rid);if(r)r.selectedIndex=0;});
+      onGlobalFilter();
+    };
+  }
   ch.update('none');
 }
 
+// Универсальный кросс-фильтр: применяет ВСЕ активные фильтры к per-appeal данным
+// и пересчитывает все чарты, KPI, карту и динамику.
 function applyTimeEngine(){
   if(!_AC) return;
   const F=id=>document.getElementById(id)?.value||'all';
   const yF=F('gYear'),mF=F('gMonth'),dF=F('gDay');
   const regF=F('gReg'),catF=F('gCatF'),typF=F('gType'),stF=F('gStatus');
+  const issF=F('gIssueF'),subF=F('gSubF'),cgoF=F('gCGO'),mioF=F('gMIO');
   const dupOnly=(typeof _gDupActive!=='undefined')&&_gDupActive;
   const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF, dN=dF==='all'?-1:+dF;
   const regI=regF==='all'?-1:_AC.regions.indexOf(regF);
   const catI=catF==='all'?-1:_AC.cats.indexOf(catF);
   const typI=typF==='all'?-1:_AC.types.indexOf(typF);
+  const issI=issF==='all'?-1:_AC.issues.indexOf(issF);
+  const subI=subF==='all'?-1:_AC.subs.indexOf(subF);
+  const orgF=cgoF!=='all'?cgoF:(mioF!=='all'?mioF:'all');
+  const orgI=orgF==='all'?-1:_AC.orgs.indexOf(orgF);
 
   const w=_AC.w,D=_AC.data,n=_AC.n;
   const regTot=new Int32Array(_AC.regions.length), regLate=new Int32Array(_AC.regions.length), regClosed=new Int32Array(_AC.regions.length);
   const catTot=new Int32Array(_AC.cats.length), typTot=new Int32Array(_AC.types.length);
-  const subTot=new Int32Array(_AC.subs.length), orgTot=new Int32Array(_AC.orgs.length);
-  const dayCnt=new Map(), dayLate=new Map();
+  const issTot=new Int32Array(_AC.issues.length), subTot=new Int32Array(_AC.subs.length), orgTot=new Int32Array(_AC.orgs.length);
+  const dayCnt=new Map(), dayLate=new Map(), ymMap=new Map(), yrMap=new Map();
   let total=0,closed=0,inwork=0,overdue=0,dup=0;
 
   for(let i=0;i<n;i++){
@@ -4609,10 +4635,13 @@ function applyTimeEngine(){
     if(yN>=0&&yy!==yN) continue;
     if(mN>=0&&mm!==mN) continue;
     if(dN>=0&&dd!==dN) continue;
-    const rr=D[o+1],cc=D[o+2],tt=D[o+3],ss=D[o+4],su=D[o+6],og=D[o+7],fl=D[o+8];
+    const rr=D[o+1],cc=D[o+2],tt=D[o+3],ss=D[o+4],ii=D[o+5],su=D[o+6],og=D[o+7],fl=D[o+8];
     if(regI>=0&&rr!==regI) continue;
     if(catI>=0&&cc!==catI) continue;
     if(typI>=0&&tt!==typI) continue;
+    if(issI>=0&&ii!==issI) continue;
+    if(subI>=0&&su!==subI) continue;
+    if(orgI>=0&&og!==orgI) continue;
     const isClosed=(ss===1||ss===3), isOverdue=(ss===2), isLate=(ss===2||ss===3);
     if(stF==='done'&&!isClosed) continue;
     if(stF==='work'&&!(ss===0||ss===2)) continue;
@@ -4623,15 +4652,17 @@ function applyTimeEngine(){
     if(isOverdue)overdue++;
     if(fl&1)dup++;
     regTot[rr]++; if(isLate)regLate[rr]++; if(isClosed)regClosed[rr]++;
-    catTot[cc]++; typTot[tt]++; subTot[su]++; orgTot[og]++;
+    catTot[cc]++; typTot[tt]++; issTot[ii]++; subTot[su]++; orgTot[og]++;
     dayCnt.set(ymd,(dayCnt.get(ymd)||0)+1);
     if(isLate) dayLate.set(ymd,(dayLate.get(ymd)||0)+1);
+    const ymk=yy*100+mm;
+    let ym=ymMap.get(ymk); if(!ym){ym={t:0,l:0};ymMap.set(ymk,ym);} ym.t++; if(isLate)ym.l++;
+    let yr=yrMap.get(yy); if(!yr){yr={t:0,l:0};yrMap.set(yy,yr);} yr.t++; if(isLate)yr.l++;
   }
 
   const ru=v=>v.toLocaleString('ru-RU');
   const setEl=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
   setEl('kpiEco',ru(total));
-  setEl('kpiDone',(total?Math.round(closed/total*100):0)+'%');
   setEl('kpiWork',ru(inwork));
   setEl('kpiLate',ru(overdue));
   setEl('kpiDup',ru(dup));
@@ -4639,25 +4670,27 @@ function applyTimeEngine(){
   if(dp) dp.textContent=(total?(dup/total*100).toFixed(1):0)+'% от выборки';
 
   const pairsOf=(arr,names)=>names.map((nm,i)=>[nm,arr[i]]).filter(p=>p[1]>0).sort((a,b)=>b[1]-a[1]);
-  const _engRegPairs=pairsOf(regTot,_AC.regions);
-  const _engLatePairs=pairsOf(regLate,_AC.regions);
-  _engSetChart('c12', _engRegPairs);
-  _engSetChart('cRegLate', _engLatePairs);
-  _fitRegionCanvas('c12', _engRegPairs.length);
-  _fitRegionCanvas('cRegLate', _engLatePairs.length);
-  _engSetChart('cAppType', pairsOf(typTot,_AC.types), 8);
-  _engSetChart('c3', pairsOf(catTot,_AC.cats), 8);
-  _engSetChart('cAppSubCat', pairsOf(subTot,_AC.subs), 8);
+  const regPairs=pairsOf(regTot,_AC.regions), latePairs=pairsOf(regLate,_AC.regions);
+  _engSetChart('c12', regPairs, 0, 'gReg');
+  _engSetChart('cRegLate', latePairs, 0, 'gReg');
+  _fitRegionCanvas('c12', regPairs.length);
+  _fitRegionCanvas('cRegLate', latePairs.length);
+  // 4 чарта аналитики — иерархия Категория → Подкатегория → Характер; Тип
+  _engSetChart('c3',         pairsOf(catTot,_AC.cats),   8, 'gCatF',  ['gIssueF','gSubF']);
+  _engSetChart('cAppSubCat', pairsOf(issTot,_AC.issues), 8, 'gIssueF',['gSubF']);
+  _engSetChart('cAppSub',    pairsOf(subTot,_AC.subs),   8, 'gSubF');
+  _engSetChart('cAppType',   pairsOf(typTot,_AC.types),  8, 'gType');
 
   // Исполнители
   const pl=document.getElementById('envPlants');
   if(pl){
     const orgs=pairsOf(orgTot,_AC.orgs).filter(p=>!String(p[0]).startsWith('Прочие'));
     const shortName=s=>{s=s.replace(/^(Коммунальное государственное учреждение|Государственное учреждение|Республиканское государственное учреждение|Акционерное общество|Товарищество с ограниченной ответственностью)\s*/i,'');return s.length>55?s.slice(0,55)+'…':s;};
-    pl.innerHTML=orgs.map(([nm,cnt])=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border)"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${nm.replace(/"/g,'&quot;')}">${shortName(nm)}</span><span style="font-size:10px;color:var(--text2)">${ru(cnt)}</span></div>`).join('');
+    pl.innerHTML=orgs.map(([nm,cnt])=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border)"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${nm.replace(/"/g,'&quot;')}">${shortName(nm)}</span><span style="font-size:10px;color:var(--text2)">${ru(cnt)}</span></div>`).join('')
+      || '<div style="font-size:11px;color:var(--text3)">Нет данных по фильтрам</div>';
   }
 
-  // Хороплет карты + тултипы за период
+  // Хороплет карты + тултипы
   if(geoLayerMain){
     const src={};
     _AC.regions.forEach((nm,i)=>{src[nm]={total:regTot[i],closed:regClosed[i],late:regLate[i]};});
@@ -4671,19 +4704,42 @@ function applyTimeEngine(){
       }
       return{fillColor:choroplethColor(d?.total,maxVal),weight:1,color:'#ffffff',fillOpacity:0.82,opacity:1};
     });
-    const plbl=_periodLabel();
+    const plbl=_periodLabel()||'по выбранным фильтрам';
     geoLayerMain.eachLayer(l=>{
       const gk=l.feature?.properties?.name_ru; if(!gk||!l.getTooltip()) return;
       const nm=gk.replace(' область','');
       const d=src[GEO_TO_ECO[gk]];
       l.setTooltipContent(d&&d.total
         ? _periodRegionTooltip(nm,d.total,d.closed,d.late,plbl)
-        : `<div style="font-size:13px;font-weight:700;color:#14532d">${nm}</div><div style="font-size:10px;color:#6b7280;margin-top:3px">нет обращений за период: ${plbl}</div>`);
+        : `<div style="font-size:13px;font-weight:700;color:#14532d">${nm}</div><div style="font-size:10px;color:#6b7280;margin-top:3px">нет обращений: ${plbl}</div>`);
     });
   }
 
-  // Динамика по дням — если выбран конкретный месяц и год
+  // Динамика: по дням (если выбран месяц+год) либо по месяцам+годам
   if(mN>=0&&yN>=0) _engRenderDaily(yN,mN,dayCnt,dayLate);
+  else { _engRenderMonthly(ymMap); _engRenderYearly(yrMap); }
+}
+
+function _engRenderMonthly(ymMap){
+  const cv=document.getElementById('cMonthly'); if(!cv) return;
+  const ch=Chart.getChart(cv); if(!ch) return;
+  const MO=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  const keys=[...ymMap.keys()].sort((a,b)=>a-b);
+  ch.data.labels=keys.map(k=>{const y=(k/100)|0,m=k%100;return MO[m-1]+' '+String(y).slice(2);});
+  if(ch.data.datasets[0]) ch.data.datasets[0].data=keys.map(k=>ymMap.get(k).t);
+  if(ch.data.datasets[1]) ch.data.datasets[1].data=keys.map(k=>ymMap.get(k).l);
+  ch.update('none');
+  const sub=document.getElementById('cMonthlySubtitle'); if(sub) sub.textContent='· по фильтрам';
+}
+
+function _engRenderYearly(yrMap){
+  const cv=document.getElementById('cYearDyn'); if(!cv) return;
+  const ch=Chart.getChart(cv); if(!ch) return;
+  const keys=[...yrMap.keys()].sort((a,b)=>a-b);
+  ch.data.labels=keys.map(String);
+  if(ch.data.datasets[0]) ch.data.datasets[0].data=keys.map(k=>yrMap.get(k).t);
+  if(ch.data.datasets[1]) ch.data.datasets[1].data=keys.map(k=>yrMap.get(k).l);
+  ch.update('none');
 }
 
 function _engRenderDaily(yN,mN,dayCnt,dayLate){
@@ -4823,15 +4879,14 @@ function onGlobalFilter(){
   const typeVal=document.getElementById('gType')?.value||'all';
   const at=document.getElementById('appTypeFilter');
   if(at) at.value=typeVal==='all'?'':typeVal;
-  // Сброс KPI к базовым значениям, если фильтр по месяцу/дню снят
-  // (движок мог оставить значения за месяц/день)
-  if(!timeFilterActive()) applyRealKPIs();
+  // Сброс KPI к базовым значениям, если все фильтры сняты
+  if(!engineFilterActive()) applyRealKPIs();
   filterAppTable();
   loadChunkForFilters();
   applyFilter();
   applyGlobalFiltersToCharts();
   updateFilterChips();
-  if(timeFilterActive()) applyTimeEngine();
+  if(engineFilterActive()) applyTimeEngine();
   _updateMapPeriodTag();
 }
 
@@ -5210,8 +5265,8 @@ function updateChoropleth(){
     }
     return{fillColor:choroplethColor(d?.total,maxVal),weight:1,color:'#ffffff',fillOpacity:0.82,opacity:1};
   });
-  // Тултипы: если фильтр по месяцу/дню не активен — восстанавливаем полные (за всё время)
-  if(!timeFilterActive()) _restoreRichTooltips();
+  // Тултипы: если фильтры не активны — восстанавливаем полные (за всё время)
+  if(!engineFilterActive()) _restoreRichTooltips();
 }
 
 // ── КАРТА НБД СОС ────────────────────────────────────────────────────────────
