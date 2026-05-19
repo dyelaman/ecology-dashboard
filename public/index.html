@@ -401,7 +401,7 @@ input[type=file]{display:none}
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_eco">Всего обращений</div><div class="kpi-val" id="kpiEco">352 641</div><div class="kpi-d nu">с 01.07.2021</div></div>
     <div class="kpi" style="cursor:pointer" onclick="switchTab('taza',document.querySelector('[onclick*=\'taza\']'))"><div class="kpi-lbl" data-i18n="kpi_taza">Таза Казахстан</div><div class="kpi-val" id="kpiTaza">42 644</div><div class="kpi-d nu">заявок · июн 2024–апр 2026</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_ikom">iKomek звонков</div><div class="kpi-val" id="kpiIkom">16 103</div><div class="kpi-d nu">с 01.04.2019</div></div>
-    <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_done">Закрыто</div><div class="kpi-val" id="kpiDone" style="color:#16A34A">98%</div><div class="kpi-d nu" title="Статус 'закрыто' включает административное завершение без гарантии фактического решения">⚠️ вкл. адм. закрытие</div></div>
+    <div class="kpi"><div class="kpi-lbl">Топ категория жалоб</div><div class="kpi-val" id="kpiCmplCount" style="color:#d97706">—</div><div class="kpi-d nu" id="kpiCmplSub">—</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_work">В работе</div><div class="kpi-val" id="kpiWork">6 342</div><div class="kpi-d nu" data-i18n="current">текущие</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_late">Просрочено</div><div class="kpi-val" id="kpiLate" style="color:#DC2626">885</div><div class="kpi-d up" data-i18n="needs_attn">требует внимания</div></div>
     <div class="kpi"><div class="kpi-lbl">Повторные обращения</div><div class="kpi-val" id="kpiDup" style="color:#d97706">9 331</div><div class="kpi-d nu" id="kpiDupPct">2.6% от общего</div></div>
@@ -487,7 +487,7 @@ input[type=file]{display:none}
   <!-- Регионы · Просрочка · Исполнители -->
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px">
     <div class="card" style="padding:12px">
-      <div class="block-title" style="margin-top:0" id="c12Title">Топ регионов по обращениям</div>
+      <div class="block-title" style="margin-top:0" id="c12Title">Количество обращений по регионам</div>
       <div class="region-list-scroll"><div class="rc-host" style="height:260px"><canvas id="c12"></canvas></div></div>
     </div>
     <div class="card" id="blkRegLate" style="padding:12px">
@@ -495,8 +495,8 @@ input[type=file]{display:none}
       <div class="region-list-scroll"><div class="rc-host" style="height:260px"><canvas id="cRegLate"></canvas></div></div>
     </div>
     <div class="card" id="blkExecutors" style="padding:12px;display:flex;flex-direction:column">
-      <div class="block-title" style="margin-top:0">Топ исполнителей</div>
-      <div id="envPlants" style="font-size:10px;display:flex;flex-direction:column;gap:3px;flex:1;overflow:auto"></div>
+      <div class="block-title" style="margin-top:0">Исполнители обращений</div>
+      <div id="envPlants" class="region-list-scroll" style="font-size:10px;display:flex;flex-direction:column;gap:3px;flex:1"></div>
     </div>
   </div>
   <!-- c13 скрыт, данные через cross-tab -->
@@ -2119,7 +2119,7 @@ function renderMainCharts() {
         n = n.replace(/^(Коммунальное государственное учреждение|Государственное учреждение|Республиканское государственное учреждение|Акционерное общество|Товарищество с ограниченной ответственностью)\s*/i,'');
         return n.length > 55 ? n.substring(0,55)+'…' : n;
       };
-      pl.innerHTML = a.top_orgs.slice(0,8).map(([name,cnt]) =>
+      pl.innerHTML = a.top_orgs.map(([name,cnt]) =>
         `<div onclick="showOrgDrilldown('${name.replace(/'/g,"\\'")}')" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${name.replace(/"/g,'&quot;')}">${shortName(name)}</span><span style="font-size:10px;color:var(--text2);white-space:nowrap;margin-left:4px">${cnt.toLocaleString('ru-RU')}</span><span style="font-size:9px;color:var(--text3);margin-left:2px">›</span></div>`
       ).join('');
     } else {
@@ -2289,6 +2289,18 @@ function applyRealKPIs() {
   setEl('kpiEco',  a.total.toLocaleString('ru-RU'));
   setEl('kpiIkom', ik.total.toLocaleString('ru-RU'));
   setEl('kpiDone', a.done_pct + '%');
+  // KPI — топ категория жалоб
+  const tcc = a.top_complaint_category;
+  if (tcc) {
+    setEl('kpiCmplCount', tcc.count.toLocaleString('ru-RU'));
+    const pct = tcc.total > 0 ? Math.round(tcc.count / tcc.total * 100) : 0;
+    const sub = document.getElementById('kpiCmplSub');
+    if (sub) {
+      const nm = tcc.name.length > 26 ? tcc.name.slice(0,25)+'…' : tcc.name;
+      sub.textContent = `${nm} · ${pct}% жалоб`;
+      sub.title = `${tcc.name} — ${tcc.count.toLocaleString('ru-RU')} из ${tcc.total.toLocaleString('ru-RU')} жалоб`;
+    }
+  }
   setEl('kpiWork', (a.work + a.late).toLocaleString('ru-RU'));
   setEl('kpiLate', a.late.toLocaleString('ru-RU'));
   // KPI главной — повторные
@@ -3745,7 +3757,7 @@ function _rechartOnFilter(){
       const topR=Object.entries(REAL_ECO).map(([n,d])=>[n,_gDupActive?(d.dup||0):(d.total||0)]).sort((a,b)=>b[1]-a[1]);
       c12Chart.data.labels=topR.map(([n])=>trunc12(n));
       c12Chart.data.datasets[0].data=topR.map(([,v])=>v);
-      if(c12TitleEl)c12TitleEl.textContent=_gDupActive?'Топ регионов — повторные':'Топ регионов по обращениям';
+      if(c12TitleEl)c12TitleEl.textContent=_gDupActive?'Регионы — повторные обращения':'Количество обращений по регионам';
     }
     c12Chart.update();
     _fitRegionCanvas('c12',c12Chart.data.labels.length);
@@ -3786,7 +3798,7 @@ function _rechartOnFilter(){
       n=n.replace(/^(Коммунальное государственное учреждение|Государственное учреждение|Республиканское государственное учреждение|Акционерное общество|Товарищество с ограниченной ответственностью)\s*/i,'');
       return n.length>55?n.substring(0,55)+'…':n;
     };
-    pl.innerHTML=orgs.slice(0,10).map(([name,cnt])=>
+    pl.innerHTML=orgs.map(([name,cnt])=>
       `<div onclick="showOrgDrilldown('${name.replace(/'/g,"\\'")}')" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${name.replace(/"/g,'&quot;')}">${shortName(name)}</span><span style="font-size:10px;color:var(--text2);white-space:nowrap;margin-left:4px">${cnt.toLocaleString('ru-RU')}</span><span style="font-size:9px;color:var(--text3);margin-left:2px">›</span></div>`
     ).join('');
   })();
@@ -4640,7 +4652,7 @@ function applyTimeEngine(){
   // Исполнители
   const pl=document.getElementById('envPlants');
   if(pl){
-    const orgs=pairsOf(orgTot,_AC.orgs).slice(0,10);
+    const orgs=pairsOf(orgTot,_AC.orgs).filter(p=>!String(p[0]).startsWith('Прочие'));
     const shortName=s=>{s=s.replace(/^(Коммунальное государственное учреждение|Государственное учреждение|Республиканское государственное учреждение|Акционерное общество|Товарищество с ограниченной ответственностью)\s*/i,'');return s.length>55?s.slice(0,55)+'…':s;};
     pl.innerHTML=orgs.map(([nm,cnt])=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border)"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${nm.replace(/"/g,'&quot;')}">${shortName(nm)}</span><span style="font-size:10px;color:var(--text2)">${ru(cnt)}</span></div>`).join('');
   }
@@ -5949,7 +5961,7 @@ function applyAppealFilter(){
     const ai={};Object.values(REAL_ECO).forEach(d=>Object.entries(d.issues).forEach(([k,v])=>ai[k]=(ai[k]||0)+v));
     const ti=Object.entries(ai).sort((a,b)=>b[1]-a[1]).slice(0,6);
     c13Chart=mkC('c13','bar',ti.map(([n])=>n),[{label:'Обращений',data:ti.map(([,v])=>v),backgroundColor:'#16A34A',borderRadius:3}],{indexAxis:'y',scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els,chart)=>{if(!els.length)return;const v=ti[els[0].index]?.[0]||chart.data.labels[els[0].index];const el=document.getElementById('gSubF');if(el){el.value=v;onGlobalFilter();}}});
-    if(t1)t1.textContent='Топ регионов по обращениям';
+    if(t1)t1.textContent='Количество обращений по регионам';
     if(t2)t2.textContent='Темы обращений (Экология)';
   } else {
     const d=REAL_ECO[region]||{done:0,work:0,late:0,latedone:0,issues:{}};

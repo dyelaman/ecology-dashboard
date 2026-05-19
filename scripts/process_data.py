@@ -191,6 +191,19 @@ def process_appeals(df):
     cat_counts = df["_category"].value_counts().head(8)
     categories = [[k, int(v)] for k, v in cat_counts.items()]
 
+    # ── Топ категория среди жалоб ──────────────────────────────────────────
+    complaints_df = df[df["appeal_type"] == "Жалоба"]
+    top_complaint_category = None
+    if len(complaints_df):
+        cc = complaints_df["_category"].value_counts()
+        top_complaint_category = {
+            "name":  str(cc.index[0]),
+            "count": int(cc.iloc[0]),
+            "total": int(len(complaints_df)),
+        }
+        print(f"  Топ категория жалоб: {top_complaint_category['name']} "
+              f"({top_complaint_category['count']:,} из {top_complaint_category['total']:,})")
+
     # ── Типы обращений ─────────────────────────────────────────────────────
     appeal_types = top_n(df["appeal_type"], 8)
 
@@ -543,6 +556,7 @@ def process_appeals(df):
         "top_orgs":      top_orgs,
         "monthly":          monthly,
         "monthly_by_region": monthly_by_region,
+        "top_complaint_category": top_complaint_category,
         "hierarchy":      hierarchy,
         "cross":          cross,
         "issue_cross":    issue_cross,
