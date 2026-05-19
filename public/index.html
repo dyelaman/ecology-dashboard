@@ -54,6 +54,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .fchip-x:hover{opacity:1;color:#fff;background:#dc2626}
 .tip{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:var(--border2);color:var(--text3);font-size:9px;font-weight:700;cursor:help;position:relative;vertical-align:middle}
 .tip:hover{background:var(--green);color:#fff}
+#tipBox{position:fixed;background:#1f2937;color:#fff;font-size:10px;line-height:1.45;padding:7px 10px;border-radius:6px;max-width:230px;z-index:99999;box-shadow:0 6px 18px rgba(0,0,0,.28);pointer-events:none;display:none}
 .synthetic-zone{background:repeating-linear-gradient(45deg,#fffbeb,#fffbeb 14px,#fef6e0 14px,#fef6e0 28px);border:2px dashed #fcd34d;border-radius:10px;padding:14px}
 .oil-marker{background:none;border:none}
 .oil-dot{width:18px;height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer}
@@ -255,8 +256,8 @@ input[type=file]{display:none}
 <div class="tabs">
   <div class="tab active" onclick="switchTab('main',this)"><span data-i18n="tab_main">Обращения граждан</span></div>
   <div class="tab" onclick="switchTab('taza',this)"><span>Таза Казахстан</span></div>
-  <div class="tab" onclick="switchTab('emissions',this)"><span>Мониторинг НБД СОС <span class="tip" title="НБД СОС — Национальный банк данных состояния окружающей среды">?</span></span></div>
-  <div class="tab" onclick="switchTab('kgs',this)"><span>КГС <span class="tip" title="КГС — «Казахстан Гарыш Сапары», спутниковый мониторинг территории">?</span></span></div>
+  <div class="tab" onclick="switchTab('emissions',this)"><span>Мониторинг НБД СОС <span class="tip" data-tip="НБД СОС — Национальный банк данных состояния окружающей среды">?</span></span></div>
+  <div class="tab" onclick="switchTab('kgs',this)"><span>КГС <span class="tip" data-tip="КГС — «Казахстан Гарыш Сапары», спутниковый мониторинг территории">?</span></span></div>
   <div class="tab" onclick="switchTab('waste',this)" style="display:none"><span data-i18n="tab_waste">Отходы</span></div>
   <div class="tab" onclick="switchTab('hearings',this)"><span data-i18n="tab_hear">Социальное напряжение</span></div>
   <div class="tab" id="tabNews" onclick="switchTab('news',this)"><span data-i18n="tab_news">Новости</span> <span id="newsDot" style="display:none" class="tab-dot"></span></div>
@@ -354,13 +355,13 @@ input[type=file]{display:none}
       </select>
 
       <div class="fbar-sep"></div>
-      <span class="fbar-label">ЦГО <span class="tip" title="Центральные государственные органы">?</span></span>
+      <span class="fbar-label">ЦГО <span class="tip" data-tip="Центральные государственные органы">?</span></span>
       <select id="gCGO" onchange="onGlobalFilter()">
         <option value="all">Все ЦГО</option>
       </select>
 
       <div class="fbar-sep"></div>
-      <span class="fbar-label">МИО <span class="tip" title="Местные исполнительные органы">?</span></span>
+      <span class="fbar-label">МИО <span class="tip" data-tip="Местные исполнительные органы">?</span></span>
       <select id="gMIO" onchange="onGlobalFilter()">
         <option value="all">Все МИО</option>
       </select>
@@ -4652,6 +4653,27 @@ function _engRenderDaily(yN,mN,dayCnt,dayLate){
   const sub=document.getElementById('cMonthlySubtitle');
   if(sub) sub.textContent=`· ${_MO_RU3[mN-1]} ${yN} · по дням`;
 }
+
+// ── Кастомные тултипы-подсказки (.tip) — fixed, не обрезаются прокруткой ─────
+(function(){
+  const box=document.createElement('div');
+  box.id='tipBox';
+  document.body.appendChild(box);
+  document.addEventListener('mouseover',e=>{
+    const t=e.target.closest&&e.target.closest('.tip');
+    if(!t||!t.dataset.tip) return;
+    box.textContent=t.dataset.tip;
+    box.style.display='block';
+    const r=t.getBoundingClientRect();
+    let left=r.left+r.width/2-box.offsetWidth/2;
+    left=Math.max(8,Math.min(left,window.innerWidth-box.offsetWidth-8));
+    box.style.left=left+'px';
+    box.style.top=(r.bottom+8)+'px';
+  });
+  document.addEventListener('mouseout',e=>{
+    if(e.target.closest&&e.target.closest('.tip')) box.style.display='none';
+  });
+})();
 
 function onGlobalFilter(){
   const typeVal=document.getElementById('gType')?.value||'all';
