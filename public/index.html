@@ -415,7 +415,7 @@ input[type=file]{display:none}
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_eco">Всего обращений</div><div class="kpi-val" id="kpiEco">352 641</div><div class="kpi-d nu">с 01.07.2021</div></div>
     <div class="kpi" style="cursor:pointer" onclick="switchTab('taza',document.querySelector('[onclick*=\'taza\']'))"><div class="kpi-lbl" data-i18n="kpi_taza">Таза Казахстан</div><div class="kpi-val" id="kpiTaza">42 644</div><div class="kpi-d nu">заявок · июн 2024–апр 2026</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_ikom">iKomek звонков</div><div class="kpi-val" id="kpiIkom">16 103</div><div class="kpi-d nu">с 01.04.2019</div></div>
-    <div class="kpi"><div class="kpi-lbl">Топ категория жалоб</div><div class="kpi-val" id="kpiCmplCount" style="color:#d97706">—</div><div class="kpi-d nu" id="kpiCmplSub">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Всего перенаправленных обращений</div><div class="kpi-val" id="kpiFwdTotal" style="color:#7c3aed">—</div><div class="kpi-d nu" id="kpiFwdSub">—</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_work">В работе</div><div class="kpi-val" id="kpiWork">6 342</div><div class="kpi-d nu" data-i18n="current">текущие</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_late">Просрочено</div><div class="kpi-val" id="kpiLate" style="color:#DC2626">885</div><div class="kpi-d up" data-i18n="needs_attn">требует внимания</div></div>
     <div class="kpi"><div class="kpi-lbl">Повторные обращения</div><div class="kpi-val" id="kpiDup" style="color:#d97706">9 331</div><div class="kpi-d nu" id="kpiDupPct">2.6% от общего</div></div>
@@ -2302,18 +2302,11 @@ function applyRealKPIs() {
     setEl('meprFwdOut', mk.fwd_out.toLocaleString('ru-RU'));
     setEl('meprFwdOutPct', mk.all_ext_fwd>0 ? (mk.fwd_out/mk.all_ext_fwd*100).toFixed(1)+'% исходящих' : '—');
   }
-  // KPI — топ категория жалоб
-  const tcc = a.top_complaint_category;
-  if (tcc) {
-    setEl('kpiCmplCount', tcc.count.toLocaleString('ru-RU'));
-    const pct = tcc.total > 0 ? Math.round(tcc.count / tcc.total * 100) : 0;
-    const sub = document.getElementById('kpiCmplSub');
-    if (sub) {
-      const nm = tcc.name.length > 26 ? tcc.name.slice(0,25)+'…' : tcc.name;
-      sub.textContent = `${nm} · ${pct}% жалоб`;
-      sub.title = `${tcc.name} — ${tcc.count.toLocaleString('ru-RU')} из ${tcc.total.toLocaleString('ru-RU')} жалоб`;
-    }
-  }
+  // KPI — всего перенаправленных обращений
+  const fwdN = a.forwarded || 0;
+  setEl('kpiFwdTotal', fwdN.toLocaleString('ru-RU'));
+  const fwdPct = a.total > 0 ? (fwdN / a.total * 100).toFixed(1) : 0;
+  setEl('kpiFwdSub', `${fwdPct}% от всех обращений`);
   setEl('kpiWork', (a.work + a.late).toLocaleString('ru-RU'));
   setEl('kpiLate', a.late.toLocaleString('ru-RU'));
   // KPI главной — повторные
