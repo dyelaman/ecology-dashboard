@@ -380,6 +380,11 @@ input[type=file]{display:none}
       <select id="gMIO" onchange="onGlobalFilter()">
         <option value="all">Все МИО</option>
       </select>
+
+      <div class="fbar-sep"></div>
+      <span class="fbar-label">Орган-исполнитель</span>
+      <input list="orgList" id="gOrg" placeholder="Любой..." onchange="onGlobalFilter()" style="font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:220px;font-weight:500;outline:none">
+      <datalist id="orgList"></datalist>
     </span>
   </span>
 
@@ -395,6 +400,15 @@ input[type=file]{display:none}
 
   <!-- БЫСТРЫЕ СЦЕНАРИИ -->
   <div class="qpresets" id="qpresets"></div>
+
+  <!-- МЭПР KPI — фокус на министерство -->
+  <div class="block-title" style="margin-top:0">🏛️ Обращения в систему МЭПР</div>
+  <div class="kpi-grid" style="margin-bottom:14px;grid-template-columns:repeat(4,1fr)">
+    <div class="kpi"><div class="kpi-lbl">Всего в МЭПР и подведомств.</div><div class="kpi-val" id="meprTotal" style="color:#0891B2">—</div><div class="kpi-d nu" id="meprTotalPct">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Центр. аппарат МЭПР РК</div><div class="kpi-val" id="meprCentral" style="color:#16A34A">—</div><div class="kpi-d nu" id="meprCentralPct">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Перенаправлено в МЭПР</div><div class="kpi-val" id="meprFwdIn" style="color:#7c3aed">—</div><div class="kpi-d nu" id="meprFwdInPct">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Перенаправлено из МЭПР</div><div class="kpi-val" id="meprFwdOut" style="color:#d97706">—</div><div class="kpi-d nu" id="meprFwdOutPct">—</div></div>
+  </div>
 
   <!-- KPIs -->
   <div class="kpi-grid" style="margin-bottom:14px">
@@ -464,6 +478,10 @@ input[type=file]{display:none}
   <div class="block-title" id="blkAnalytics">Аналитика обращений <span style="font-size:10px;color:var(--text3);font-weight:400">· eObr · 352 641 обращений с 01.07.2021</span></div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
     <div class="card" style="padding:12px">
+      <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.2px;margin-bottom:6px">ТИП ОБРАЩЕНИЯ</div>
+      <div class="cw" style="height:220px"><canvas id="cAppType"></canvas></div>
+    </div>
+    <div class="card" style="padding:12px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
         <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.2px" id="c3Title">КАТЕГОРИЯ</div>
         <div id="c3Breadcrumb" style="font-size:9px;"></div>
@@ -477,10 +495,6 @@ input[type=file]{display:none}
     <div class="card" style="padding:12px">
       <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.2px;margin-bottom:6px" id="cAppSubTitle">ХАРАКТЕР ВОПРОСА</div>
       <div class="cw" style="height:220px"><canvas id="cAppSub"></canvas></div>
-    </div>
-    <div class="card" style="padding:12px">
-      <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.2px;margin-bottom:6px">ТИП ОБРАЩЕНИЙ</div>
-      <div class="cw" style="height:220px"><canvas id="cAppType"></canvas></div>
     </div>
   </div>
 
@@ -2144,34 +2158,10 @@ function renderMainCharts() {
   const _typeBg=['#dc2626','#0891B2','#7c3aed','#16a34a','#d97706','#f59e0b','#06b6d4','#84cc16'];
   if (_chartType) { _chartType.destroy(); _chartType = null; }
   const typeData = types || [['Жалоба',121],['Заявление',89],['Запрос',34],['Предложение',18],['Сообщение',6]];
-  _chartType = mkC('cAppType','bar',typeData.map(([n])=>n),
-    [{data:typeData.map(([,v])=>v),backgroundColor:typeData.map((_,i)=>_typeBg[i%_typeBg.length]),borderRadius:3}],
-    Object.assign({indexAxis:'y',scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}}},_clickOpts((i)=>{
-      const v=typeData[i]?.[0]||''; const el=document.getElementById('gType');
-      if(el){el.value=v;onGlobalFilter();}
-    })));
+  _chartType = _pieChart('cAppType', typeData, 'gType');
 
-  // Подкатегория — группировка по issue
-  const subCatCtx = document.getElementById('cAppSubCat');
-  if (subCatCtx) {
-    const ex = Chart.getChart(subCatCtx); if(ex) ex.destroy();
-    const subCatData = a ? (a.top_issues||[]).slice(0,8) : [];
-    const subCatColors = ['#0891B2','#16a34a','#d97706','#7c3aed','#dc2626','#f97316','#0d9488','#6b7280'];
-    new Chart(subCatCtx, {
-      type:'bar',
-      data:{
-        labels: subCatData.map(([n])=>n),
-        datasets:[{data:subCatData.map(([,v])=>v), backgroundColor:subCatColors, borderRadius:3}]
-      },
-      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toLocaleString('ru-RU')}}},
-        scales:{
-          x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>(v/1000).toFixed(0)+'k'}},
-          y:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af',callback:_truncTick}},
-        }
-      }
-    });
-  }
+  // Подкатегория — группировка по issue (doughnut)
+  if (a && (a.top_issues||[]).length) _pieChart('cAppSubCat', a.top_issues, 'gIssueF', ['gSubF']);
   if (_chartSub) { _chartSub.destroy(); _chartSub = null; }
   _renderCAppSub();
 
@@ -2276,6 +2266,17 @@ function renderMainCharts() {
           else if(_isMIO(n)&&mioEl) mioEl.appendChild(o.cloneNode(true));
         });
       }
+      // Populate «Орган-исполнитель» datalist — все органы (топ-200), сорт. по убыванию
+      if(a.all_orgs){
+        const dl=document.getElementById('orgList');
+        if(dl){
+          a.all_orgs.forEach(([nm,cnt])=>{
+            const o=document.createElement('option');
+            o.value=nm; o.label=`(${cnt.toLocaleString('ru-RU')}) ${nm.length>80?nm.slice(0,80)+'…':nm}`;
+            dl.appendChild(o);
+          });
+        }
+      }
     })(summary.appeals);
   } catch(e) { console.warn('Dashboard data load failed:', e.message); }
 })();
@@ -2289,6 +2290,18 @@ function applyRealKPIs() {
   setEl('kpiEco',  a.total.toLocaleString('ru-RU'));
   setEl('kpiIkom', ik.total.toLocaleString('ru-RU'));
   setEl('kpiDone', a.done_pct + '%');
+  // МЭПР KPI
+  const mk = a.mepr_kpi;
+  if (mk) {
+    setEl('meprTotal', mk.total.toLocaleString('ru-RU'));
+    setEl('meprTotalPct', mk.all_total>0 ? (mk.total/mk.all_total*100).toFixed(1)+'% от всех' : '—');
+    setEl('meprCentral', mk.central.toLocaleString('ru-RU'));
+    setEl('meprCentralPct', mk.total>0 ? (mk.central/mk.total*100).toFixed(1)+'% от МЭПР' : '—');
+    setEl('meprFwdIn', mk.fwd_in.toLocaleString('ru-RU'));
+    setEl('meprFwdInPct', mk.all_forwarded>0 ? (mk.fwd_in/mk.all_forwarded*100).toFixed(1)+'% входящих' : '—');
+    setEl('meprFwdOut', mk.fwd_out.toLocaleString('ru-RU'));
+    setEl('meprFwdOutPct', mk.all_ext_fwd>0 ? (mk.fwd_out/mk.all_ext_fwd*100).toFixed(1)+'% исходящих' : '—');
+  }
   // KPI — топ категория жалоб
   const tcc = a.top_complaint_category;
   if (tcc) {
@@ -3436,6 +3449,67 @@ function _truncTick(value){
   return (l&&l.length>20) ? l.slice(0,19)+'…' : l;
 }
 
+// ── Pie / Doughnut helpers ──────────────────────────────────────────────────
+const _PIE_COLORS=['#0891B2','#16a34a','#d97706','#7c3aed','#dc2626','#f97316','#0d9488','#9ca3af'];
+
+function _topNWithOther(pairs,n){
+  if(!Array.isArray(pairs)||pairs.length<=n) return pairs||[];
+  const top=pairs.slice(0,n);
+  let rest=0;
+  for(let i=n;i<pairs.length;i++) rest+=(pairs[i][1]||0);
+  if(rest>0) top.push(['Прочее',rest]);
+  return top;
+}
+
+function _pieOptions(onClickFn){
+  return {
+    responsive:true,maintainAspectRatio:false,cutout:'55%',
+    plugins:{
+      legend:{position:'right',labels:{
+        font:{size:9},color:'#6b7280',boxWidth:9,padding:5,usePointStyle:false,
+        generateLabels:function(chart){
+          const ds=chart.data.datasets[0]; if(!ds) return [];
+          const bg=ds.backgroundColor||[];
+          return chart.data.labels.map((lbl,i)=>{
+            const v=String(lbl);
+            const text=v.length>22?v.slice(0,21)+'…':v;
+            return {text,fillStyle:Array.isArray(bg)?bg[i%bg.length]:bg,strokeStyle:'#fff',lineWidth:1,hidden:false,index:i};
+          });
+        }
+      }},
+      tooltip:{callbacks:{
+        label:c=>{
+          const total=c.dataset.data.reduce((s,v)=>s+(v||0),0);
+          const pct=total>0?(c.raw/total*100).toFixed(1):0;
+          return ` ${c.label}: ${(c.raw||0).toLocaleString('ru-RU')} (${pct}%)`;
+        }
+      }}
+    },
+    onClick:onClickFn||null
+  };
+}
+
+function _pieChart(id,pairs,filterSelectId,resetIds){
+  const ctx=document.getElementById(id); if(!ctx) return null;
+  const ex=Chart.getChart(ctx); if(ex) ex.destroy();
+  const d=_topNWithOther(pairs,7);
+  if(!d.length) return null;
+  return new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:d.map(p=>String(p[0])),datasets:[{data:d.map(p=>p[1]),backgroundColor:_PIE_COLORS,borderColor:'#fff',borderWidth:2}]},
+    options:_pieOptions(filterSelectId ? (e,els)=>{
+      if(!els.length) return;
+      const v=d[els[0].index]?.[0];
+      if(!v||v==='Прочее') return;
+      const sel=document.getElementById(filterSelectId); if(!sel) return;
+      if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
+      sel.value=v;
+      (resetIds||[]).forEach(rid=>{const r=document.getElementById(rid);if(r)r.selectedIndex=0;});
+      onGlobalFilter();
+    } : null)
+  });
+}
+
 // Подгонка высоты canvas под число строк (30px на строку) — для скролл-блоков регионов
 function _fitRegionCanvas(id,n){
   const cv=document.getElementById(id); if(!cv) return;
@@ -3551,12 +3625,17 @@ function _renderC3(){
     };
   }
   if(!data.length)return;
-  _chartCat=new Chart(el,{type:'bar',
-    data:{labels:data.map(([n])=>n),datasets:[{label:'Обращений',data:data.map(([,v])=>v),backgroundColor:color,borderRadius:3}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},
-      onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},
-      onClick:clickFn}});
+  const piesD=_topNWithOther(data,7);
+  _chartCat=new Chart(el,{
+    type:'doughnut',
+    data:{labels:piesD.map(([n])=>String(n)),datasets:[{data:piesD.map(([,v])=>v),backgroundColor:_PIE_COLORS,borderColor:'#fff',borderWidth:2}]},
+    options:_pieOptions((e,els)=>{
+      if(!els.length) return;
+      const v=piesD[els[0].index]?.[0]; if(!v||v==='Прочее') return;
+      const origIdx=data.findIndex(d=>d[0]===v);
+      if(origIdx>=0) clickFn(e,[{index:origIdx}]);
+    })
+  });
 }
 
 // ── Context-aware cAppSub ─────────────────────────────────────────────────
@@ -3620,17 +3699,17 @@ function _renderCAppSub(){
     }
   }
   if(!data.length)return;
-  _chartSub=new Chart(el,{type:'bar',
-    data:{labels:data.map(([n])=>n),datasets:[{data:data.map(([,v])=>v),backgroundColor:'#16a34a',borderRadius:3}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},
-      onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},
-      onClick:(e,els,chart)=>{
-        if(!els.length)return;
-        const v=data[els[0].index]?.[0]||chart.data.labels[els[0].index]; if(!v)return;
-        const fEl=document.getElementById(targetFilter);
-        if(fEl){fEl.value=v; if(nextCascade==='sub')cascadeSubFilter(); onGlobalFilter();}
-      }}});
+  const piesS=_topNWithOther(data,7);
+  _chartSub=new Chart(el,{
+    type:'doughnut',
+    data:{labels:piesS.map(([n])=>String(n)),datasets:[{data:piesS.map(([,v])=>v),backgroundColor:_PIE_COLORS,borderColor:'#fff',borderWidth:2}]},
+    options:_pieOptions((e,els)=>{
+      if(!els.length) return;
+      const v=piesS[els[0].index]?.[0]; if(!v||v==='Прочее') return;
+      const fEl=document.getElementById(targetFilter);
+      if(fEl){fEl.value=v; if(nextCascade==='sub')cascadeSubFilter(); onGlobalFilter();}
+    })
+  });
 }
 
 // ── Кросс-фильтрация: обновить все чарты при изменении фильтра ────────────
@@ -3708,12 +3787,7 @@ function _rechartOnFilter(){
     }
     const d=srcData.slice(0,8);
     if(!d.length)return;
-    new Chart(ctx,{type:'bar',
-      data:{labels:d.map(([n])=>n),datasets:[{data:d.map(([,v])=>v),backgroundColor:colors,borderRadius:3}]},
-      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toLocaleString('ru-RU')}}},
-        scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af'}},
-                y:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af',callback:_truncTick}}}}});
+    _pieChart('cAppSubCat', d, 'gIssueF', ['gSubF']);
   })();
 
   // c12: адаптируется под контекст фильтров
@@ -3865,7 +3939,7 @@ function _rechartOnFilter(){
     const typeLabels=_chartType.data.labels||[];
     const selType=document.getElementById('gType')?.value||'all';
     _chartType.data.datasets[0].backgroundColor=typeLabels.map((l,i)=>{
-      if(selType==='all') return ['#dc2626','#0891B2','#7c3aed','#16a34a','#d97706','#f59e0b','#06b6d4','#84cc16'][i%8];
+      if(selType==='all') return _PIE_COLORS[i%_PIE_COLORS.length];
       return l===selType||l.startsWith(selType)?'#f97316':'rgba(150,150,150,0.3)';
     });
     _chartType.update();
@@ -4479,9 +4553,10 @@ const _FCHIP_DEFS=[
   {id:'gSubF',  label:'Характер'},
   {id:'gCGO',   label:'ЦГО'},
   {id:'gMIO',   label:'МИО'},
+  {id:'gOrg',   label:'Орган'},
   {id:'gDupSel',label:'Повторные'},
 ];
-const _FCHIP_ADV=['gCatF','gIssueF','gSubF','gCGO','gMIO'];
+const _FCHIP_ADV=['gCatF','gIssueF','gSubF','gCGO','gMIO','gOrg'];
 
 function updateFilterChips(){
   const box=document.getElementById('fbarActive');
@@ -4490,9 +4565,9 @@ function updateFilterChips(){
   _FCHIP_DEFS.forEach(d=>{
     const el=document.getElementById(d.id);
     if(!el) return;
-    const v=el.value;
+    const v=(el.value||'').trim();
     if(v==='all'||v==='') return;
-    let txt=el.options[el.selectedIndex]?.text||v;
+    let txt=(el.options && el.options[el.selectedIndex]?.text) || v;
     if(_FCHIP_ADV.includes(d.id)) advActive=true;
     if(txt.length>22) txt=txt.slice(0,21)+'…';
     chips.push(`<span class="fchip"><b>${d.label}:</b> ${txt}<span class="fchip-x" title="Убрать" onclick="clearOneFilter('${d.id}')">✕</span></span>`);
@@ -4510,7 +4585,7 @@ function updateFilterChips(){
 }
 
 function clearOneFilter(id){
-  const reset=el=>{ if(el) el.selectedIndex=0; };
+  const reset=el=>{ if(!el) return; if(el.tagName==='INPUT') el.value=''; else el.selectedIndex=0; };
   reset(document.getElementById(id));
   if(id==='gCatF'){ reset(document.getElementById('gIssueF')); reset(document.getElementById('gSubF')); }
   if(id==='gIssueF'){ reset(document.getElementById('gSubF')); }
@@ -4577,9 +4652,10 @@ function _restoreRichTooltips(){
 
 function engineFilterActive(){
   const F=id=>document.getElementById(id)?.value||'all';
+  const orgV=(document.getElementById('gOrg')?.value||'').trim();
   return F('gYear')!=='all'||F('gMonth')!=='all'||F('gDay')!=='all'||F('gReg')!=='all'
     ||F('gType')!=='all'||F('gStatus')!=='all'||F('gCatF')!=='all'||F('gIssueF')!=='all'
-    ||F('gSubF')!=='all'||F('gCGO')!=='all'||F('gMIO')!=='all'
+    ||F('gSubF')!=='all'||F('gCGO')!=='all'||F('gMIO')!=='all'||orgV!==''
     ||((typeof _gDupActive!=='undefined')&&_gDupActive);
 }
 
@@ -4593,6 +4669,7 @@ function _engSetChart(id,pairs,limit,filterSelectId,resetIds){
     ch.options.onClick=(e,els)=>{
       if(!els.length) return;
       const v=ch.data.labels[els[0].index];
+      if(v==='Прочее') return;
       const sel=document.getElementById(filterSelectId);
       if(!sel) return;
       if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
@@ -4612,6 +4689,7 @@ function applyTimeEngine(){
   const yF=F('gYear'),mF=F('gMonth'),dF=F('gDay');
   const regF=F('gReg'),catF=F('gCatF'),typF=F('gType'),stF=F('gStatus');
   const issF=F('gIssueF'),subF=F('gSubF'),cgoF=F('gCGO'),mioF=F('gMIO');
+  const orgFsel=(document.getElementById('gOrg')?.value||'').trim();
   const dupOnly=(typeof _gDupActive!=='undefined')&&_gDupActive;
   const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF, dN=dF==='all'?-1:+dF;
   const regI=regF==='all'?-1:_AC.regions.indexOf(regF);
@@ -4619,8 +4697,8 @@ function applyTimeEngine(){
   const typI=typF==='all'?-1:_AC.types.indexOf(typF);
   const issI=issF==='all'?-1:_AC.issues.indexOf(issF);
   const subI=subF==='all'?-1:_AC.subs.indexOf(subF);
-  const orgF=cgoF!=='all'?cgoF:(mioF!=='all'?mioF:'all');
-  const orgI=orgF==='all'?-1:_AC.orgs.indexOf(orgF);
+  const orgF=orgFsel||(cgoF!=='all'?cgoF:(mioF!=='all'?mioF:'all'));
+  const orgI=(!orgF||orgF==='all')?-1:_AC.orgs.indexOf(orgF);
 
   const w=_AC.w,D=_AC.data,n=_AC.n;
   const regTot=new Int32Array(_AC.regions.length), regLate=new Int32Array(_AC.regions.length), regClosed=new Int32Array(_AC.regions.length);
@@ -4675,11 +4753,11 @@ function applyTimeEngine(){
   _engSetChart('cRegLate', latePairs, 0, 'gReg');
   _fitRegionCanvas('c12', regPairs.length);
   _fitRegionCanvas('cRegLate', latePairs.length);
-  // 4 чарта аналитики — иерархия Категория → Подкатегория → Характер; Тип
-  _engSetChart('c3',         pairsOf(catTot,_AC.cats),   8, 'gCatF',  ['gIssueF','gSubF']);
-  _engSetChart('cAppSubCat', pairsOf(issTot,_AC.issues), 8, 'gIssueF',['gSubF']);
-  _engSetChart('cAppSub',    pairsOf(subTot,_AC.subs),   8, 'gSubF');
-  _engSetChart('cAppType',   pairsOf(typTot,_AC.types),  8, 'gType');
+  // 4 чарта аналитики (doughnut, топ-7 + Прочее) — иерархия Тип → Категория → Подкатегория → Характер
+  _engSetChart('cAppType',   _topNWithOther(pairsOf(typTot,_AC.types),7),  0, 'gType');
+  _engSetChart('c3',         _topNWithOther(pairsOf(catTot,_AC.cats),7),   0, 'gCatF',  ['gIssueF','gSubF']);
+  _engSetChart('cAppSubCat', _topNWithOther(pairsOf(issTot,_AC.issues),7), 0, 'gIssueF',['gSubF']);
+  _engSetChart('cAppSub',    _topNWithOther(pairsOf(subTot,_AC.subs),7),   0, 'gSubF');
 
   // Исполнители
   const pl=document.getElementById('envPlants');
@@ -4827,6 +4905,7 @@ function _resetFiltersSilent(){
     const el=document.getElementById(id); if(el) el.selectedIndex=0;
   });
   const ds=document.getElementById('gDupSel'); if(ds) ds.selectedIndex=0;
+  const org=document.getElementById('gOrg'); if(org) org.value='';
   _gDupActive=false;
 }
 
@@ -5083,6 +5162,7 @@ function resetGlobalFilter(){
   ['gYear','gMonth','gDay','gReg','gStatus','gType','gCatF','gIssueF','gSubF','gCGO','gMIO'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='all';
   });
+  const org=document.getElementById('gOrg'); if(org) org.value='';
   ['appCatFilter','appIssFilter','appSubFilter','prvCat','prvIss','prvSub'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='all';
   });

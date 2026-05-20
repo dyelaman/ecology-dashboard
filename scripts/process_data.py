@@ -115,6 +115,114 @@ MONTH_ORDER = {
     "Сентябрь": 9, "Октябрь": 10, "Ноябрь": 11, "Декабрь": 12,
 }
 
+# ── ECOLOGY WHITELIST ─────────────────────────────────────────────────────────
+# Отсекаем нерелевантные категории/подкатегории — оставляем только экологию.
+ECOLOGY_FILTER = {
+    "fullCategories": [
+        "ИСПОЛЬЗОВАНИЕ ПРИРОДНО-СЫРЬЕВЫХ, ЗЕМЕЛЬНЫХ И ВОДНЫХ РЕСУРСОВ, ЭКОЛОГИЯ И УТИЛИЗАЦИЯ",
+        "Использование природно-сырьевых, земельных и водных ресурсов, недропользование, экология и утилизация",
+    ],
+    "filteredCategories": {
+        "ЧРЕЗВЫЧАЙНЫЕ СИТУАЦИИ": {
+            "issues": [
+                "Профилактика, предупреждение и ликвидация ЧС",
+                "Чрезвычайные ситуации",
+                "Вопросы в сфере промышленной безопасности",
+            ],
+            "excludeSubissues": ["Безопасность на водоемах"],
+        },
+        "ЗДРАВООХРАНЕНИЕ, САНИТАРИЯ И ГИГИЕНА": {
+            "issues": ["Вопросы санитарного и эпидемиологического контроля"],
+        },
+        "ПРОМЫШЛЕННОСТЬ И ЭНЕРГЕТИКА": {
+            "issues": [
+                "Недропользование", "Углеводородное сырье", "Возобновляемые источники энергии",
+                "Контроль и надзор в области использования атомной и электроэнергии", "Геология",
+                "Отрасли промышленности", "Электроэнергетика",
+            ],
+            "subissueRules": {
+                "Электроэнергетика": ["Деятельность энергопредприятий в сфере электроэнергетики"],
+                "Отрасли промышленности": [
+                    "Химическая и нефтехимическая промышленность",
+                    "Черная металлургия", "Цветная металлургия",
+                ],
+            },
+        },
+        "ЖИЛИЩНО-КОММУНАЛЬНОЕ ХОЗЯЙСТВО": {
+            "issues": [
+                "Тепло-, водо-, газоснабжение, освещение, канализация, лифтовое хозяйство, благоустройство и озеленение",
+            ],
+        },
+        "Строительство, промышленность, транспорт и коммуникации, жилищно-коммунальное хозяйство, бытовое обслуживание населения": {
+            "issues": [
+                "Промышленность",
+                "Тепло-, водо-, газоснабжение, освещение, канализация, лифтовое хозяйство, благоустройство и озеленение, телефонизация и радиофикация",
+            ],
+        },
+        "ЛИЦЕНЗИРОВАНИЕ, РАЗРЕШИТЕЛЬНЫЕ СИСТЕМЫ, ТЕХРЕГУЛИРОВАНИЕ": {
+            "issues": ["Разрешительные системы", "Лицензирование"],
+        },
+        "ОКАЗАНИЕ ГОСУДАРСТВЕННЫХ УСЛУГ, ЛИЦЕНЗИРОВАНИЕ И ТЕХНИЧЕСКОЕ РЕГУЛИРОВАНИЕ": {
+            "issues": ["Разрешительные системы", "Лицензирование"],
+        },
+        "СЕЛЬСКОЕ ХОЗЯЙСТВО": {
+            "issues": ["Безопасность в сфере сельского хозяйства"],
+        },
+        "СЕЛЬСКОЕ ХОЗЯЙСТВО И ЗЕМЕЛЬНЫЕ ОТНОШЕНИЯ": {
+            "issues": [
+                "Безопасность в сфере сельского хозяйства",
+                "Вопросы земли и землепользования",
+                "Сельскохозяйственная деятельность",
+            ],
+        },
+        "ВОПРОСЫ ЗЕМЛИ И ЗЕМЛЕПОЛЬЗОВАНИЯ": {
+            "issues": ["Соблюдение законодательства в сфере земельных отношений"],
+        },
+    },
+    "excludeCategories": [
+        "Раздел до 01.08.2021",
+        "В рассмотрении",
+        "АДМИНИСТРАТИВНЫЕ ПРАВОНАРУШЕНИЯ, ОБЩЕСТВЕННАЯ И ДОРОЖНАЯ БЕЗОПАСНОСТЬ",
+    ],
+}
+
+
+def filter_ecology(df):
+    """Возвращает только обращения по экологически релевантным категориям/подкатегориям."""
+    cat = df["category"].fillna("").astype(str)
+    iss = df["issue"].fillna("").astype(str)
+    sub = df["subissue"].fillna("").astype(str)
+
+    mask = pd.Series(False, index=df.index)
+
+    # 1. Категории целиком
+    mask |= cat.isin(ECOLOGY_FILTER["fullCategories"])
+
+    # 2. Категории с фильтром по подкатегориям
+    for cat_name, rules in ECOLOGY_FILTER["filteredCategories"].items():
+        cat_mask = (cat == cat_name)
+        if not cat_mask.any():
+            continue
+        if "issues" in rules:
+            cat_mask &= iss.isin(rules["issues"])
+        # exclude по issue ИЛИ subissue (трактуем мягко)
+        for ex in rules.get("excludeSubissues", []):
+            cat_mask &= ~(iss == ex)
+            cat_mask &= ~(sub == ex)
+        # правила по конкретным issue → допустимым subissue
+        for iss_name, allowed_subs in rules.get("subissueRules", {}).items():
+            inside = cat_mask & (iss == iss_name)
+            if inside.any():
+                cat_mask &= ~inside | sub.isin(allowed_subs)
+        mask |= cat_mask
+
+    # 3. Явное исключение
+    mask &= ~cat.isin(ECOLOGY_FILTER["excludeCategories"])
+
+    out = df[mask].copy()
+    print(f"  Экология-фильтр: {len(out):,} из {len(df):,} обращений ({len(out)/len(df)*100:.1f}%)")
+    return out
+
 # ── УТИЛИТЫ ───────────────────────────────────────────────────────────────────
 def read_csv(path, label):
     print(f"\nЧитаю {label}...")
@@ -166,6 +274,33 @@ def process_appeals(df):
     print(f"  Итого: {total:,} | Завершено: {done+latedone:,} ({done_pct}%) | В работе: {work:,} | Просрочено: {late:,}")
     print(f"  Дубли: {duplicates:,} | Перенаправлено: {forwarded:,} | Частично: {ext_forwarded:,}")
 
+    # ── МЭПР KPI ───────────────────────────────────────────────────────────
+    org_low = df["org_name"].fillna("").astype(str).str.lower()
+    mepr_mask = org_low.str.contains("экологии и природных ресурсов", na=False)
+    mepr_total = int(mepr_mask.sum())
+    central_name = 'государственное учреждение "министерство экологии и природных ресурсов республики казахстан"'
+    mepr_central = int((org_low == central_name).sum())
+    if "is_forward" in df.columns:
+        fwd_series = df["is_forward"].astype(str).str.lower().isin(["y","1","true","да"])
+    else:
+        fwd_series = pd.Series(False, index=df.index)
+    if "is_ext_forward" in df.columns:
+        ext_series = df["is_ext_forward"].astype(str).str.lower().isin(["y","1","true","да"])
+    else:
+        ext_series = pd.Series(False, index=df.index)
+    mepr_fwd_in  = int((mepr_mask & fwd_series).sum())
+    mepr_fwd_out = int((mepr_mask & ext_series).sum())
+    mepr_kpi = {
+        "total":         mepr_total,
+        "central":       mepr_central,
+        "fwd_in":        mepr_fwd_in,
+        "fwd_out":       mepr_fwd_out,
+        "all_total":     total,
+        "all_forwarded": forwarded,
+        "all_ext_fwd":   ext_forwarded,
+    }
+    print(f"  МЭПР: всего {mepr_total:,} ({mepr_total/total*100:.1f}% от всех) · ЦА {mepr_central:,} · перенапр. ВХ {mepr_fwd_in:,} · ИСХ {mepr_fwd_out:,}")
+
     # ── По регионам ────────────────────────────────────────────────────────
     print("  Регионы...")
     by_region = {}
@@ -214,6 +349,7 @@ def process_appeals(df):
     df["_subissue"] = df["subissue"].map(lambda x: SUBISSUE_SHORT.get(str(x), str(x)[:55]) if pd.notna(x) else x)
     top_subissues= top_n(df["_subissue"], 8)
     top_orgs     = top_n(df["org_name"],   50)
+    all_orgs     = top_n(df["org_name"],   200)  # для фильтра «Орган-исполнитель»
 
     # ── Иерархия: категория → характер → подкатегория ─────────────────────
     hierarchy = {}
@@ -554,9 +690,11 @@ def process_appeals(df):
         "top_issues":    top_issues,
         "top_subissues": top_subissues,
         "top_orgs":      top_orgs,
+        "all_orgs":      all_orgs,
         "monthly":          monthly,
         "monthly_by_region": monthly_by_region,
         "top_complaint_category": top_complaint_category,
+        "mepr_kpi": mepr_kpi,
         "hierarchy":      hierarchy,
         "cross":          cross,
         "issue_cross":    issue_cross,
@@ -1642,7 +1780,9 @@ def make_appeals_compact(df, top_orgs):
     types   = sorted(d["appeal_type"].dropna().astype(str).unique().tolist())
     issues  = sorted(d["issue"].dropna().astype(str).unique().tolist())
     subs    = sorted(d["_subissue"].dropna().astype(str).unique().tolist())
-    org_list = [str(o) for o, _ in top_orgs]
+    # Топ-200 организаций — для поддержки фильтра «Орган-исполнитель»
+    top_orgs_full = top_n(df["org_name"], 200)
+    org_list = [str(o) for o, _ in top_orgs_full]
     OTHER = len(org_list)
 
     ri = {v: i for i, v in enumerate(regions)}
@@ -1691,6 +1831,7 @@ def main():
     os.makedirs(OUT_DIR, exist_ok=True)
 
     df_appeals    = read_csv(APPEALS_CSV,    "Обращения")
+    df_appeals    = filter_ecology(df_appeals)
     df_ikomek     = read_csv(IKOMEK_CSV,     "iKomek")
     df_pek        = read_csv(PEK_CSV,        "ПЭК объекты")
     df_emerg      = read_csv(EMERG_CSV,      "Аварийные выбросы")
