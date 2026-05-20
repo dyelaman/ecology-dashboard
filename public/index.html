@@ -424,11 +424,13 @@ input[type=file]{display:none}
 
   <!-- МЭПР KPI — фокус на министерство -->
   <div class="block-title" style="margin-top:0">🏛️ Обращения в систему МЭПР</div>
-  <div class="kpi-grid" style="margin-bottom:14px;grid-template-columns:repeat(4,1fr)">
+  <div class="kpi-grid" style="margin-bottom:14px;grid-template-columns:repeat(6,1fr);gap:8px">
     <div class="kpi"><div class="kpi-lbl">Всего в МЭПР и подведомств.</div><div class="kpi-val" id="meprTotal" style="color:#0891B2">—</div><div class="kpi-d nu" id="meprTotalPct">—</div></div>
     <div class="kpi"><div class="kpi-lbl">Центр. аппарат МЭПР РК</div><div class="kpi-val" id="meprCentral" style="color:#16A34A">—</div><div class="kpi-d nu" id="meprCentralPct">—</div></div>
     <div class="kpi"><div class="kpi-lbl">Перенаправлено в МЭПР</div><div class="kpi-val" id="meprFwdIn" style="color:#7c3aed">—</div><div class="kpi-d nu" id="meprFwdInPct">—</div></div>
-    <div class="kpi"><div class="kpi-lbl">Перенаправлено из МЭПР</div><div class="kpi-val" id="meprFwdOut" style="color:#d97706">—</div><div class="kpi-d nu" id="meprFwdOutPct">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Повторные в МЭПР</div><div class="kpi-val" id="meprDup" style="color:#d97706">—</div><div class="kpi-d nu" id="meprDupPct">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">В работе в МЭПР</div><div class="kpi-val" id="meprWork" style="color:#0d9488">—</div><div class="kpi-d nu" id="meprWorkPct">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Просроченные в МЭПР</div><div class="kpi-val" id="meprLate" style="color:#DC2626">—</div><div class="kpi-d nu" id="meprLatePct">—</div></div>
   </div>
 
   <!-- KPIs -->
@@ -2313,14 +2315,19 @@ function applyRealKPIs() {
   // МЭПР KPI
   const mk = a.mepr_kpi;
   if (mk) {
+    const pctOf = (n,d)=> d>0 ? (n/d*100).toFixed(1)+'%' : '—';
     setEl('meprTotal', mk.total.toLocaleString('ru-RU'));
-    setEl('meprTotalPct', mk.all_total>0 ? (mk.total/mk.all_total*100).toFixed(1)+'% от всех' : '—');
+    setEl('meprTotalPct', pctOf(mk.total,mk.all_total)+' от всех');
     setEl('meprCentral', mk.central.toLocaleString('ru-RU'));
-    setEl('meprCentralPct', mk.total>0 ? (mk.central/mk.total*100).toFixed(1)+'% от МЭПР' : '—');
+    setEl('meprCentralPct', pctOf(mk.central,mk.total)+' от МЭПР');
     setEl('meprFwdIn', mk.fwd_in.toLocaleString('ru-RU'));
-    setEl('meprFwdInPct', mk.all_forwarded>0 ? (mk.fwd_in/mk.all_forwarded*100).toFixed(1)+'% входящих' : '—');
-    setEl('meprFwdOut', mk.fwd_out.toLocaleString('ru-RU'));
-    setEl('meprFwdOutPct', mk.all_ext_fwd>0 ? (mk.fwd_out/mk.all_ext_fwd*100).toFixed(1)+'% исходящих' : '—');
+    setEl('meprFwdInPct', pctOf(mk.fwd_in,mk.all_forwarded)+' входящих');
+    setEl('meprDup', (mk.dup||0).toLocaleString('ru-RU'));
+    setEl('meprDupPct', pctOf(mk.dup||0,mk.total)+' от МЭПР');
+    setEl('meprWork', (mk.work||0).toLocaleString('ru-RU'));
+    setEl('meprWorkPct', pctOf(mk.work||0,mk.total)+' от МЭПР');
+    setEl('meprLate', (mk.late||0).toLocaleString('ru-RU'));
+    setEl('meprLatePct', pctOf(mk.late||0,(mk.work||1))+' от очереди');
   }
   // KPI — всего перенаправленных обращений
   const fwdN = a.forwarded || 0;

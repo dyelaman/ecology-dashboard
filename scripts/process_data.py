@@ -366,32 +366,31 @@ def process_appeals(df):
     print(f"  Итого: {total:,} | Завершено: {done+latedone:,} ({done_pct}%) | В работе: {work:,} | Просрочено: {late:,}")
     print(f"  Дубли: {duplicates:,} | Перенаправлено: {forwarded:,} | Частично: {ext_forwarded:,}")
 
-    # ── МЭПР KPI ───────────────────────────────────────────────────────────
+    # ── МЭПР KPI (используем _ministry — единая логика с фильтром в UI) ────
     org_low = df["org_name"].fillna("").astype(str).str.lower()
-    mepr_mask = org_low.str.contains("экологии и природных ресурсов", na=False)
+    mepr_mask = (df["_ministry"] == "mepr")
     mepr_total = int(mepr_mask.sum())
     central_name = 'государственное учреждение "министерство экологии и природных ресурсов республики казахстан"'
     mepr_central = int((org_low == central_name).sum())
-    if "is_forward" in df.columns:
-        fwd_series = df["is_forward"].astype(str).str.lower().isin(["y","1","true","да"])
-    else:
-        fwd_series = pd.Series(False, index=df.index)
-    if "is_ext_forward" in df.columns:
-        ext_series = df["is_ext_forward"].astype(str).str.lower().isin(["y","1","true","да"])
-    else:
-        ext_series = pd.Series(False, index=df.index)
+    fwd_series = (df["is_forward"].astype(str).str.lower().isin(["y","1","true","да"])
+                  if "is_forward" in df.columns else pd.Series(False, index=df.index))
+    dup_series = (df["is_duplicate"].astype(str).str.lower().isin(["y","1","true","да"])
+                  if "is_duplicate" in df.columns else pd.Series(False, index=df.index))
     mepr_fwd_in  = int((mepr_mask & fwd_series).sum())
-    mepr_fwd_out = int((mepr_mask & ext_series).sum())
+    mepr_dup     = int((mepr_mask & dup_series).sum())
+    mepr_work    = int((mepr_mask & df["_status"].isin(["work","late"])).sum())
+    mepr_late    = int((mepr_mask & (df["_status"] == "late")).sum())
     mepr_kpi = {
         "total":         mepr_total,
         "central":       mepr_central,
         "fwd_in":        mepr_fwd_in,
-        "fwd_out":       mepr_fwd_out,
+        "dup":           mepr_dup,
+        "work":          mepr_work,
+        "late":          mepr_late,
         "all_total":     total,
         "all_forwarded": forwarded,
-        "all_ext_fwd":   ext_forwarded,
     }
-    print(f"  МЭПР: всего {mepr_total:,} ({mepr_total/total*100:.1f}% от всех) · ЦА {mepr_central:,} · перенапр. ВХ {mepr_fwd_in:,} · ИСХ {mepr_fwd_out:,}")
+    print(f"  МЭПР: всего {mepr_total:,} ({mepr_total/total*100:.1f}%) · ЦА {mepr_central:,} · перенапр. {mepr_fwd_in:,} · повторные {mepr_dup:,} · в работе {mepr_work:,} · просроч. {mepr_late:,}")
 
     # ── По регионам ────────────────────────────────────────────────────────
     print("  Регионы...")

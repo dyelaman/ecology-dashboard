@@ -1,5 +1,5 @@
 {
-  "generated": "2026-05-20T12:59:33.292959",
+  "generated": "2026-05-20T14:20:16.133088",
   "appeals": {
     "total": 330698,
     "done": 320112,
@@ -12313,13 +12313,14 @@
       "total": 26215
     },
     "mepr_kpi": {
-      "total": 73304,
+      "total": 82864,
       "central": 8070,
-      "fwd_in": 14074,
-      "fwd_out": 592,
+      "fwd_in": 15106,
+      "dup": 3047,
+      "work": 3521,
+      "late": 323,
       "all_total": 330698,
-      "all_forwarded": 65828,
-      "all_ext_fwd": 2686
+      "all_forwarded": 65828
     },
     "hierarchy": {
       "Экология и природные ресурсы": {
