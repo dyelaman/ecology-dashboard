@@ -70,6 +70,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .qp-reset:hover{color:var(--red);border-color:var(--red)}
 @keyframes pulse-highlight{0%,100%{box-shadow:0 0 0 0 rgba(27,122,58,0)}50%{box-shadow:0 0 0 8px rgba(27,122,58,0.3)}}
 .highlighted{animation:pulse-highlight 2s ease-in-out}
+#minPanel{position:fixed;display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.18);z-index:9500;width:380px;max-height:520px;overflow:hidden;flex-direction:column}
+#minPanel.open{display:flex}
+.min-head{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.min-head input{flex:1;font-size:11px;padding:6px 10px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none}
+.min-reset{font-size:10px;padding:6px 10px;border-radius:18px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;white-space:nowrap}
+.min-reset:hover{color:var(--red);border-color:var(--red)}
+.min-tree{flex:1;overflow-y:auto;padding:4px 6px}
+.min-tree::-webkit-scrollbar{width:6px}
+.min-tree::-webkit-scrollbar-thumb{background:#c4c4c4;border-radius:3px}
+.min-row{display:flex;align-items:center;gap:6px;padding:6px 8px;cursor:pointer;border-radius:6px;font-size:11px}
+.min-row:hover{background:var(--surface2)}
+.min-row input[type=checkbox]{cursor:pointer;width:13px;height:13px;flex-shrink:0;accent-color:var(--green)}
+.min-toggle{cursor:pointer;width:14px;text-align:center;color:var(--text3);font-size:10px;user-select:none;flex-shrink:0}
+.min-toggle.open{color:var(--green)}
+.min-icon{flex-shrink:0}
+.min-label{flex:1;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.min-count{color:var(--text3);font-variant-numeric:tabular-nums;flex-shrink:0;font-size:10px}
+.min-partial{background:linear-gradient(45deg,var(--green) 50%,transparent 50%);border:1px solid var(--green);width:13px;height:13px;border-radius:3px;flex-shrink:0;margin-right:1px}
+.min-orgs{padding:2px 0 6px 22px;border-left:2px solid var(--border);margin-left:14px}
+.org-row{display:flex;align-items:center;gap:6px;padding:4px 8px;cursor:pointer;border-radius:5px;font-size:10px}
+.org-row:hover{background:var(--surface2)}
+.org-row input[type=checkbox]{cursor:pointer;width:12px;height:12px;flex-shrink:0;accent-color:var(--green)}
+.org-label{flex:1;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.org-count{color:var(--text3);font-variant-numeric:tabular-nums;font-size:9px;flex-shrink:0}
 .synthetic-zone{background:repeating-linear-gradient(45deg,#fffbeb,#fffbeb 14px,#fef6e0 14px,#fef6e0 28px);border:2px dashed #fcd34d;border-radius:10px;padding:14px}
 .oil-marker{background:none;border:none}
 .oil-dot{width:18px;height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer}
@@ -369,20 +393,17 @@ input[type=file]{display:none}
         <option value="all">Все</option>
       </select>
 
-      <div class="fbar-sep"></div>
-      <span class="fbar-label">ЦГО <span class="tip" data-tip="Центральные государственные органы">?</span></span>
-      <select id="gCGO" onchange="onGlobalFilter()">
-        <option value="all">Все ЦГО</option>
-      </select>
+      <span style="display:none">
+        <select id="gCGO" onchange="onGlobalFilter()"><option value="all">Все ЦГО</option></select>
+        <select id="gMIO" onchange="onGlobalFilter()"><option value="all">Все МИО</option></select>
+      </span>
 
       <div class="fbar-sep"></div>
-      <span class="fbar-label">МИО <span class="tip" data-tip="Местные исполнительные органы">?</span></span>
-      <select id="gMIO" onchange="onGlobalFilter()">
-        <option value="all">Все МИО</option>
-      </select>
+      <span class="fbar-label">Госорган</span>
+      <button class="fbar-chip" id="minFilterBtn" onclick="toggleMinFilter(event)">Все ▾</button>
 
       <div class="fbar-sep"></div>
-      <span class="fbar-label">Орган-исполнитель</span>
+      <span class="fbar-label">Конкретный орган</span>
       <input list="orgList" id="gOrg" placeholder="Любой..." onchange="onGlobalFilter()" style="font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:220px;font-weight:500;outline:none">
       <datalist id="orgList"></datalist>
     </span>
@@ -2133,9 +2154,7 @@ function renderMainCharts() {
         n = n.replace(/^(Коммунальное государственное учреждение|Государственное учреждение|Республиканское государственное учреждение|Акционерное общество|Товарищество с ограниченной ответственностью)\s*/i,'');
         return n.length > 55 ? n.substring(0,55)+'…' : n;
       };
-      pl.innerHTML = a.top_orgs.map(([name,cnt]) =>
-        `<div onclick="showOrgDrilldown('${name.replace(/'/g,"\\'")}')" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${name.replace(/"/g,'&quot;')}">${shortName(name)}</span><span style="font-size:10px;color:var(--text2);white-space:nowrap;margin-left:4px">${cnt.toLocaleString('ru-RU')}</span><span style="font-size:9px;color:var(--text3);margin-left:2px">›</span></div>`
-      ).join('');
+      pl.innerHTML = a.top_orgs.map(([name,cnt]) => _envPlantsRow(name, cnt)).join('');
     } else {
       pl.innerHTML = '<div style="font-size:11px;color:var(--text3)">Загрузка…</div>';
     }
@@ -2229,6 +2248,7 @@ function renderMainCharts() {
       if(gd) for(let d=1;d<=31;d++){const o=document.createElement('option');o.value=String(d);o.textContent=String(d);gd.appendChild(o);}
     })();
     renderHearingsTab(summary.appeals);
+    _buildMinTree();
     // Populate global filter dropdowns from real data
     (function populateFilters(a){
       const addOpts=(id,items,valFn,lblFn)=>{
@@ -3865,9 +3885,7 @@ function _rechartOnFilter(){
       n=n.replace(/^(Коммунальное государственное учреждение|Государственное учреждение|Республиканское государственное учреждение|Акционерное общество|Товарищество с ограниченной ответственностью)\s*/i,'');
       return n.length>55?n.substring(0,55)+'…':n;
     };
-    pl.innerHTML=orgs.map(([name,cnt])=>
-      `<div onclick="showOrgDrilldown('${name.replace(/'/g,"\\'")}')" style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${name.replace(/"/g,'&quot;')}">${shortName(name)}</span><span style="font-size:10px;color:var(--text2);white-space:nowrap;margin-left:4px">${cnt.toLocaleString('ru-RU')}</span><span style="font-size:9px;color:var(--text3);margin-left:2px">›</span></div>`
-    ).join('');
+    pl.innerHTML=orgs.map(([name,cnt])=>_envPlantsRow(name,cnt)).join('');
   })();
 
   // KPI из cross-data
@@ -4565,6 +4583,18 @@ function updateFilterChips(){
     if(txt.length>22) txt=txt.slice(0,21)+'…';
     chips.push(`<span class="fchip"><b>${d.label}:</b> ${txt}<span class="fchip-x" title="Убрать" onclick="clearOneFilter('${d.id}')">✕</span></span>`);
   });
+  // Иерархический фильтр госорганов — отдельные чипы
+  const mins = (_DATA?.summary?.appeals?.ministries) || [];
+  _minSelKeys.forEach(k=>{
+    const m = mins.find(x=>x.key===k);
+    const label = m ? m.label : k;
+    chips.push(`<span class="fchip"><b>Госорган:</b> ${m?m.icon+' ':''}${label}<span class="fchip-x" onclick="_chipRemoveMin('${k}')">✕</span></span>`);
+  });
+  _orgTreeSel.forEach(name=>{
+    const enc = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    const short = name.length>22?name.slice(0,21)+'…':name;
+    chips.push(`<span class="fchip"><b>Орган:</b> ${short}<span class="fchip-x" onclick="_chipRemoveOrg('${enc}')">✕</span></span>`);
+  });
   box.innerHTML=chips.join('');
   // авто-раскрытие доп. фильтров, если среди активных есть скрытый
   if(advActive){
@@ -4643,12 +4673,206 @@ function _restoreRichTooltips(){
   });
 }
 
+// ── Иерархический фильтр госорганов ────────────────────────────────────────
+const _minSelKeys = new Set();
+const _orgTreeSel = new Set();
+
+function _buildMinTree(){
+  const a = _DATA?.summary?.appeals;
+  if(!a || !a.ministries) return;
+  const tree = document.getElementById('minTree'); if(!tree) return;
+  const orgsBy = a.orgs_by_ministry || {};
+  const sorted = [...a.ministries].sort((x,y)=>y.count-x.count).filter(m=>m.count>0);
+  let html='';
+  sorted.forEach(m=>{
+    const orgs = orgsBy[m.key] || [];
+    const labelSafe = m.short.replace(/"/g,'&quot;');
+    html += `<div class="min-row" data-min="${m.key}" data-search="${(m.label+' '+m.short).toLowerCase()}">
+      <input type="checkbox" data-min-cb="${m.key}" onchange="_onMinChange('${m.key}', this.checked)">
+      <span class="min-toggle" data-min-toggle="${m.key}" onclick="_toggleMinOrgs('${m.key}')">${orgs.length?'▶':' '}</span>
+      <span class="min-icon">${m.icon}</span>
+      <span class="min-label" title="${labelSafe}">${m.label} <span style="color:var(--text3);font-weight:400;font-size:9px">— ${m.short}</span></span>
+      <span class="min-count">${m.count.toLocaleString('ru-RU')}</span>
+    </div>`;
+    if(orgs.length){
+      html += `<div class="min-orgs" data-min-orgs="${m.key}" style="display:none">`;
+      orgs.forEach(([nm,cnt])=>{
+        const enc = nm.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        const safe = nm.replace(/"/g,'&quot;');
+        html += `<div class="org-row" data-search="${nm.toLowerCase()}">
+          <input type="checkbox" data-org-cb="${safe}" onchange="_onOrgTreeChange('${enc}','${m.key}',this.checked)">
+          <span class="org-label" title="${safe}">${nm.length>52?nm.slice(0,51)+'…':nm}</span>
+          <span class="org-count">${cnt.toLocaleString('ru-RU')}</span>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+  });
+  tree.innerHTML = html;
+}
+
+function toggleMinFilter(ev){
+  ev && ev.stopPropagation && ev.stopPropagation();
+  const p = document.getElementById('minPanel'); if(!p) return;
+  if(p.classList.contains('open')){ p.classList.remove('open'); return; }
+  const btn = document.getElementById('minFilterBtn');
+  const r = btn.getBoundingClientRect();
+  p.style.top  = (r.bottom + 6) + 'px';
+  p.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 388)) + 'px';
+  p.classList.add('open');
+}
+
+function _toggleMinOrgs(key){
+  const orgs = document.querySelector(`.min-orgs[data-min-orgs="${key}"]`);
+  const tog  = document.querySelector(`.min-toggle[data-min-toggle="${key}"]`);
+  if(!orgs) return;
+  const open = orgs.style.display === 'none';
+  orgs.style.display = open ? 'block' : 'none';
+  if(tog){ tog.textContent = open ? '▼' : '▶'; tog.classList.toggle('open', open); }
+}
+
+function _onMinChange(key, checked){
+  if(checked) _minSelKeys.add(key); else _minSelKeys.delete(key);
+  _applyMinSelection();
+}
+
+function _onOrgTreeChange(orgName, minKey, checked){
+  if(checked){
+    _orgTreeSel.add(orgName);
+    if(_minSelKeys.has(minKey)){
+      _minSelKeys.delete(minKey);
+      const cb = document.querySelector(`[data-min-cb="${minKey}"]`);
+      if(cb) cb.checked = false;
+    }
+  } else {
+    _orgTreeSel.delete(orgName);
+  }
+  _applyMinSelection();
+}
+
+function clearMinFilter(){
+  _minSelKeys.clear();
+  _orgTreeSel.clear();
+  document.querySelectorAll('#minTree input[type=checkbox]').forEach(cb=>cb.checked=false);
+  _applyMinSelection();
+}
+
+function _applyMinSelection(){
+  _updateMinButton();
+  onGlobalFilter();
+}
+
+function _updateMinButton(){
+  const btn = document.getElementById('minFilterBtn'); if(!btn) return;
+  const total = _minSelKeys.size + _orgTreeSel.size;
+  if(total===0){ btn.textContent = 'Все ▾'; btn.classList.remove('active'); return; }
+  btn.classList.add('active');
+  if(total===1){
+    if(_minSelKeys.size===1){
+      const k=[..._minSelKeys][0];
+      const m=(_DATA?.summary?.appeals?.ministries||[]).find(x=>x.key===k);
+      btn.textContent = (m?m.label:k) + ' ▾';
+    } else {
+      const o=[..._orgTreeSel][0];
+      btn.textContent = (o.length>18?o.slice(0,17)+'…':o) + ' ▾';
+    }
+  } else {
+    btn.textContent = `${total} выбрано ▾`;
+  }
+}
+
+function filterMinTree(){
+  const q = (document.getElementById('minSearch')?.value || '').toLowerCase().trim();
+  document.querySelectorAll('#minTree .min-row').forEach(el=>{
+    const s = el.dataset.search || '';
+    el.style.display = (!q || s.includes(q)) ? '' : 'none';
+  });
+  document.querySelectorAll('#minTree .org-row').forEach(el=>{
+    const s = el.dataset.search || '';
+    el.style.display = (!q || s.includes(q)) ? '' : 'none';
+  });
+  if(q){
+    document.querySelectorAll('.min-orgs').forEach(ob=>{
+      const hasMatch = [...ob.querySelectorAll('.org-row')].some(r=>r.style.display!=='none');
+      if(hasMatch){
+        ob.style.display='block';
+        const key = ob.dataset.minOrgs;
+        const minRow = document.querySelector(`.min-row[data-min="${key}"]`);
+        if(minRow) minRow.style.display = '';
+      }
+    });
+  } else {
+    document.querySelectorAll('.min-orgs').forEach(ob=>ob.style.display='none');
+    document.querySelectorAll('.min-toggle').forEach(t=>{t.textContent='▶';t.classList.remove('open');});
+  }
+}
+
+document.addEventListener('click', e=>{
+  const p = document.getElementById('minPanel');
+  if(!p || !p.classList.contains('open')) return;
+  if(e.target.closest('#minPanel') || e.target.closest('#minFilterBtn')) return;
+  p.classList.remove('open');
+});
+
+function _orgMinLabel(name){
+  // Через _AC (если уже загружен) — топ-200 органов
+  if(_AC && _AC.orgs && _AC.org_ministry && _AC.ministries){
+    const idx=_AC.orgs.indexOf(name);
+    if(idx>=0){
+      const mi=_AC.org_ministry[idx];
+      if(mi!=null && _AC.ministries[mi]) return _AC.ministries[mi].label;
+    }
+  }
+  // Fallback: orgs_by_ministry из summary.json (доступен сразу после загрузки)
+  const obym = _DATA?.summary?.appeals?.orgs_by_ministry || {};
+  for(const key of Object.keys(obym)){
+    if((obym[key]||[]).some(([nm])=>nm===name)){
+      const m=(_DATA?.summary?.appeals?.ministries||[]).find(x=>x.key===key);
+      return m?m.label:'';
+    }
+  }
+  return '';
+}
+
+function _envOrgClick(name){
+  if(_orgTreeSel.has(name)) _orgTreeSel.delete(name);
+  else _orgTreeSel.add(name);
+  // синхронизация чекбокса в дереве
+  document.querySelectorAll('[data-org-cb]').forEach(cb=>{
+    if(cb.getAttribute('data-org-cb')===name) cb.checked=_orgTreeSel.has(name);
+  });
+  _applyMinSelection();
+}
+
+function _envPlantsRow(name, cnt){
+  const enc = String(name).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const safe = String(name).replace(/"/g,'&quot;');
+  const ml = _orgMinLabel(name);
+  const shortName=s=>{s=String(s).replace(/^(Коммунальное государственное учреждение|Государственное учреждение|Республиканское государственное учреждение|Акционерное общество|Товарищество с ограниченной ответственностью|Государственное коммунальное предприятие на праве хозяйственного ведения)\s*/i,'');return s.length>50?s.slice(0,50)+'…':s;};
+  const pill = ml ? `<span style="font-size:8px;color:#0891B2;background:rgba(8,145,178,0.10);border-radius:8px;padding:1px 6px;font-weight:600;white-space:nowrap;letter-spacing:.2px">${ml}</span>` : '';
+  return `<div onclick="_envOrgClick('${enc}')" style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${safe}">${shortName(name)}</span><span style="font-size:10px;color:var(--text2);white-space:nowrap">${(cnt||0).toLocaleString('ru-RU')}</span>${pill}</div>`;
+}
+
+function _chipRemoveMin(key){
+  _minSelKeys.delete(key);
+  const cb=document.querySelector(`[data-min-cb="${key}"]`); if(cb) cb.checked=false;
+  _applyMinSelection();
+}
+function _chipRemoveOrg(name){
+  _orgTreeSel.delete(name);
+  document.querySelectorAll('[data-org-cb]').forEach(cb=>{
+    if(cb.getAttribute('data-org-cb')===name) cb.checked=false;
+  });
+  _applyMinSelection();
+}
+
 function engineFilterActive(){
   const F=id=>document.getElementById(id)?.value||'all';
   const orgV=(document.getElementById('gOrg')?.value||'').trim();
   return F('gYear')!=='all'||F('gMonth')!=='all'||F('gDay')!=='all'||F('gReg')!=='all'
     ||F('gType')!=='all'||F('gStatus')!=='all'||F('gCatF')!=='all'||F('gIssueF')!=='all'
     ||F('gSubF')!=='all'||F('gCGO')!=='all'||F('gMIO')!=='all'||orgV!==''
+    ||_minSelKeys.size>0||_orgTreeSel.size>0
     ||((typeof _gDupActive!=='undefined')&&_gDupActive);
 }
 
@@ -4692,6 +4916,9 @@ function applyTimeEngine(){
   const subI=subF==='all'?-1:_AC.subs.indexOf(subF);
   const orgF=orgFsel||(cgoF!=='all'?cgoF:(mioF!=='all'?mioF:'all'));
   const orgI=(!orgF||orgF==='all')?-1:_AC.orgs.indexOf(orgF);
+  // Иерархический фильтр госорганов: множества выбранных министерств и конкретных органов
+  const minFilterOn = _minSelKeys.size>0 || _orgTreeSel.size>0;
+  const _minKeyByIdx = (_AC.ministries||[]).map(m=>m.key);
 
   const w=_AC.w,D=_AC.data,n=_AC.n;
   const regTot=new Int32Array(_AC.regions.length), regLate=new Int32Array(_AC.regions.length), regClosed=new Int32Array(_AC.regions.length);
@@ -4707,12 +4934,18 @@ function applyTimeEngine(){
     if(mN>=0&&mm!==mN) continue;
     if(dN>=0&&dd!==dN) continue;
     const rr=D[o+1],cc=D[o+2],tt=D[o+3],ss=D[o+4],ii=D[o+5],su=D[o+6],og=D[o+7],fl=D[o+8];
+    const mn=w>=10?D[o+9]:-1;
     if(regI>=0&&rr!==regI) continue;
     if(catI>=0&&cc!==catI) continue;
     if(typI>=0&&tt!==typI) continue;
     if(issI>=0&&ii!==issI) continue;
     if(subI>=0&&su!==subI) continue;
     if(orgI>=0&&og!==orgI) continue;
+    if(minFilterOn){
+      const mk = mn>=0 ? _minKeyByIdx[mn] : null;
+      const orgNm = _AC.orgs[og];
+      if(!(mk && _minSelKeys.has(mk)) && !_orgTreeSel.has(orgNm)) continue;
+    }
     const isClosed=(ss===1||ss===3), isOverdue=(ss===2), isLate=(ss===2||ss===3);
     if(stF==='done'&&!isClosed) continue;
     if(stF==='work'&&!(ss===0||ss===2)) continue;
@@ -4756,8 +4989,7 @@ function applyTimeEngine(){
   const pl=document.getElementById('envPlants');
   if(pl){
     const orgs=pairsOf(orgTot,_AC.orgs).filter(p=>!String(p[0]).startsWith('Прочие'));
-    const shortName=s=>{s=s.replace(/^(Коммунальное государственное учреждение|Государственное учреждение|Республиканское государственное учреждение|Акционерное общество|Товарищество с ограниченной ответственностью)\s*/i,'');return s.length>55?s.slice(0,55)+'…':s;};
-    pl.innerHTML=orgs.map(([nm,cnt])=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border)"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${nm.replace(/"/g,'&quot;')}">${shortName(nm)}</span><span style="font-size:10px;color:var(--text2)">${ru(cnt)}</span></div>`).join('')
+    pl.innerHTML = orgs.map(([nm,cnt])=>_envPlantsRow(nm,cnt)).join('')
       || '<div style="font-size:11px;color:var(--text3)">Нет данных по фильтрам</div>';
   }
 
@@ -4899,6 +5131,10 @@ function _resetFiltersSilent(){
   });
   const ds=document.getElementById('gDupSel'); if(ds) ds.selectedIndex=0;
   const org=document.getElementById('gOrg'); if(org) org.value='';
+  if(typeof _minSelKeys!=='undefined') _minSelKeys.clear();
+  if(typeof _orgTreeSel!=='undefined') _orgTreeSel.clear();
+  document.querySelectorAll('#minTree input[type=checkbox]').forEach(cb=>cb.checked=false);
+  if(typeof _updateMinButton==='function') _updateMinButton();
   _gDupActive=false;
 }
 
@@ -5156,6 +5392,11 @@ function resetGlobalFilter(){
     const el=document.getElementById(id);if(el)el.value='all';
   });
   const org=document.getElementById('gOrg'); if(org) org.value='';
+  // сброс иерархического фильтра госорганов
+  if(typeof _minSelKeys!=='undefined') _minSelKeys.clear();
+  if(typeof _orgTreeSel!=='undefined') _orgTreeSel.clear();
+  document.querySelectorAll('#minTree input[type=checkbox]').forEach(cb=>cb.checked=false);
+  if(typeof _updateMinButton==='function') _updateMinButton();
   ['appCatFilter','appIssFilter','appSubFilter','prvCat','prvIss','prvSub'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='all';
   });
@@ -6350,6 +6591,15 @@ async function initNews(){newsInit=true;setStatus('loading','Проверка к
     <div id="orgModalContent"></div>
   </div>
 </div>
+<!-- ── ИЕРАРХИЧЕСКИЙ ФИЛЬТР ГОСОРГАНОВ ── -->
+<div id="minPanel">
+  <div class="min-head">
+    <input type="text" id="minSearch" placeholder="🔍 Поиск по органу..." oninput="filterMinTree()">
+    <button class="min-reset" onclick="clearMinFilter()">✕ Сбросить</button>
+  </div>
+  <div class="min-tree" id="minTree"></div>
+</div>
+
 <!-- ── БОКОВАЯ ПАНЕЛЬ МЕСТОРОЖДЕНИЯ ── -->
 <div id="oilPanel">
   <div class="oilp-head" id="oilpHead">

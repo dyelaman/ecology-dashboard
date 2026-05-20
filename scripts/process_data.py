@@ -187,6 +187,95 @@ ECOLOGY_FILTER = {
 }
 
 
+# ── MINISTRY CLASSIFICATION ───────────────────────────────────────────────────
+MINISTRY_DEFS = [
+    ("mepr",  "МЭПР",  "Министерство экологии и природных ресурсов",        "🌳"),
+    ("mvri",  "МВРИ",  "Министерство водных ресурсов и ирригации",          "💧"),
+    ("me",    "МЭ",    "Министерство энергетики",                            "⚡"),
+    ("mps",   "МПС",   "Министерство промышленности и строительства",        "🏭"),
+    ("msh",   "МСХ",   "Министерство сельского хозяйства",                   "🌾"),
+    ("mz",    "МЗ",    "Министерство здравоохранения",                        "🏥"),
+    ("mchs",  "МЧС",   "Министерство по чрезвычайным ситуациям",             "🚨"),
+    ("mt",    "МТ",    "Министерство транспорта",                             "🚛"),
+    ("mne",   "МНЭ",   "Министерство национальной экономики",                "📊"),
+    ("mtszn", "МТСЗН", "Министерство труда и социальной защиты",             "👥"),
+    ("mvd",   "МВД",   "Министерство внутренних дел",                         "👮"),
+    ("mio",   "МИО",   "Местные исполнительные органы",                       "🏛️"),
+    ("other", "Другое","Другие органы",                                       "❓"),
+]
+MINISTRY_KEYS = [m[0] for m in MINISTRY_DEFS]
+MINISTRY_IDX  = {k:i for i,k in enumerate(MINISTRY_KEYS)}
+
+def detect_ministry(org_name):
+    if not org_name:
+        return "other"
+    s = str(org_name).lower()
+    # MEPR — экология
+    if ("экологии и природных ресурсов" in s
+        or "комитет лесного хозяйства и животного мира" in s
+        or "комитет экологического регулирования" in s
+        or "казгидромет" in s
+        or "бассейновая инспекция" in s
+        or ("департамент экологии" in s and "комитет" in s)):
+        return "mepr"
+    # MVRI — водные ресурсы
+    if ("водных ресурсов и ирригации" in s
+        or "водных ресурсов" in s
+        or "комитет по водным" in s
+        or "балхаш-алакольская" in s
+        or "арало-сырдарьинская" in s
+        or "ертисская бассейновая" in s
+        or "жайык-каспийская" in s
+        or "нура-сарысуская" in s):
+        return "mvri"
+    # ME — энергетика
+    if ("министерство энергетики" in s
+        or "комитет атомного" in s
+        or "комитет геологии" in s):
+        return "me"
+    # MPS — промышленность
+    if ("промышленности и строительства" in s
+        or "индустрии и инфраструктурного" in s
+        or "комитет индустриального развития" in s):
+        return "mps"
+    # MSH — сельское хозяйство
+    if ("министерство сельского хозяйства" in s
+        or "комитет ветеринарного" in s
+        or "комитет государственной инспекции в агропромышленном" in s
+        or "комитет рыбного хозяйства" in s
+        or ("комитет лесного хозяйства" in s and "сельского" in s)):
+        return "msh"
+    # MZ — здравоохранение
+    if ("министерство здравоохранения" in s
+        or "санитарно-эпидемиологического контроля" in s
+        or "сэс" in s
+        or "управления санитарного" in s):
+        return "mz"
+    # MCHS
+    if ("чрезвычайных ситуаций" in s or "мчс" in s):
+        return "mchs"
+    # MT — транспорт
+    if "министерство транспорта" in s:
+        return "mt"
+    # MNE — нацэкономика
+    if "национальной экономики" in s:
+        return "mne"
+    # MTSZN — труд
+    if "труда и социальной защиты" in s:
+        return "mtszn"
+    # MVD
+    if ("министерство внутренних дел" in s
+        or "департамент полиции" in s
+        or "управление полиции" in s):
+        return "mvd"
+    # MIO — местные исполнительные
+    if ("акимат" in s
+        or "аппарат акима" in s
+        or ("управление" in s and ("области" in s or "города" in s or "района" in s))):
+        return "mio"
+    return "other"
+
+
 def filter_ecology(df):
     """Возвращает только обращения по экологически релевантным категориям/подкатегориям."""
     cat = df["category"].fillna("").astype(str)
@@ -257,6 +346,9 @@ def process_appeals(df):
 
     # Нормализация статуса
     df["_status"] = df["current_working_state"].map(STATUS_MAP).fillna("work")
+
+    # Классификация органа по министерству
+    df["_ministry"] = df["org_name"].map(detect_ministry).fillna("other")
 
     total = len(df)
     sc = df["_status"].value_counts()
@@ -350,6 +442,20 @@ def process_appeals(df):
     top_subissues= top_n(df["_subissue"], 8)
     top_orgs     = top_n(df["org_name"],   50)
     all_orgs     = top_n(df["org_name"],   200)  # для фильтра «Орган-исполнитель»
+
+    # ── Министерства: счётчики + список органов по каждому ─────────────────
+    min_counts = {k: int((df["_ministry"] == k).sum()) for k in MINISTRY_KEYS}
+    ministries_meta = [
+        {"key": k, "label": lbl, "short": short, "icon": icon, "count": min_counts.get(k, 0)}
+        for (k, lbl, short, icon) in MINISTRY_DEFS
+    ]
+    # Список органов по каждому министерству — топ по числу обращений
+    orgs_by_ministry = {}
+    for k in MINISTRY_KEYS:
+        sub = df[df["_ministry"] == k]
+        orgs_by_ministry[k] = [[str(n), int(c)] for n, c in
+                                sub["org_name"].dropna().value_counts().head(40).items()]
+    print(f"  Министерства: " + ", ".join(f"{m['label']}={m['count']:,}" for m in ministries_meta if m['count']>0))
 
     # ── Иерархия: категория → характер → подкатегория ─────────────────────
     hierarchy = {}
@@ -691,6 +797,8 @@ def process_appeals(df):
         "top_subissues": top_subissues,
         "top_orgs":      top_orgs,
         "all_orgs":      all_orgs,
+        "ministries":      ministries_meta,
+        "orgs_by_ministry": orgs_by_ministry,
         "monthly":          monthly,
         "monthly_by_region": monthly_by_region,
         "top_complaint_category": top_complaint_category,
@@ -1801,6 +1909,11 @@ def make_appeals_compact(df, top_orgs):
     org_i = d["org_name"].astype(str).map(lambda o: oi.get(o, OTHER)).astype("int64")
     st_i  = d["_status"].astype(str).map(st).fillna(0).astype("int64")
 
+    # Министерство по органу
+    if "_ministry" not in d.columns:
+        d["_ministry"] = d["org_name"].map(detect_ministry).fillna("other")
+    min_i = d["_ministry"].map(MINISTRY_IDX).fillna(MINISTRY_IDX["other"]).astype("int64")
+
     def truthy(col):
         if col in d.columns:
             return d[col].astype(str).str.lower().isin(["y", "1", "true", "да"]).astype("int64")
@@ -1809,15 +1922,22 @@ def make_appeals_compact(df, top_orgs):
 
     mat = np.column_stack([
         ymd.values, reg_i.values, cat_i.values, typ_i.values,
-        st_i.values, iss_i.values, sub_i.values, org_i.values, flags.values,
+        st_i.values, iss_i.values, sub_i.values, org_i.values, flags.values, min_i.values,
     ]).astype("int64")
+
+    # Для каждого top-200 органа — индекс министерства (для UI-группировки)
+    org_min_idx = [MINISTRY_IDX.get(detect_ministry(o), MINISTRY_IDX["other"]) for o in org_list]
+    org_min_idx.append(MINISTRY_IDX["other"])  # для бакета «Прочие»
 
     out = {
         "n": int(mat.shape[0]),
-        "w": 9,
-        "fields": ["ymd", "region", "cat", "type", "status", "issue", "sub", "org", "flags"],
+        "w": 10,
+        "fields": ["ymd", "region", "cat", "type", "status", "issue", "sub", "org", "flags", "ministry"],
         "regions": regions, "cats": cats, "types": types,
         "issues": issues, "subs": subs, "orgs": org_list + ["Прочие исполнители"],
+        "ministries": [{"key": k, "label": lbl, "short": short, "icon": icon}
+                       for (k, lbl, short, icon) in MINISTRY_DEFS],
+        "org_ministry": org_min_idx,
         "data": mat.ravel().tolist(),
     }
     path = os.path.join(OUT_DIR, "appeals_compact.json")
