@@ -438,7 +438,7 @@ input[type=file]{display:none}
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_eco">Всего обращений</div><div class="kpi-val" id="kpiEco">352 641</div><div class="kpi-d nu">с 01.07.2021</div></div>
     <div class="kpi" style="cursor:pointer" onclick="switchTab('taza',document.querySelector('[onclick*=\'taza\']'))"><div class="kpi-lbl" data-i18n="kpi_taza">Таза Казахстан</div><div class="kpi-val" id="kpiTaza">42 644</div><div class="kpi-d nu">заявок · июн 2024–апр 2026</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_ikom">iKomek звонков</div><div class="kpi-val" id="kpiIkom">16 103</div><div class="kpi-d nu">с 01.04.2019</div></div>
-    <div class="kpi"><div class="kpi-lbl">Всего перенаправленных обращений</div><div class="kpi-val" id="kpiFwdTotal" style="color:#7c3aed">—</div><div class="kpi-d nu" id="kpiFwdSub">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Перенаправленные обращения</div><div class="kpi-val" id="kpiFwdTotal" style="color:#7c3aed">—</div><div class="kpi-d nu" id="kpiFwdSub">—</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_work">В работе</div><div class="kpi-val" id="kpiWork">6 342</div><div class="kpi-d nu" data-i18n="current">текущие</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_late">Просрочено</div><div class="kpi-val" id="kpiLate" style="color:#DC2626">885</div><div class="kpi-d up" data-i18n="needs_attn">требует внимания</div></div>
     <div class="kpi"><div class="kpi-lbl">Повторные обращения</div><div class="kpi-val" id="kpiDup" style="color:#d97706">9 331</div><div class="kpi-d nu" id="kpiDupPct">2.6% от общего</div></div>
@@ -4932,7 +4932,7 @@ function applyTimeEngine(){
   const catTot=new Int32Array(_AC.cats.length), typTot=new Int32Array(_AC.types.length);
   const issTot=new Int32Array(_AC.issues.length), subTot=new Int32Array(_AC.subs.length), orgTot=new Int32Array(_AC.orgs.length);
   const dayCnt=new Map(), dayLate=new Map(), ymMap=new Map(), yrMap=new Map();
-  let total=0,closed=0,inwork=0,overdue=0,dup=0;
+  let total=0,closed=0,inwork=0,overdue=0,dup=0,fwd=0;
 
   for(let i=0;i<n;i++){
     const o=i*w, ymd=D[o];
@@ -4962,6 +4962,7 @@ function applyTimeEngine(){
     if(isClosed)closed++; else inwork++;
     if(isOverdue)overdue++;
     if(fl&1)dup++;
+    if(fl&2)fwd++;
     regTot[rr]++; if(isLate)regLate[rr]++; if(isClosed)regClosed[rr]++;
     catTot[cc]++; typTot[tt]++; issTot[ii]++; subTot[su]++; orgTot[og]++;
     dayCnt.set(ymd,(dayCnt.get(ymd)||0)+1);
@@ -4979,6 +4980,8 @@ function applyTimeEngine(){
   setEl('kpiDup',ru(dup));
   const dp=document.getElementById('kpiDupPct');
   if(dp) dp.textContent=(total?(dup/total*100).toFixed(1):0)+'% от выборки';
+  setEl('kpiFwdTotal',ru(fwd));
+  setEl('kpiFwdSub',(total?(fwd/total*100).toFixed(1):0)+'% от выборки');
 
   const pairsOf=(arr,names)=>names.map((nm,i)=>[nm,arr[i]]).filter(p=>p[1]>0).sort((a,b)=>b[1]-a[1]);
   const regPairs=pairsOf(regTot,_AC.regions), latePairs=pairsOf(regLate,_AC.regions);
