@@ -1461,7 +1461,7 @@ input[type=file]{display:none}
   <div class="kpi-grid" style="margin-bottom:14px" id="tzKpiGrid">
     <div class="kpi"><div class="kpi-lbl">Всего заявок</div><div class="kpi-val" id="tzTotal">—</div><div class="kpi-d nu" id="tzPeriod">июн 2024 — апр 2026</div></div>
     <div class="kpi"><div class="kpi-lbl">Исполнено</div><div class="kpi-val" style="color:#16a34a" id="tzDonePct">—</div><div class="kpi-d dn">от всех заявок</div></div>
-    <div class="kpi"><div class="kpi-lbl">Просрочено</div><div class="kpi-val" style="color:#dc2626" id="tzOverdue">—</div><div class="kpi-d up" id="tzOverduePct">—</div></div>
+    <div class="kpi"><div class="kpi-lbl">Просрочено</div><div class="kpi-val" style="color:#dc2626" id="tzKpiOverdue">—</div><div class="kpi-d up" id="tzOverduePct">—</div></div>
     <div class="kpi"><div class="kpi-lbl">Отменено</div><div class="kpi-val" id="tzCancelled">—</div><div class="kpi-d nu">заявок</div></div>
     <div class="kpi"><div class="kpi-lbl">Медиана закрытия</div><div class="kpi-val" id="tzMedianDays">—</div><div class="kpi-d dn">дней</div></div>
     <div class="kpi"><div class="kpi-lbl">Среднее закрытия</div><div class="kpi-val" id="tzAvgDays">—</div><div class="kpi-d nu">дней</div></div>
@@ -3689,7 +3689,7 @@ function renderTazaTab(d) {
   // KPI
   $('tzTotal',      fmt(d.total));
   $('tzDonePct',    pctStr(d.done_pct));
-  $('tzOverdue',    fmt(d.overdue));
+  $('tzKpiOverdue', fmt(d.overdue));
   $('tzOverduePct', pctStr(d.overdue_pct)+' от всех');
   $('tzCancelled',  fmt(d.cancelled));
   $('tzMedianDays', d.median_days);
@@ -3812,13 +3812,13 @@ function renderTazaTab(d) {
   // ── Просрочка по регионам (HTML, все регионы) ──
   (function(){
     const el = document.getElementById('tzOverdueList'); if(!el) return;
-    const regs = [...d.by_region].filter(r=>r.overdue>0).sort((a,b)=>b.overdue_pct-a.overdue_pct);
+    const regs = [...d.by_region].filter(r=>r.overdue>0).sort((a,b)=>b.overdue-a.overdue);
     if(!regs.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет просроченных по фильтрам</div>'; return; }
-    const maxPct = Math.max(...regs.map(r=>r.overdue_pct), 1);
+    const maxOvd = Math.max(...regs.map(r=>r.overdue), 1);
     el.innerHTML = regs.map(r=>{
       const c = r.overdue_pct>=12 ? '#dc2626' : r.overdue_pct>=7 ? '#f97316' : '#d97706';
-      const w = Math.max(2, Math.min(100, r.overdue_pct/maxPct*100));
-      return `<div class="sat-row"><span class="sat-name" title="${r.name}">${r.name}</span><div class="sat-bar"><div class="sat-bar-fill" style="width:${w}%;background:${c}"></div></div><span class="sat-val" style="color:${c}">${r.overdue.toLocaleString('ru-RU')} · ${r.overdue_pct}%</span></div>`;
+      const w = Math.max(2, Math.min(100, r.overdue/maxOvd*100));
+      return `<div class="sat-row"><span class="sat-name" title="${r.name}">${r.name}</span><div class="sat-bar"><div class="sat-bar-fill" style="width:${w}%;background:${c}"></div></div><span class="sat-val" style="color:${c}">${r.overdue.toLocaleString('ru-RU')}</span></div>`;
     }).join('');
   })();
 
