@@ -16,24 +16,24 @@ from datetime import datetime
 import pandas as pd
 
 # ── ПУТИ ─────────────────────────────────────────────────────────────────────
-APPEALS_CSV  = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по обращениям с 2021-07-01/ecology_eobr_subissues.csv"
-IKOMEK_CSV   = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по ikomek с 2019-04-01/ecology_ikomek.csv"
-PEK_CSV      = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/ecology_pekobject.csv"
-EMERG_CSV    = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/ecology_emergency_emission.csv"
-AIR_MONTHLY_CSV  = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/ecology_air_emission_measurement_data_month_substances.csv"
-AIR_DEVICES_CSV  = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/ecology_air_emission_measurement_data_top_devices_sum.csv"
-AIR_SUM_CSV      = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/ecology_air_emission_measurement_data_SUM_substances.csv"
-AIR_EMERG_FL_CSV = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/ecology_emergency_emission_air_fact_vs_limit.csv"
-AIR_EMERG_M_CSV  = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/ecology_emergency_emission_air_month_fact_limit.csv"
-KGS_FOREST_CSV = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/get_forest_detailed.csv"
-KGS_LAND_CSV   = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/get_land_seizure_detailed.csv"
-KGS_NEDRA_CSV  = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/get_nedra_detailed.csv"
-KGS_WASTE_CSV  = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/get_waste_detailed.csv"
-ACCUM_WASTE_CSV= "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/accumulation_waste.csv"
-FIRE_CSV       = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/view_fire_emissions_full.csv"
-WATER_CSV      = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по НБД СОС/view_water_emissions_full.csv"
+APPEALS_CSV  = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по обращениям с 2021-07-01/ecology_eobr_subissues.csv"
+IKOMEK_CSV   = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по ikomek с 2019-04-01/ecology_ikomek.csv"
+PEK_CSV      = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/ecology_pekobject.csv"
+EMERG_CSV    = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/ecology_emergency_emission.csv"
+AIR_MONTHLY_CSV  = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/ecology_air_emission_measurement_data_month_substances.csv"
+AIR_DEVICES_CSV  = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/ecology_air_emission_measurement_data_top_devices_sum.csv"
+AIR_SUM_CSV      = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/ecology_air_emission_measurement_data_SUM_substances.csv"
+AIR_EMERG_FL_CSV = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/ecology_emergency_emission_air_fact_vs_limit.csv"
+AIR_EMERG_M_CSV  = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/ecology_emergency_emission_air_month_fact_limit.csv"
+KGS_FOREST_CSV = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/get_forest_detailed.csv"
+KGS_LAND_CSV   = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/get_land_seizure_detailed.csv"
+KGS_NEDRA_CSV  = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/get_nedra_detailed.csv"
+KGS_WASTE_CSV  = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/get_waste_detailed.csv"
+ACCUM_WASTE_CSV= "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/accumulation_waste.csv"
+FIRE_CSV       = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/view_fire_emissions_full.csv"
+WATER_CSV      = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/view_water_emissions_full.csv"
 # Таза Казахстан
-TAZA_DIR = "/Users/alprasalam/Desktop/Кейс по экологии/выгрузки по Таза Казахстан"
+TAZA_DIR = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по Таза Казахстан"
 TAZA_REQUESTS_CSV   = f"{TAZA_DIR}/requests_share_202604281652.csv"
 TAZA_REGIONS_CSV    = f"{TAZA_DIR}/region_share_202604281649.csv"
 TAZA_CATS_CSV       = f"{TAZA_DIR}/request_category_share_202604281650.csv"
@@ -2029,6 +2029,7 @@ def main():
         json.dump(waste_accum, f, ensure_ascii=False, indent=2)
 
     taza_data = process_taza_kz()
+    make_taza_compact()
     taza_path = os.path.join(OUT_DIR, "taza_kz.json")
     with open(taza_path, "w", encoding="utf-8") as f:
         json.dump(taza_data, f, ensure_ascii=False, indent=2)
@@ -2071,6 +2072,147 @@ def main():
     print(f"  taza_kz.json             → {sz_tz} KB  ({taza_data['total']:,} заявок, {taza_data['done_pct']}% исп.)")
     print(f"\n  ГОТОВО. Следующий шаг:")
     print(f"  cd ~/Downloads/eco-dashboard && vercel --prod")
+
+def make_taza_compact():
+    """Компактный per-request датасет для клиентской фильтрации Таза Казахстан."""
+    import csv, datetime as dt_mod, collections
+    print("\nКомпактный per-request датасет Таза Казахстан...")
+
+    # Справочники категорий
+    cats_map = {}
+    try:
+        with open(TAZA_CATS_CSV, encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                cats_map[row["id"]] = {
+                    "name_ru": row.get("name_ru", ""),
+                    "name_kk": row.get("name_kk", "") or row.get("name_ru", ""),
+                }
+    except Exception as e:
+        print(f"  ⚠ не удалось прочитать категории: {e}")
+
+    # Иерархия регионов
+    reg_info = {}
+    try:
+        with open(TAZA_REGIONS_CSV, encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                reg_info[row["id"]] = {"name": row["name_ru"], "parent": row.get("parent_id", "") or ""}
+    except Exception as e:
+        print(f"  ⚠ не удалось прочитать регионы: {e}")
+
+    REG_NORM = {
+        "Область Абай": "Абайская область", "Абай область": "Абайская область",
+        "Абай область дубликат": "Абайская область",
+        "Область Жетысу": "Жетысуская область",
+        "Область Улытау": "Улытауская область",
+    }
+
+    def top_region_name(rid):
+        rid = str(rid)
+        visited = set()
+        while rid and rid not in visited:
+            visited.add(rid)
+            info = reg_info.get(rid)
+            if not info:
+                return None
+            if not info["parent"]:
+                n = info["name"]
+                return REG_NORM.get(n, n)
+            rid = info["parent"]
+        return None
+
+    STATUS_IDX = {"DONE": 0, "CANCELLED": 1, "WORKING": 2, "CREATED": 3, "RETURNED_TO_OPERATOR": 4}
+
+    rows = []
+    regions_set = set()
+    cat_ids_seen = set()
+
+    skipped_no_region = 0
+    skipped_no_date   = 0
+
+    with open(TAZA_REQUESTS_CSV, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            created = (r.get("created_at") or "")[:10]
+            if not created or len(created) < 10:
+                skipped_no_date += 1
+                continue
+            try:
+                y = int(created[:4]); m = int(created[5:7]); d = int(created[8:10])
+            except Exception:
+                skipped_no_date += 1
+                continue
+            ymd = y * 10000 + m * 100 + d
+            reg = top_region_name(r.get("region_id", "")) or ""
+            if not reg:
+                skipped_no_region += 1
+                continue
+            regions_set.add(reg)
+            cid = r.get("category_id", "") or ""
+            if cid:
+                cat_ids_seen.add(cid)
+            st = r.get("service_state", "") or ""
+            st_idx = STATUS_IDX.get(st, 5)
+            overdue = 1 if (r.get("is_overdue", "").lower() in ("true", "1")) else 0
+            try: rating = int(float(r.get("rating", "") or 0))
+            except Exception: rating = 0
+            if rating < 0 or rating > 5: rating = 0
+            try: lat10k = int(round(float(r.get("latitude", "") or 0) * 10000))
+            except Exception: lat10k = 0
+            try: lon10k = int(round(float(r.get("longitude", "") or 0) * 10000))
+            except Exception: lon10k = 0
+            closed_days = -1
+            if st == "DONE":
+                done_at = (r.get("done_at") or "")[:19]
+                if done_at:
+                    try:
+                        cdt = dt_mod.datetime.fromisoformat(created[:10] + " 00:00:00")
+                        ddt = dt_mod.datetime.fromisoformat(done_at if "T" not in done_at else done_at.replace("T", " "))
+                        cd = (ddt - cdt).days
+                        if 0 <= cd <= 365: closed_days = cd
+                    except Exception: pass
+            rows.append((ymd, reg, cid, st_idx, rating, overdue, lat10k, lon10k, closed_days))
+
+    # Стабильный порядок регионов / категорий
+    regions = sorted(regions_set)
+    reg_to_idx = {n: i for i, n in enumerate(regions)}
+
+    # Категории: id → name_ru (только те что встречаются)
+    cat_ids = sorted(cat_ids_seen, key=lambda x: (len(x), x))
+    cat_to_idx = {cid: i for i, cid in enumerate(cat_ids)}
+    cats_meta = [{"id": cid, "name_ru": cats_map.get(cid, {}).get("name_ru", f"Категория {cid}"),
+                  "name_kk": cats_map.get(cid, {}).get("name_kk", "")} for cid in cat_ids]
+
+    # Развернуть в плоский массив
+    flat = []
+    for (ymd, reg, cid, st_idx, rating, overdue, lat10k, lon10k, cd) in rows:
+        ri = reg_to_idx[reg]
+        ci = cat_to_idx.get(cid, len(cat_ids))  # последний "?"
+        flat.extend([ymd, ri, ci, st_idx, rating, overdue, lat10k, lon10k, cd])
+
+    cats_meta.append({"id": "", "name_ru": "Без категории", "name_kk": "Санатсыз"})
+
+    out = {
+        "n": len(rows),
+        "w": 9,
+        "fields": ["ymd", "region", "cat", "status", "rating", "overdue", "lat10k", "lon10k", "closed_days"],
+        "regions": regions,
+        "cats": cats_meta,
+        "statuses": [
+            {"key": "DONE",      "label_ru": "Выполнено",            "label_kk": "Орындалды"},
+            {"key": "CANCELLED", "label_ru": "Отменено",             "label_kk": "Күші жойылды"},
+            {"key": "WORKING",   "label_ru": "В работе",             "label_kk": "Жұмыс барысында"},
+            {"key": "CREATED",   "label_ru": "Создано",              "label_kk": "Жасалды"},
+            {"key": "RETURNED_TO_OPERATOR", "label_ru": "Возвращено оператору", "label_kk": "Операторға қайтарылды"},
+            {"key": "OTHER",     "label_ru": "Другое",                "label_kk": "Басқа"},
+        ],
+        "data": flat,
+    }
+    path = os.path.join(OUT_DIR, "taza_compact.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"  taza_compact.json → {os.path.getsize(path)/1024:,.0f} KB ({out['n']:,} заявок · {len(regions)} рег. · {len(cat_ids)} кат.)")
+    if skipped_no_date or skipped_no_region:
+        print(f"  пропущено: без даты {skipped_no_date:,} · без региона {skipped_no_region:,}")
+
 
 def process_taza_kz():
     """Обработка данных системы Таза Казахстан → taza_kz.json"""
