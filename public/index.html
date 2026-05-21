@@ -1775,7 +1775,10 @@ function switchTab(id, el) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   el.classList.add('active');
-  // Скрыть фильтры обращений на вкладках НБД СОС / КГС
+  // Глобальная панель фильтров (Период + Тип/Категория/Подкатегория/…) принадлежит вкладке "Обращения граждан".
+  // На остальных вкладках у каждой свой набор фильтров — глобальную скрываем целиком.
+  const gbar = document.getElementById('globalFbar');
+  if (gbar) gbar.style.display = (id==='main') ? '' : 'none';
   const appealsOnly = document.getElementById('fbarAppealsOnly');
   if (appealsOnly) appealsOnly.style.display = (id==='emissions'||id==='kgs') ? 'none' : 'contents';
   if(id==='news' && !newsInit) initNews();
