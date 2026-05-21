@@ -6,6 +6,8 @@
 <title>Экологический мониторинг — МЭПР РК</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
@@ -83,6 +85,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .taza-reset:hover{color:var(--red);border-color:var(--red)}
 .taza-chips{display:flex;flex-wrap:wrap;gap:5px;min-height:0}
 .taza-chips:empty{display:none}
+.tz-gran{font-size:10px;padding:4px 9px;border-radius:14px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-weight:500;transition:all .15s}
+.tz-gran:hover{border-color:var(--green);color:var(--green)}
+.tz-gran.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
+.sat-row{display:flex;align-items:center;gap:8px;padding:5px 4px;border-bottom:0.5px solid var(--border);font-size:11px;min-height:28px}
+.sat-name{flex:0 0 130px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
+.sat-bar{flex:1;height:14px;background:var(--surface2);border-radius:7px;overflow:hidden;position:relative}
+.sat-bar-fill{height:100%;border-radius:7px;transition:width .25s}
+.sat-val{flex:0 0 64px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:11px}
 #minPanel{position:fixed;display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.18);z-index:9500;width:380px;max-height:520px;overflow:hidden;flex-direction:column}
 #minPanel.open{display:flex}
 .min-head{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--border);background:var(--surface2)}
@@ -1414,36 +1424,40 @@ input[type=file]{display:none}
     <div class="kpi"><div class="kpi-lbl">Категорий услуг</div><div class="kpi-val" id="tzCatCount">—</div><div class="kpi-d nu">видов работ</div></div>
   </div>
 
-  <!-- ROW 1: Тренд + Категории -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-
-    <!-- Динамика по месяцам -->
-    <div class="card" style="padding:14px">
-      <div class="card-title">📈 Динамика заявок по месяцам</div>
-      <div class="cw" style="height:260px"><canvas id="cTzMonthly"></canvas></div>
+  <!-- ROW 1: Тренд (на всю ширину, интерактивный) -->
+  <div class="card" style="padding:14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <div class="card-title" style="margin:0">📈 Динамика заявок</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:10px;color:var(--text3);font-weight:600">Группировка:</span>
+        <button class="tz-gran" data-gran="day"     onclick="tzSetGran('day')">По дням</button>
+        <button class="tz-gran" data-gran="week"    onclick="tzSetGran('week')">По неделям</button>
+        <button class="tz-gran active" data-gran="month" onclick="tzSetGran('month')">По месяцам</button>
+        <button class="tz-gran" data-gran="quarter" onclick="tzSetGran('quarter')">По кварталам</button>
+        <span style="font-size:9px;color:var(--text3);margin-left:10px">Колесо мыши — зум · Drag — выделение периода · Двойной клик — сброс</span>
+      </div>
     </div>
+    <div class="cw" style="height:300px"><canvas id="cTzMonthly"></canvas></div>
+  </div>
 
+  <!-- ROW 2: Категории + Скорость -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
     <!-- Топ категорий -->
     <div class="card" style="padding:14px">
       <div class="card-title">📋 Заявки по категориям</div>
-      <div class="cw" style="height:260px"><canvas id="cTzCats"></canvas></div>
+      <div class="region-list-scroll" style="max-height:430px"><div class="rc-host" style="height:280px"><canvas id="cTzCats"></canvas></div></div>
+    </div>
+    <!-- Скорость + жалобы — оставляем плейсхолдер -->
+    <div class="card" style="padding:14px">
+      <div class="card-title">⭐ Удовлетворённость граждан (из 5)</div>
+      <div id="tzSatList" class="region-list-scroll" style="max-height:430px;padding:4px 8px 4px 0"></div>
     </div>
   </div>
 
-  <!-- ROW 2: Регионы (просрочка) + Удовлетворённость -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-
-    <!-- Просрочка по регионам -->
-    <div class="card" style="padding:14px">
-      <div class="card-title">⚠️ Просроченные заявки по регионам</div>
-      <div class="cw" style="height:280px"><canvas id="cTzOverdue"></canvas></div>
-    </div>
-
-    <!-- Удовлетворённость -->
-    <div class="card" style="padding:14px">
-      <div class="card-title">⭐ Удовлетворённость граждан (из 5)</div>
-      <div class="cw" style="height:280px"><canvas id="cTzSat"></canvas></div>
-    </div>
+  <!-- ROW 3: Просрочка по регионам (HTML scroll) -->
+  <div class="card" style="padding:14px;margin-bottom:14px">
+    <div class="card-title">⚠️ Просроченные заявки по регионам</div>
+    <div id="tzOverdueList" class="region-list-scroll" style="max-height:430px;padding:4px 8px 4px 0"></div>
   </div>
 
   <!-- ROW 3: Скорость закрытия + Жалобы -->
@@ -1551,6 +1565,12 @@ input[type=file]{display:none}
 
 <script>
 document.getElementById('hdDate').textContent = new Date().toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+// Chart.js плагины (datalabels + zoom) — регистрируем глобально, по умолчанию выключены
+if (typeof ChartDataLabels !== 'undefined') {
+  Chart.register(ChartDataLabels);
+  if (Chart.defaults && Chart.defaults.set) Chart.defaults.set('plugins.datalabels', { display: false });
+}
 
 // ── REGIONAL MODE ──
 const REGION_PARAM_MAP={
@@ -3138,7 +3158,8 @@ function applyTazaEngine(){
   const ratN=rat==='all'?-1:+rat;
   const w=_TAZA.w, D=_TAZA.data, n=_TAZA.n;
 
-  const regAgg={}; const catAgg={}; const monthly={}; const speed={same_day:0,d1_3:0,d4_7:0,over_7:0};
+  const regAgg={}; const catAgg={}; const monthly={}; const byDay=new Map();
+  const speed={same_day:0,d1_3:0,d4_7:0,over_7:0};
   let total=0,done=0,cancelled=0,in_work=0,overdue=0;
   const doneDays=[];
 
@@ -3172,6 +3193,8 @@ function applyTazaEngine(){
     const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100;
     const ymk=yy+'-'+(mm<10?'0'+mm:mm);
     monthly[ymk]=(monthly[ymk]||0)+1;
+    let dr=byDay.get(ymd); if(!dr){dr={t:0,d:0,o:0,c:0};byDay.set(ymd,dr);}
+    dr.t++; if(si===0)dr.d++; if(od)dr.o++; if(si===1)dr.c++;
   }
 
   const categories=Object.entries(catAgg).map(([id,v])=>{
@@ -3210,6 +3233,7 @@ function applyTazaEngine(){
     period_from: dfStr || (window._DATA_TAZA?.period_from||''),
     period_to:   dtStr || (window._DATA_TAZA?.period_to||''),
     categories, by_region, monthly:monthlyArr,
+    byDay: Array.from(byDay.entries()).sort((a,b)=>a[0]-b[0]),
     satisfaction: window._DATA_TAZA?.satisfaction||[],
     speed,
   };
@@ -3217,9 +3241,55 @@ function applyTazaEngine(){
 
 function rerenderTaza(){
   if(!_TAZA){ if(window._DATA_TAZA) renderTazaTab(window._DATA_TAZA); updateTazaChips(); return; }
-  const d = tazaEngineFilterActive() ? applyTazaEngine() : window._DATA_TAZA;
-  if(d) renderTazaTab(d);
+  // Всегда через движок — для byDay/динамики
+  renderTazaTab(applyTazaEngine());
   updateTazaChips();
+}
+
+// ── Гранулярность динамики ──
+let _tzGran = 'month';
+function tzSetGran(g){
+  _tzGran = g;
+  document.querySelectorAll('.tz-gran').forEach(b=>b.classList.toggle('active', b.dataset.gran===g));
+  rerenderTaza();
+}
+function _tzGrainKey(ymd, gran){
+  const y=(ymd/10000)|0, m=((ymd/100)|0)%100, d=ymd%100;
+  if(gran==='day') return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  if(gran==='week'){
+    const dt=new Date(Date.UTC(y,m-1,d));
+    const onejan=new Date(Date.UTC(y,0,1));
+    const dow = (dt.getUTCDay()+6)%7;
+    const wkStart = new Date(dt); wkStart.setUTCDate(dt.getUTCDate()-dow);
+    const diff = Math.floor((wkStart - onejan)/86400000);
+    const wk = Math.floor(diff/7)+1;
+    return `${wkStart.getUTCFullYear()}-W${String(wk).padStart(2,'0')}`;
+  }
+  if(gran==='quarter') return `${y}-Q${Math.ceil(m/3)}`;
+  return `${y}-${String(m).padStart(2,'0')}`;
+}
+function _tzAggByGran(byDay, gran){
+  const map = new Map();
+  byDay.forEach(([ymd,m])=>{
+    const k=_tzGrainKey(ymd,gran);
+    let v=map.get(k); if(!v){v={t:0,d:0,o:0,c:0,first:ymd,last:ymd};map.set(k,v);}
+    v.t+=m.t; v.d+=m.d; v.o+=m.o; v.c+=m.c;
+    if(ymd<v.first) v.first=ymd; if(ymd>v.last) v.last=ymd;
+  });
+  const keys=[...map.keys()].sort();
+  return {keys, vals: keys.map(k=>map.get(k))};
+}
+function _tzLabelFmt(k, gran){
+  const MO=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  if(gran==='day'){ const [y,m,d]=k.split('-'); return `${+d} ${MO[+m-1]} ${String(y).slice(2)}`; }
+  if(gran==='week'){ const [y,w]=k.split('-W'); return `Нед ${w} ${String(y).slice(2)}`; }
+  if(gran==='quarter') return k.replace('-',' ');
+  // month
+  const [y,m]=k.split('-'); return `${MO[+m-1]} ${String(y).slice(2)}`;
+}
+function _ymdToISO(ymd){
+  const y=(ymd/10000)|0, m=((ymd/100)|0)%100, d=ymd%100;
+  return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 }
 
 function updateTazaChips(){
@@ -3261,77 +3331,139 @@ function renderTazaTab(d) {
   const colors8 = ['#0891B2','#16a34a','#d97706','#7c3aed','#dc2626','#f97316','#0d9488','#6b7280'];
   const trunc = (s,n) => s&&s.length>n ? s.slice(0,n)+'…' : (s||'');
 
-  // ── Тренд по месяцам ──
+  // ── Динамика заявок (multi-series + granularity + brush-zoom + datalabels) ──
   (function(){
     const ctx = document.getElementById('cTzMonthly'); if(!ctx) return;
     const ex = Chart.getChart(ctx); if(ex) ex.destroy();
-    const labels = d.monthly.map(m=>m.ym.slice(0,7));
-    const vals   = d.monthly.map(m=>m.total);
-    new Chart(ctx, {type:'line', data:{labels, datasets:[{
-      label:'Заявок',data:vals,
-      borderColor:'#0891B2',backgroundColor:'rgba(8,145,178,0.12)',
-      fill:true,tension:0.35,pointRadius:2,pointHoverRadius:4,borderWidth:2
-    }]}, options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw.toLocaleString('ru-RU')}}},
-      scales:{
-        x:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af',maxRotation:45}},
-        y:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>v.toLocaleString('ru-RU')}}
-      }}});
+    const agg = _tzAggByGran(d.byDay||[], _tzGran);
+    const labels = agg.keys.map(k=>_tzLabelFmt(k, _tzGran));
+    const total = agg.vals.map(v=>v.t);
+    const done  = agg.vals.map(v=>v.d);
+    const overdue = agg.vals.map(v=>v.o);
+    const cancelled = agg.vals.map(v=>v.c);
+    const showPoints = labels.length<=60;
+    const showLabels = labels.length<=30;
+    const mkDS = (lbl,data,col,hidden)=>({
+      label:lbl, data, borderColor:col,
+      backgroundColor:col+'22',
+      fill:false, tension:0.3, borderWidth:2,
+      pointRadius: showPoints?3:0, pointHoverRadius:6,
+      pointBackgroundColor:'#fff', pointBorderColor:col, pointBorderWidth:2,
+      hidden: !!hidden,
+    });
+    const zoomOpts = (typeof window.ChartZoom !== 'undefined' || (Chart.registry && Chart.registry.plugins && Chart.registry.plugins.get && Chart.registry.plugins.get('zoom'))) ? {
+      pan:{enabled:true,mode:'x'},
+      zoom:{
+        wheel:{enabled:true}, pinch:{enabled:true},
+        drag:{enabled:true, backgroundColor:'rgba(27,122,58,0.12)', borderColor:'rgba(27,122,58,0.6)', borderWidth:1, threshold:6},
+        mode:'x',
+        onZoomComplete: ({chart})=>{
+          const x = chart.scales.x;
+          const lo = Math.max(0, Math.round(x.min)), hi = Math.min(labels.length-1, Math.round(x.max));
+          if(lo<0||hi<0||lo>hi) return;
+          const k1 = agg.keys[lo], k2 = agg.keys[hi];
+          if(!k1||!k2) return;
+          const v1 = agg.vals[lo].first, v2 = agg.vals[hi].last;
+          const df = _ymdToISO(v1), dt = _ymdToISO(v2);
+          chart.resetZoom('none');
+          const fEl=document.getElementById('tzDateFrom'), tEl=document.getElementById('tzDateTo');
+          if(fEl){fEl.value=df;} if(tEl){tEl.value=dt;}
+          onTazaFilter();
+        }
+      }
+    } : {};
+    new Chart(ctx, {
+      type:'line',
+      data:{ labels, datasets:[
+        mkDS('Всего',      total,   '#0891B2'),
+        mkDS('Выполнено',  done,    '#16a34a'),
+        mkDS('Просрочено', overdue, '#dc2626'),
+        mkDS('Отменено',   cancelled,'#d97706', true),
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index', intersect:false},
+        plugins:{
+          legend:{position:'top', labels:{font:{size:11},usePointStyle:true,pointStyleWidth:10,padding:10,color:'#6b7280'}},
+          tooltip:{
+            backgroundColor:'#fff',borderColor:'rgba(0,0,0,0.1)',borderWidth:1,
+            titleColor:'#111',bodyColor:'#374151',padding:10,
+            callbacks:{label:c=>` ${c.dataset.label}: ${c.raw.toLocaleString('ru-RU')}`}
+          },
+          datalabels:{
+            display: ctx=>showLabels && ctx.dataset.data[ctx.dataIndex]>0 && !ctx.dataset.hidden,
+            align:'top', anchor:'end',
+            font:{size:9,weight:'600'},
+            color:c=>c.dataset.borderColor,
+            formatter:v=>v.toLocaleString('ru-RU'),
+            padding:{bottom:2}
+          },
+          zoom: zoomOpts.zoom ? zoomOpts : undefined,
+        },
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',maxRotation:0,autoSkip:true,maxTicksLimit:24}},
+          y:{grid:{color:'rgba(128,128,128,0.07)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>v.toLocaleString('ru-RU')},beginAtZero:true}
+        }
+      }
+    });
+    // Двойной клик по canvas — сброс зума
+    ctx.ondblclick = ()=>{ const ch=Chart.getChart(ctx); if(ch && ch.resetZoom) ch.resetZoom(); };
   })();
 
   // ── Категории (горизонтальный бар) ──
   (function(){
     const ctx = document.getElementById('cTzCats'); if(!ctx) return;
     const ex = Chart.getChart(ctx); if(ex) ex.destroy();
-    const cats = d.categories.filter(c=>c.name!=='Разное').slice(0,10);
+    const cats = d.categories.filter(c=>c.name!=='Разное');
     new Chart(ctx, {type:'bar', data:{
-      labels: cats.map(c=>trunc(c.name,24)),
+      labels: cats.map(c=>c.name),
       datasets:[{
         label:'Заявок', data:cats.map(c=>c.total),
         backgroundColor:cats.map((_,i)=>colors8[i%8]), borderRadius:3
       }]
     }, options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{
-        label:c=>`${c.raw.toLocaleString('ru-RU')} заявок`
-      }}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:c=>`${c.raw.toLocaleString('ru-RU')} заявок`}},
+        datalabels:{
+          display:true, anchor:'end', align:'end',
+          font:{size:10,weight:'600'}, color:'#374151',
+          formatter:v=>v.toLocaleString('ru-RU'),
+          clip:false,
+        }
+      },
+      layout:{padding:{right:48}},
       scales:{
         x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af'}},
-        y:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af'}}
+        y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:function(v){const l=this.getLabelForValue(v); return l&&l.length>26?l.slice(0,25)+'…':l;}}}
       }}});
+    if(typeof _fitRegionCanvas==='function') _fitRegionCanvas('cTzCats', cats.length);
   })();
 
-  // ── Просрочка по регионам ──
+  // ── Просрочка по регионам (HTML, все регионы) ──
   (function(){
-    const ctx = document.getElementById('cTzOverdue'); if(!ctx) return;
-    const ex = Chart.getChart(ctx); if(ex) ex.destroy();
-    const regs = [...d.by_region].sort((a,b)=>b.overdue_pct-a.overdue_pct).slice(0,12);
-    const colors = regs.map(r=>r.overdue_pct>=12?'#dc2626':r.overdue_pct>=7?'#f97316':'#d97706');
-    new Chart(ctx, {type:'bar', data:{
-      labels: regs.map(r=>trunc(r.name,18)),
-      datasets:[{label:'Просрочено %',data:regs.map(r=>r.overdue_pct),backgroundColor:colors,borderRadius:3}]
-    }, options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'%'}}},
-      scales:{
-        x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>v+'%'},max:25},
-        y:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af'}}
-      }}});
+    const el = document.getElementById('tzOverdueList'); if(!el) return;
+    const regs = [...d.by_region].filter(r=>r.overdue>0).sort((a,b)=>b.overdue_pct-a.overdue_pct);
+    if(!regs.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет просроченных по фильтрам</div>'; return; }
+    const maxPct = Math.max(...regs.map(r=>r.overdue_pct), 1);
+    el.innerHTML = regs.map(r=>{
+      const c = r.overdue_pct>=12 ? '#dc2626' : r.overdue_pct>=7 ? '#f97316' : '#d97706';
+      const w = Math.max(2, Math.min(100, r.overdue_pct/maxPct*100));
+      return `<div class="sat-row"><span class="sat-name" title="${r.name}">${r.name}</span><div class="sat-bar"><div class="sat-bar-fill" style="width:${w}%;background:${c}"></div></div><span class="sat-val" style="color:${c}">${r.overdue.toLocaleString('ru-RU')} · ${r.overdue_pct}%</span></div>`;
+    }).join('');
   })();
 
-  // ── Удовлетворённость ──
+  // ── Удовлетворённость (HTML, все регионы) ──
   (function(){
-    const ctx = document.getElementById('cTzSat'); if(!ctx) return;
-    const ex = Chart.getChart(ctx); if(ex) ex.destroy();
-    const sat = [...d.satisfaction].sort((a,b)=>b.rating-a.rating);
-    const colors = sat.map(r=>r.rating>=4?'#16a34a':r.rating>=3?'#d97706':'#dc2626');
-    new Chart(ctx, {type:'bar', data:{
-      labels: sat.map(r=>trunc(r.region,18)),
-      datasets:[{label:'Рейтинг',data:sat.map(r=>r.rating),backgroundColor:colors,borderRadius:3}]
-    }, options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+' / 5'}}},
-      scales:{
-        x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af'},min:0,max:5},
-        y:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af'}}
-      }}});
+    const el = document.getElementById('tzSatList'); if(!el) return;
+    const sat = [...d.satisfaction].filter(r=>r.rating!=null).sort((a,b)=>b.rating-a.rating);
+    if(!sat.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет оценок по фильтрам</div>'; return; }
+    el.innerHTML = sat.map(r=>{
+      const v = +r.rating;
+      const c = v>=4.5?'#15803d':v>=4?'#16a34a':v>=3.5?'#d97706':v>=3?'#ea580c':'#dc2626';
+      const w = Math.max(2, v/5*100);
+      return `<div class="sat-row"><span class="sat-name" title="${r.region}">${r.region}</span><div class="sat-bar"><div class="sat-bar-fill" style="width:${w}%;background:${c}"></div></div><span class="sat-val" style="color:${c}">${v.toFixed(2)} / 5</span></div>`;
+    }).join('');
   })();
 
   // ── Скорость закрытия ──
@@ -3347,9 +3479,16 @@ function renderTazaTab(d) {
       labels:['В день подачи','1–3 дня','4–7 дней','Более 7 дней'],
       datasets:[{data:[sp.same_day,sp.d1_3,sp.d4_7,sp.over_7],
         backgroundColor:['#16a34a','#0891B2','#d97706','#dc2626'],borderWidth:2,borderColor:'#fff'}]
-    }, options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'right',labels:{font:{size:9},boxWidth:10}},
-        tooltip:{callbacks:{label:c=>c.label+': '+c.raw.toLocaleString('ru-RU')}}}}});
+    }, options:{responsive:true,maintainAspectRatio:false,cutout:'52%',
+      plugins:{
+        legend:{position:'right',labels:{font:{size:9},boxWidth:10}},
+        tooltip:{callbacks:{label:c=>c.label+': '+c.raw.toLocaleString('ru-RU')}},
+        datalabels:{
+          display: c=>c.dataset.data[c.dataIndex] > spTotal*0.03,
+          color:'#fff',font:{size:11,weight:'700'},
+          formatter:(v)=>v>=1000?(v/1000).toFixed(1)+'k':String(v),
+        }
+      }}});
   })();
 
   // ── Жалобы по регионам (progress bars) ──
