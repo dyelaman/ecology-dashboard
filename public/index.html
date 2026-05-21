@@ -70,6 +70,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .qp-reset:hover{color:var(--red);border-color:var(--red)}
 @keyframes pulse-highlight{0%,100%{box-shadow:0 0 0 0 rgba(27,122,58,0)}50%{box-shadow:0 0 0 8px rgba(27,122,58,0.3)}}
 .highlighted{animation:pulse-highlight 2s ease-in-out}
+.taza-filters{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;flex-direction:column;gap:8px}
+.taza-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.taza-flbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-right:2px}
+.taza-filters input[type=date]{font-size:11px;padding:5px 10px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none;width:130px}
+.taza-filters select{font-size:11px;padding:5px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;font-weight:500;width:160px}
+.taza-quick{display:inline-flex;gap:4px;margin-left:6px;flex-wrap:wrap}
+.taza-quick button{font-size:10px;padding:4px 9px;border-radius:14px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-weight:500;white-space:nowrap;transition:all .15s}
+.taza-quick button:hover{border-color:var(--green);color:var(--green)}
+.taza-quick button.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
+.taza-reset{font-size:10px;padding:5px 10px;border-radius:18px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;margin-left:auto;font-weight:500}
+.taza-reset:hover{color:var(--red);border-color:var(--red)}
+.taza-chips{display:flex;flex-wrap:wrap;gap:5px;min-height:0}
+.taza-chips:empty{display:none}
 #minPanel{position:fixed;display:none;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.18);z-index:9500;width:380px;max-height:520px;overflow:hidden;flex-direction:column}
 #minPanel.open{display:flex}
 .min-head{display:flex;gap:6px;padding:10px;border-bottom:1px solid var(--border);background:var(--surface2)}
@@ -421,17 +434,6 @@ input[type=file]{display:none}
 
   <!-- БЫСТРЫЕ СЦЕНАРИИ -->
   <div class="qpresets" id="qpresets"></div>
-
-  <!-- МЭПР KPI — фокус на министерство -->
-  <div class="block-title" style="margin-top:0">🏛️ Обращения в систему МЭПР</div>
-  <div class="kpi-grid" style="margin-bottom:14px;grid-template-columns:repeat(6,1fr);gap:8px">
-    <div class="kpi"><div class="kpi-lbl">Всего в МЭПР и подведомств.</div><div class="kpi-val" id="meprTotal" style="color:#0891B2">—</div><div class="kpi-d nu" id="meprTotalPct">—</div></div>
-    <div class="kpi"><div class="kpi-lbl">Центр. аппарат МЭПР РК</div><div class="kpi-val" id="meprCentral" style="color:#16A34A">—</div><div class="kpi-d nu" id="meprCentralPct">—</div></div>
-    <div class="kpi"><div class="kpi-lbl">Перенаправлено в МЭПР</div><div class="kpi-val" id="meprFwdIn" style="color:#7c3aed">—</div><div class="kpi-d nu" id="meprFwdInPct">—</div></div>
-    <div class="kpi"><div class="kpi-lbl">Повторные в МЭПР</div><div class="kpi-val" id="meprDup" style="color:#d97706">—</div><div class="kpi-d nu" id="meprDupPct">—</div></div>
-    <div class="kpi"><div class="kpi-lbl">В работе в МЭПР</div><div class="kpi-val" id="meprWork" style="color:#0d9488">—</div><div class="kpi-d nu" id="meprWorkPct">—</div></div>
-    <div class="kpi"><div class="kpi-lbl">Просроченные в МЭПР</div><div class="kpi-val" id="meprLate" style="color:#DC2626">—</div><div class="kpi-d nu" id="meprLatePct">—</div></div>
-  </div>
 
   <!-- KPIs -->
   <div class="kpi-grid" style="margin-bottom:14px">
@@ -1349,6 +1351,57 @@ input[type=file]{display:none}
 <!-- ТАЗА КАЗАХСТАН -->
 <div id="panel-taza" class="panel">
 
+  <!-- ФИЛЬТРЫ -->
+  <div class="taza-filters" id="tzFilters">
+    <div class="taza-row">
+      <span class="taza-flbl">📅 Период:</span>
+      <input type="date" id="tzDateFrom" min="2024-06-01" max="2026-04-28" onchange="onTazaFilter()">
+      <span style="color:var(--text3);font-size:11px">—</span>
+      <input type="date" id="tzDateTo" min="2024-06-01" max="2026-04-28" onchange="onTazaFilter()">
+      <span class="taza-quick">
+        <button onclick="tzQuickPeriod(0)">Сегодня</button>
+        <button onclick="tzQuickPeriod(7)">7 дней</button>
+        <button onclick="tzQuickPeriod(30)">30 дней</button>
+        <button onclick="tzQuickPeriod(90)">Квартал</button>
+        <button onclick="tzQuickPeriod(365)">Год</button>
+        <button onclick="tzQuickPeriod(null)">Всё время</button>
+      </span>
+    </div>
+    <div class="taza-row">
+      <span class="taza-flbl">Регион</span>
+      <select id="tzReg" onchange="onTazaFilter()"><option value="all">Все регионы</option></select>
+      <span class="taza-flbl">Категория</span>
+      <select id="tzCat" onchange="onTazaFilter()"><option value="all">Все категории</option></select>
+      <span class="taza-flbl">Статус</span>
+      <select id="tzStatus" onchange="onTazaFilter()">
+        <option value="all">Все статусы</option>
+        <option value="DONE">Выполнено</option>
+        <option value="CANCELLED">Отменено</option>
+        <option value="WORKING">В работе</option>
+        <option value="CREATED">Создано</option>
+        <option value="RETURNED_TO_OPERATOR">Возвращено оператору</option>
+      </select>
+      <span class="taza-flbl">Просрочка</span>
+      <select id="tzOverdue" onchange="onTazaFilter()">
+        <option value="all">Все</option>
+        <option value="true">Просрочено</option>
+        <option value="false">В срок</option>
+      </select>
+      <span class="taza-flbl">Рейтинг</span>
+      <select id="tzRating" onchange="onTazaFilter()">
+        <option value="all">Все</option>
+        <option value="5">5 ⭐</option>
+        <option value="4">4 ⭐</option>
+        <option value="3">3 ⭐</option>
+        <option value="2">2 ⭐</option>
+        <option value="1">1 ⭐</option>
+        <option value="0">Без оценки</option>
+      </select>
+      <button onclick="resetTazaFilters()" class="taza-reset">✕ Сбросить</button>
+    </div>
+    <div id="tzChips" class="taza-chips"></div>
+  </div>
+
   <!-- KPI -->
   <div class="kpi-grid" style="margin-bottom:14px" id="tzKpiGrid">
     <div class="kpi"><div class="kpi-lbl">Всего заявок</div><div class="kpi-val" id="tzTotal">—</div><div class="kpi-d nu" id="tzPeriod">июн 2024 — апр 2026</div></div>
@@ -1654,7 +1707,11 @@ function switchTab(id, el) {
     if(_DATA_KGS && !_kgsCharts._rendered) renderKgsCharts(_DATA_KGS);
     setTimeout(initKgsMap, 100);
   }
-  if(id==='taza' && !_tzInited && window._DATA_TAZA) { _tzInited=true; renderTazaTab(window._DATA_TAZA); }
+  if(id==='taza'){
+    if(!_tzInited && window._DATA_TAZA){ _tzInited=true; renderTazaTab(window._DATA_TAZA); }
+    if(typeof populateTazaFilters==='function') populateTazaFilters();
+    if(typeof tazaEngineFilterActive==='function' && tazaEngineFilterActive() && typeof rerenderTaza==='function') rerenderTaza();
+  }
 }
 
 function switchSubTab(group, panelId, el) {
@@ -2239,6 +2296,11 @@ function renderMainCharts() {
       if(tzEl) tzEl.textContent = tzData.total.toLocaleString('ru-RU');
     }
     fetch('/data/chunks/manifest.json').then(r=>r.json()).then(m=>{_CHUNK_MANIFEST=m;}).catch(()=>{});
+    // Per-request датасет Таза Казахстан — для клиентской кросс-фильтрации
+    fetch('/data/taza_compact.json').then(r=>r.json()).then(tc=>{
+      _TAZA=tc; populateTazaFilters();
+      if(document.getElementById('panel-taza')?.classList.contains('active') && tazaEngineFilterActive()) rerenderTaza();
+    }).catch(e=>console.warn('taza_compact load failed:',e.message));
     // Компактный per-appeal датасет — для фильтрации по месяцам/дням (загружаем в фоне)
     fetch('/data/appeals_compact.json').then(r=>r.json()).then(ac=>{
       _AC=ac;
@@ -3011,6 +3073,175 @@ function renderHearingsTab(a) {
 }
 
 // ── ТАЗА КАЗАХСТАН ────────────────────────────────────────────────────────────
+// ── ДВИЖОК КРОСС-ФИЛЬТРАЦИИ ТАЗА КАЗАХСТАН ──────────────────────────────────
+let _TAZA=null;
+
+function populateTazaFilters(){
+  if(!_TAZA) return;
+  const rEl=document.getElementById('tzReg');
+  if(rEl && rEl.options.length<=1){
+    _TAZA.regions.forEach(nm=>{const o=document.createElement('option');o.value=nm;o.textContent=nm;rEl.appendChild(o);});
+  }
+  const cEl=document.getElementById('tzCat');
+  if(cEl && cEl.options.length<=1){
+    _TAZA.cats.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name_ru;cEl.appendChild(o);});
+  }
+}
+
+function tazaEngineFilterActive(){
+  const F=id=>document.getElementById(id)?.value||'all';
+  const df=document.getElementById('tzDateFrom')?.value||'';
+  const dt=document.getElementById('tzDateTo')?.value||'';
+  return !!df||!!dt||F('tzReg')!=='all'||F('tzCat')!=='all'||F('tzStatus')!=='all'
+    ||F('tzOverdue')!=='all'||F('tzRating')!=='all';
+}
+
+function tzQuickPeriod(days){
+  const from=document.getElementById('tzDateFrom'), to=document.getElementById('tzDateTo');
+  if(!from||!to) return;
+  const maxD=new Date('2026-04-28');
+  if(days===null){ from.value=''; to.value=''; }
+  else {
+    to.value=maxD.toISOString().slice(0,10);
+    const d=new Date(maxD); d.setDate(d.getDate()-days);
+    from.value=d.toISOString().slice(0,10);
+  }
+  // mark active button
+  document.querySelectorAll('.taza-quick button').forEach(b=>b.classList.remove('active'));
+  const btn=event?.target; if(btn) btn.classList.add('active');
+  onTazaFilter();
+}
+
+function onTazaFilter(){
+  if(!_TAZA){ if(window._DATA_TAZA) renderTazaTab(window._DATA_TAZA); updateTazaChips(); return; }
+  rerenderTaza();
+}
+
+function resetTazaFilters(){
+  ['tzDateFrom','tzDateTo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['tzReg','tzCat','tzStatus','tzOverdue','tzRating'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
+  document.querySelectorAll('.taza-quick button').forEach(b=>b.classList.remove('active'));
+  onTazaFilter();
+}
+
+function applyTazaEngine(){
+  // Возвращает объект формы как taza_kz.json, но пересчитанный из _TAZA с учётом фильтров.
+  const F=id=>document.getElementById(id)?.value||'all';
+  const dfStr=document.getElementById('tzDateFrom')?.value||'';
+  const dtStr=document.getElementById('tzDateTo')?.value||'';
+  const dfInt=dfStr?+dfStr.replace(/-/g,''):0;
+  const dtInt=dtStr?+dtStr.replace(/-/g,''):99999999;
+  const reg=F('tzReg'), cat=F('tzCat'), st=F('tzStatus'), ovd=F('tzOverdue'), rat=F('tzRating');
+  const regI=reg==='all'?-1:_TAZA.regions.indexOf(reg);
+  const catI=cat==='all'?-1:_TAZA.cats.findIndex(c=>c.id===cat);
+  const stIdx=st==='all'?-1:_TAZA.statuses.findIndex(s=>s.key===st);
+  const ratN=rat==='all'?-1:+rat;
+  const w=_TAZA.w, D=_TAZA.data, n=_TAZA.n;
+
+  const regAgg={}; const catAgg={}; const monthly={}; const speed={same_day:0,d1_3:0,d4_7:0,over_7:0};
+  let total=0,done=0,cancelled=0,in_work=0,overdue=0;
+  const doneDays=[];
+
+  for(let i=0;i<n;i++){
+    const o=i*w, ymd=D[o];
+    if(ymd<dfInt||ymd>dtInt) continue;
+    const ri=D[o+1], ci=D[o+2], si=D[o+3], ra=D[o+4], od=D[o+5], cd=D[o+8];
+    if(regI>=0&&ri!==regI) continue;
+    if(catI>=0&&ci!==catI) continue;
+    if(stIdx>=0&&si!==stIdx) continue;
+    if(ovd==='true'&&od!==1) continue;
+    if(ovd==='false'&&od!==0) continue;
+    if(ratN>=0&&ra!==ratN) continue;
+    total++;
+    if(si===0) done++; else if(si===1) cancelled++; else if(si===2||si===3||si===4) in_work++;
+    if(od) overdue++;
+    const rNm=_TAZA.regions[ri]; if(rNm){
+      let a=regAgg[rNm]; if(!a){a={total:0,done:0,overdue:0};regAgg[rNm]=a;}
+      a.total++; if(si===0) a.done++; if(od) a.overdue++;
+    }
+    const cId=_TAZA.cats[ci]?.id;
+    if(cId!=null){
+      let a=catAgg[cId]; if(!a){a={total:0,done:0,overdue:0,days:[]};catAgg[cId]=a;}
+      a.total++; if(si===0) a.done++; if(od) a.overdue++;
+      if(cd>=0) a.days.push(cd);
+    }
+    if(cd>=0){
+      doneDays.push(cd);
+      if(cd===0) speed.same_day++; else if(cd<=3) speed.d1_3++; else if(cd<=7) speed.d4_7++; else speed.over_7++;
+    }
+    const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100;
+    const ymk=yy+'-'+(mm<10?'0'+mm:mm);
+    monthly[ymk]=(monthly[ymk]||0)+1;
+  }
+
+  const categories=Object.entries(catAgg).map(([id,v])=>{
+    const meta=_TAZA.cats.find(c=>c.id===id)||{name_ru:'?'};
+    const avg=v.days.length?+(v.days.reduce((s,d)=>s+d,0)/v.days.length).toFixed(1):null;
+    return {id, name:meta.name_ru, total:v.total, done:v.done,
+            done_pct:v.total?+((v.done/v.total)*100).toFixed(1):0,
+            overdue:v.overdue, avg_days:avg};
+  }).sort((a,b)=>b.total-a.total);
+
+  const origByReg = (window._DATA_TAZA?.by_region)||[];
+  const by_region=Object.entries(regAgg).map(([name,v])=>{
+    const o=origByReg.find(r=>r.name===name)||{};
+    return {name, total:v.total, done:v.done,
+            done_pct:v.total?+((v.done/v.total)*100).toFixed(1):0,
+            overdue:v.overdue,
+            overdue_pct:v.total?+((v.overdue/v.total)*100).toFixed(1):0,
+            satisfaction:o.satisfaction??null,
+            complaints:o.complaints??0,
+            complaint_pct:o.complaint_pct??null};
+  }).sort((a,b)=>b.total-a.total);
+
+  const monthlyArr=Object.entries(monthly).sort((a,b)=>a[0].localeCompare(b[0]))
+    .map(([ym,c])=>({ym, total:c}));
+
+  doneDays.sort((a,b)=>a-b);
+  const median_days=doneDays.length?doneDays[Math.floor(doneDays.length/2)]:0;
+  const avg_days=doneDays.length?+(doneDays.reduce((s,d)=>s+d,0)/doneDays.length).toFixed(1):0;
+
+  return {
+    total, done,
+    done_pct: total?Math.round(done/total*100):0,
+    cancelled, in_work, overdue,
+    overdue_pct: total?+((overdue/total)*100).toFixed(1):0,
+    median_days, avg_days,
+    period_from: dfStr || (window._DATA_TAZA?.period_from||''),
+    period_to:   dtStr || (window._DATA_TAZA?.period_to||''),
+    categories, by_region, monthly:monthlyArr,
+    satisfaction: window._DATA_TAZA?.satisfaction||[],
+    speed,
+  };
+}
+
+function rerenderTaza(){
+  if(!_TAZA){ if(window._DATA_TAZA) renderTazaTab(window._DATA_TAZA); updateTazaChips(); return; }
+  const d = tazaEngineFilterActive() ? applyTazaEngine() : window._DATA_TAZA;
+  if(d) renderTazaTab(d);
+  updateTazaChips();
+}
+
+function updateTazaChips(){
+  const box=document.getElementById('tzChips'); if(!box) return;
+  const chips=[];
+  const dfStr=document.getElementById('tzDateFrom')?.value||'';
+  const dtStr=document.getElementById('tzDateTo')?.value||'';
+  if(dfStr||dtStr){
+    const lbl=`${dfStr||'…'} — ${dtStr||'…'}`;
+    chips.push(`<span class="fchip"><b>Период:</b> ${lbl}<span class="fchip-x" onclick="document.getElementById('tzDateFrom').value='';document.getElementById('tzDateTo').value='';onTazaFilter()">✕</span></span>`);
+  }
+  const fld=(id,lbl,readLabel)=>{
+    const el=document.getElementById(id); if(!el) return;
+    const v=el.value; if(v==='all'||v==='') return;
+    const txt=readLabel? readLabel(el) : (el.options? el.options[el.selectedIndex]?.text : v);
+    chips.push(`<span class="fchip"><b>${lbl}:</b> ${txt}<span class="fchip-x" onclick="document.getElementById('${id}').selectedIndex=0;onTazaFilter()">✕</span></span>`);
+  };
+  fld('tzReg','Регион'); fld('tzCat','Категория'); fld('tzStatus','Статус');
+  fld('tzOverdue','Просрочка'); fld('tzRating','Рейтинг');
+  box.innerHTML=chips.join('');
+}
+
 function renderTazaTab(d) {
   const $ = (id,v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
   const fmt = n => n.toLocaleString('ru-RU');
