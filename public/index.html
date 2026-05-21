@@ -92,9 +92,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tz-gran{font-size:10px;padding:4px 9px;border-radius:14px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-weight:500;transition:all .15s}
 .tz-gran:hover{border-color:var(--green);color:var(--green)}
 .tz-gran.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
-.tz-mapmode{font-size:10px;padding:4px 10px;border-radius:14px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-weight:500;transition:all .15s}
-.tz-mapmode:hover{border-color:var(--green);color:var(--green)}
+.tz-mapmode{font-size:11px;padding:6px 10px;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#444;cursor:pointer;font-weight:500;transition:all .15s;text-align:left;min-width:130px}
+.tz-mapmode:hover{border-color:#1B7A3A;color:#1B7A3A;background:#f1f8f3}
 .tz-mapmode.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
+@media (max-width:768px){
+  #tazaMapContainer{height:400px!important}
+  #tzMapModes{top:6px;right:6px;padding:3px;gap:2px}
+  .tz-mapmode{font-size:10px;padding:4px 7px;min-width:0}
+  #tzMapLegend{font-size:10px;padding:6px 8px;max-width:140px}
+}
 .sat-row{display:flex;align-items:center;gap:8px;padding:5px 4px;border-bottom:0.5px solid var(--border);font-size:11px;min-height:28px}
 .sat-name{flex:0 0 130px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
 .sat-bar{flex:1;height:14px;background:var(--surface2);border-radius:7px;overflow:hidden;position:relative}
@@ -1460,19 +1466,21 @@ input[type=file]{display:none}
     <div class="kpi"><div class="kpi-lbl">Категорий услуг</div><div class="kpi-val" id="tzCatCount">—</div><div class="kpi-d nu">видов работ</div></div>
   </div>
 
-  <!-- КАРТА ТАЗА (4 режима) -->
+  <!-- КАРТА ТАЗА (4 режима, реальные границы регионов) -->
   <div class="card" style="padding:14px;margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
       <div class="card-title" style="margin:0">🗺️ Карта заявок Таза Казахстан <span style="font-size:10px;color:var(--text3);font-weight:400" id="tzMapCount"></span></div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
-        <span style="font-size:10px;color:var(--text3);font-weight:600">Режим:</span>
-        <button class="tz-mapmode active" data-mode="choropleth" onclick="setTzMapMode('choropleth')">Хороплет</button>
-        <button class="tz-mapmode" data-mode="heatmap"    onclick="setTzMapMode('heatmap')">Тепловая</button>
-        <button class="tz-mapmode" data-mode="clusters"   onclick="setTzMapMode('clusters')">Кластеры</button>
-        <button class="tz-mapmode" data-mode="points"     onclick="setTzMapMode('points')">Точки</button>
-      </div>
     </div>
-    <div id="mapTaza" style="height:520px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border);position:relative"></div>
+    <div id="tazaMapContainer" style="position:relative;height:600px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border)">
+      <div id="mapTaza" style="height:100%;width:100%"></div>
+      <div id="tzMapModes" style="position:absolute;top:10px;right:10px;z-index:1000;background:#fff;padding:5px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15);display:flex;flex-direction:column;gap:3px">
+        <button class="tz-mapmode active" data-mode="choropleth" onclick="setTzMapMode('choropleth')">🗺️ Хороплет</button>
+        <button class="tz-mapmode" data-mode="heatmap"    onclick="setTzMapMode('heatmap')">🌡️ Тепловая</button>
+        <button class="tz-mapmode" data-mode="clusters"   onclick="setTzMapMode('clusters')">📍 Кластеры</button>
+        <button class="tz-mapmode" data-mode="points"     onclick="setTzMapMode('points')">⚫ Точки</button>
+      </div>
+      <div id="tzMapLegend" style="position:absolute;bottom:24px;left:10px;z-index:1000;background:#fff;padding:8px 11px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.15);font-size:11px;line-height:1.5;max-width:230px"></div>
+    </div>
   </div>
 
   <!-- ROW 1: Тренд (на всю ширину, интерактивный) -->
@@ -3252,8 +3260,10 @@ function applyTazaEngine(){
     if(si===0) done++; else if(si===1) cancelled++; else if(si===2||si===3||si===4) in_work++;
     if(od) overdue++;
     const rNm=_TAZA.regions[ri]; if(rNm){
-      let a=regAgg[rNm]; if(!a){a={total:0,done:0,overdue:0};regAgg[rNm]=a;}
+      let a=regAgg[rNm]; if(!a){a={total:0,done:0,overdue:0,cats:{},ratSum:0,ratN:0};regAgg[rNm]=a;}
       a.total++; if(si===0) a.done++; if(od) a.overdue++;
+      if(ci>=0){ a.cats[ci]=(a.cats[ci]||0)+1; }
+      if(ra>0){ a.ratSum+=ra; a.ratN++; }
     }
     const cId=_TAZA.cats[ci]?.id;
     if(cId!=null){
@@ -3283,10 +3293,16 @@ function applyTazaEngine(){
   const origByReg = (window._DATA_TAZA?.by_region)||[];
   const by_region=Object.entries(regAgg).map(([name,v])=>{
     const o=origByReg.find(r=>r.name===name)||{};
+    const topCats = Object.entries(v.cats||{})
+      .sort((a,b)=>b[1]-a[1])
+      .slice(0,3)
+      .map(([ci,cnt])=>({name:_TAZA.cats[+ci]?.name_ru||'?', count:cnt}));
     return {name, total:v.total, done:v.done,
             done_pct:v.total?+((v.done/v.total)*100).toFixed(1):0,
             overdue:v.overdue,
             overdue_pct:v.total?+((v.overdue/v.total)*100).toFixed(1):0,
+            avg_rating: v.ratN ? +(v.ratSum/v.ratN).toFixed(2) : null,
+            top_cats: topCats,
             satisfaction:o.satisfaction??null,
             complaints:o.complaints??0,
             complaint_pct:o.complaint_pct??null};
@@ -3323,29 +3339,17 @@ function rerenderTaza(){
   updateTazaChips();
 }
 
-// ── Интерактивная карта Таза (4 режима) ──
+// ── Интерактивная карта Таза (4 режима, реальные границы) ──
 let _tzMap=null, _tzMapMode='choropleth', _tzGeoLayer=null, _tzPointsLayer=null, _tzHeatLayer=null, _tzClusterLayer=null, _tzGeoData=null, _tzCanvas=null, _tzMapInitPromise=null, _tzRenderTimer=null;
-const TZ_STATUS_COLOR = {0:'#10b981', 1:'#9ca3af', 2:'#f59e0b', 3:'#3b82f6', 4:'#8b5cf6', 5:'#ef4444'};
-const TZ_GEO_TO_DATA = {
-  'СКО':'Северо-Казахстанская область',
-  'ЗКО':'Западно-Казахстанская область',
-  'ВКО':'Восточно-Казахстанская область',
-  'Алматинская обл.':'Алматинская область',
-  'Акмолинская':'Акмолинская область',
-  'Актюбинская':'Актюбинская область',
-  'Абайская':'Абайская область',
-  'Атырауская':'Атырауская область',
-  'Жамбылская':'Жамбылская область',
-  'Жетысуская':'Жетысуская область',
-  'Карагандинская':'Карагандинская область',
-  'Костанайская':'Костанайская область',
-  'Кызылординская':'Кызылординская область',
-  'Мангистауская':'Мангистауская область',
-  'Павлодарская':'Павлодарская область',
-  'Туркестанская':'Туркестанская область',
-  'Улытауская':'Улытауская область',
-};
-function _tzGeoName(geoName){ return TZ_GEO_TO_DATA[geoName] || geoName; }
+const TZ_STATUS_COLOR = {0:'#43A047', 1:'#757575', 2:'#1E88E5', 3:'#1E88E5', 4:'#1E88E5', 5:'#1E88E5'};
+
+function _tzPointColor(si, od){
+  if(od) return '#E53935';            // overdue first
+  if(si === 0) return '#43A047';      // DONE
+  if(si === 1) return '#757575';      // CANCELLED
+  if(si >= 2 && si <= 4) return '#1E88E5'; // WORKING
+  return '#9E9E9E';
+}
 
 function setTzMapMode(m){
   _tzMapMode=m;
@@ -3363,32 +3367,104 @@ function _initTazaMap(){
       {subdomains:'abcd', maxZoom:19, attribution:'🇰🇿 Таза Казахстан · &copy; OSM/Carto'}).addTo(_tzMap);
     _tzCanvas = L.canvas({padding:0.4});
     if(!_tzGeoData){
-      try { const r = await fetch('/kaz.geojson'); _tzGeoData = await r.json(); } catch(e){ _tzGeoData = null; }
+      try { const r = await fetch('/border_regions.geojson'); _tzGeoData = await r.json(); } catch(e){ _tzGeoData = null; }
     }
+    // Постоянный слой границ регионов — создаётся один раз, не удаляется
+    if(_tzGeoData) _tzBuildBorderLayer();
   })();
   return _tzMapInitPromise;
 }
 
-function _tzClearLayers(){
-  if(!_tzMap) return;
-  for(const ref of ['_tzGeoLayer','_tzPointsLayer','_tzHeatLayer','_tzClusterLayer']){
-    if(window[ref]) { try{ _tzMap.removeLayer(window[ref]); }catch(_){} window[ref]=null; }
+// Тонкие границы всегда видны; choropleth заливает их цветом, в др. режимах заливка прозрачная.
+function _tzBuildBorderLayer(){
+  if(_tzGeoLayer) return;
+  _tzGeoLayer = L.geoJSON(_tzGeoData, {
+    style: ()=>({color:'#1B7A3A', weight:1.2, opacity:0.85, fillColor:'#ffffff', fillOpacity:0}),
+    onEachFeature: (f, lyr)=>{
+      const name = f.properties?.name_ru || '';
+      lyr._tzRegName = name;
+      lyr.on('mouseover', e=>{
+        const cur = e.target.options.fillOpacity;
+        e.target.setStyle({weight:2.6, color:'#0d4d24', fillOpacity: cur ? Math.min(1, cur+0.15) : 0.12});
+        e.target.bringToFront();
+      });
+      lyr.on('mouseout', e=>{
+        _tzStyleChoroFeature(e.target);
+      });
+      lyr.on('click', ()=>{
+        const sel = document.getElementById('tzReg');
+        if(!sel) return;
+        sel.value = (sel.value===name) ? 'all' : name;
+        onTazaFilter();
+      });
+    }
+  }).addTo(_tzMap);
+}
+
+// Зелёная палитра по спецификации
+function _tzRegionColor(v, maxV){
+  if(!v) return '#f5f5f5';
+  const ratio = v / Math.max(maxV, 1);
+  if(ratio < 0.10) return '#e8f5e9';
+  if(ratio < 0.25) return '#c8e6c9';
+  if(ratio < 0.50) return '#81c784';
+  if(ratio < 0.75) return '#43a047';
+  return '#1b5e20';
+}
+
+// Локальное состояние с агрегатом, доступным mouseout-стайлеру
+let _tzRegLookup = {}; let _tzRegMax = 1;
+
+function _tzStyleChoroFeature(lyr){
+  const name = lyr._tzRegName || '';
+  if(_tzMapMode === 'choropleth'){
+    const r = _tzRegLookup[name];
+    lyr.setStyle({color:'#1B7A3A', weight:1.2, fillColor:_tzRegionColor(r?.total||0, _tzRegMax), fillOpacity:0.72});
+  } else {
+    lyr.setStyle({color:'#1B7A3A', weight:1.0, fillColor:'#ffffff', fillOpacity:0});
   }
-  // local closure copies
-  if(_tzGeoLayer){ try{_tzMap.removeLayer(_tzGeoLayer);}catch(_){} _tzGeoLayer=null; }
+}
+
+function _tzApplyChoropleth(byReg){
+  _tzRegLookup = {}; (byReg||[]).forEach(r=>{ _tzRegLookup[r.name]=r; });
+  _tzRegMax = Math.max(...(byReg||[]).map(r=>r.total||0), 1);
+  if(!_tzGeoLayer) return;
+  _tzGeoLayer.eachLayer(lyr=>{
+    const name = lyr._tzRegName || '';
+    const r = _tzRegLookup[name];
+    // refresh tooltip
+    lyr.unbindTooltip();
+    if(_tzMapMode === 'choropleth'){
+      const total = r?.total||0;
+      const donePct = r?.done_pct||0;
+      const ovdNum = r?.overdue||0;
+      const rating = r?.avg_rating;
+      const tops = (r?.top_cats||[]).slice(0,3);
+      const topsHtml = tops.length
+        ? tops.map((c,i)=>`<div style="font-size:10px;color:#333">${i+1}. ${c.name} — ${c.count.toLocaleString('ru-RU')}</div>`).join('')
+        : '<div style="font-size:10px;color:#999">нет данных</div>';
+      lyr.bindTooltip(`
+        <div style="font-weight:600;font-size:13px;margin-bottom:4px">${name}</div>
+        <div style="font-size:11px">Заявок: <b>${total.toLocaleString('ru-RU')}</b></div>
+        <div style="font-size:11px">Выполнено: <b>${donePct}%</b></div>
+        <div style="font-size:11px">Просрочено: <b>${ovdNum.toLocaleString('ru-RU')}</b></div>
+        <div style="font-size:11px">Рейтинг: <b>${rating ? '⭐ '+rating : '—'}</b></div>
+        <hr style="margin:5px 0;opacity:.3">
+        <div style="font-size:10px;color:#666;margin-bottom:2px">Топ-3 категории:</div>
+        ${topsHtml}
+      `, {sticky:true, direction:'auto'});
+    } else {
+      // в др. режимах — короткая подсказка
+      lyr.bindTooltip(`<div style="font-weight:600">${name}</div>`, {sticky:true});
+    }
+    _tzStyleChoroFeature(lyr);
+  });
+}
+
+function _tzClearOverlays(){
   if(_tzPointsLayer){ try{_tzMap.removeLayer(_tzPointsLayer);}catch(_){} _tzPointsLayer=null; }
   if(_tzHeatLayer){ try{_tzMap.removeLayer(_tzHeatLayer);}catch(_){} _tzHeatLayer=null; }
   if(_tzClusterLayer){ try{_tzMap.removeLayer(_tzClusterLayer);}catch(_){} _tzClusterLayer=null; }
-}
-
-function _tzRegionColor(v, maxV){
-  if(!v) return '#f3f4f6';
-  const t = Math.min(1, Math.log(1+v) / Math.log(1 + Math.max(maxV,1)));
-  if(t<0.20) return '#dcfce7';
-  if(t<0.40) return '#86efac';
-  if(t<0.60) return '#facc15';
-  if(t<0.80) return '#fb923c';
-  return '#dc2626';
 }
 
 function _tzCollectPoints(maxN){
@@ -3429,34 +3505,6 @@ function _tzCollectPoints(maxN){
   return out;
 }
 
-function _renderChoropleth(byReg){
-  if(!_tzGeoData) return;
-  const map={}; (byReg||[]).forEach(r=>{ map[r.name]=r; });
-  const max = Math.max(...(byReg||[]).map(r=>r.total||0), 1);
-  _tzGeoLayer = L.geoJSON(_tzGeoData, {
-    style: f=>{
-      const dataName = _tzGeoName(f.properties?.name_ru || '');
-      const m = map[dataName];
-      return {color:'#fff', weight:1.2, fillColor:_tzRegionColor(m?.total||0, max), fillOpacity:0.75};
-    },
-    onEachFeature: (f, lyr)=>{
-      const geoName = f.properties?.name_ru || '';
-      const dataName = _tzGeoName(geoName);
-      const m = map[dataName] || {total:0,done:0,done_pct:0,overdue:0,overdue_pct:0};
-      const tip = `<b>${dataName}</b><br>Заявок: <b>${(m.total||0).toLocaleString('ru')}</b><br>Исполнено: ${m.done||0} (${m.done_pct||0}%)<br>Просрочено: ${m.overdue||0} (${m.overdue_pct||0}%)`;
-      lyr.bindTooltip(tip, {sticky:true});
-      lyr.on('mouseover', e=>{ e.target.setStyle({weight:2.4, color:'#1B7A3A'}); });
-      lyr.on('mouseout',  e=>{ _tzGeoLayer.resetStyle(e.target); });
-      lyr.on('click', ()=>{
-        const sel = document.getElementById('tzReg');
-        if(!sel) return;
-        sel.value = (sel.value===dataName) ? 'all' : dataName;
-        onTazaFilter();
-      });
-    }
-  }).addTo(_tzMap);
-}
-
 function _renderHeatmap(pts){
   if(typeof L.heatLayer !== 'function') return;
   const data = pts.map(p=>[p[0], p[1], 0.5]);
@@ -3472,7 +3520,7 @@ function _renderClusters(pts){
   const batch = [];
   for(let i=0;i<pts.length;i++){
     const p = pts[i];
-    const m = L.circleMarker([p[0],p[1]], {renderer:_tzCanvas, radius:5, color:'#fff', weight:0.5, fillColor:TZ_STATUS_COLOR[p[2]]||'#999', fillOpacity:0.9});
+    const m = L.circleMarker([p[0],p[1]], {renderer:_tzCanvas, radius:5, color:'#fff', weight:0.5, fillColor:_tzPointColor(p[2], p[3]), fillOpacity:0.9});
     m._tzMeta = p;
     m.on('click', _tzPointPopup);
     batch.push(m);
@@ -3485,7 +3533,7 @@ function _renderPoints(pts){
   _tzPointsLayer = L.layerGroup();
   for(let i=0;i<pts.length;i++){
     const p = pts[i];
-    const m = L.circleMarker([p[0],p[1]], {renderer:_tzCanvas, radius:3, weight:0, fillColor:TZ_STATUS_COLOR[p[2]]||'#999', fillOpacity:0.7});
+    const m = L.circleMarker([p[0],p[1]], {renderer:_tzCanvas, radius:3, weight:0, fillColor:_tzPointColor(p[2], p[3]), fillOpacity:0.6});
     m._tzMeta = p;
     m.on('click', _tzPointPopup);
     _tzPointsLayer.addLayer(m);
@@ -3500,12 +3548,37 @@ function _tzPointPopup(e){
   const rgNm = _TAZA.regions[p[5]] || '?';
   const ymd = p[4];
   const ds = `${(ymd/10000)|0}-${String(((ymd/100)|0)%100).padStart(2,'0')}-${String(ymd%100).padStart(2,'0')}`;
-  const ovdHtml = p[3] ? ' · <span style="color:#dc2626;font-weight:600">просрочено</span>' : '';
-  e.target.bindPopup(`<div style="font-size:11px;line-height:1.4">
+  const ovdHtml = p[3] ? ' · <span style="color:#E53935;font-weight:600">просрочено</span>' : '';
+  const col = _tzPointColor(p[2], p[3]);
+  e.target.bindPopup(`<div style="font-size:11px;line-height:1.45;min-width:170px">
     <b>${ds}</b><br>${rgNm}<br>
     <span style="color:#555">${ctNm}</span><br>
-    Статус: <b style="color:${TZ_STATUS_COLOR[p[2]]||'#999'}">${stNm}</b>${ovdHtml}
+    Статус: <b style="color:${col}">${stNm}</b>${ovdHtml}
   </div>`).openPopup();
+}
+
+function _tzUpdateLegend(byReg){
+  const el = document.getElementById('tzMapLegend'); if(!el) return;
+  if(_tzMapMode === 'choropleth'){
+    const max = Math.max(...(byReg||[]).map(r=>r.total||0), 1);
+    const bins = [
+      {label:'0',           col:'#f5f5f5'},
+      {label:`< ${Math.round(max*0.10).toLocaleString('ru')}`, col:'#e8f5e9'},
+      {label:`< ${Math.round(max*0.25).toLocaleString('ru')}`, col:'#c8e6c9'},
+      {label:`< ${Math.round(max*0.50).toLocaleString('ru')}`, col:'#81c784'},
+      {label:`< ${Math.round(max*0.75).toLocaleString('ru')}`, col:'#43a047'},
+      {label:`до ${max.toLocaleString('ru')}`, col:'#1b5e20'},
+    ];
+    el.innerHTML = `<div style="font-weight:600;margin-bottom:4px">Заявок в регионе</div>` +
+      bins.map(b=>`<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:14px;height:10px;background:${b.col};border:0.5px solid #ccc"></span>${b.label}</div>`).join('');
+  } else {
+    el.innerHTML = `<div style="font-weight:600;margin-bottom:4px">Статус заявки</div>` + [
+      ['#E53935','Просрочено'],
+      ['#43A047','Выполнено'],
+      ['#1E88E5','В работе'],
+      ['#757575','Отменено'],
+    ].map(([c,t])=>`<div style="display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:10px;height:10px;background:${c};border-radius:50%"></span>${t}</div>`).join('');
+  }
 }
 
 function _renderTazaMap(d){
@@ -3515,12 +3588,15 @@ function _renderTazaMap(d){
     await _initTazaMap();
     if(!_tzMap) return;
     setTimeout(()=>{ try{ _tzMap.invalidateSize(); }catch(_){} }, 30);
-    _tzClearLayers();
+    _tzClearOverlays();
     const dd = d || (typeof applyTazaEngine==='function' && _TAZA ? applyTazaEngine() : (window._DATA_TAZA||{}));
+    const byReg = dd?.by_region || [];
     const cntEl = document.getElementById('tzMapCount');
+    // 1) Всегда обновляем хороплет/границы + tooltips
+    _tzApplyChoropleth(byReg);
+    // 2) Слой точек/кластеров/heatmap — только в соответствующем режиме
     if(_tzMapMode === 'choropleth'){
-      _renderChoropleth(dd?.by_region||[]);
-      const total = (dd?.by_region||[]).reduce((s,r)=>s+(r.total||0),0);
+      const total = byReg.reduce((s,r)=>s+(r.total||0),0);
       if(cntEl) cntEl.textContent = '· ' + total.toLocaleString('ru') + ' заявок';
     } else {
       const pts = _tzCollectPoints();
@@ -3529,7 +3605,8 @@ function _renderTazaMap(d){
       else if(_tzMapMode === 'clusters') _renderClusters(pts);
       else if(_tzMapMode === 'points')   _renderPoints(pts);
     }
-  }, 180);
+    _tzUpdateLegend(byReg);
+  }, 200);
 }
 
 // ── Гранулярность динамики ──
