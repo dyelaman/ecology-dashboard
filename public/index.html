@@ -327,8 +327,21 @@ input[type=file]{display:none}
 
 <!-- ── ГЛОБАЛЬНАЯ ПАНЕЛЬ ФИЛЬТРОВ ── -->
 <div class="fbar" id="globalFbar">
+  <span class="fbar-label">📅 Период</span>
+  <input type="date" id="gDateFrom" min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" style="font-size:11px;padding:4px 8px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none;width:130px" placeholder="С">
+  <span style="color:var(--text3);font-size:11px">—</span>
+  <input type="date" id="gDateTo"   min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" style="font-size:11px;padding:4px 8px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none;width:130px" placeholder="По">
+  <span style="display:inline-flex;gap:4px;flex-wrap:wrap;margin-left:4px" id="gPeriodPresets">
+    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(0)">Сегодня</button>
+    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(7)">7д</button>
+    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(30)">30д</button>
+    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(90)">Квартал</button>
+    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(365)">Год</button>
+    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(null)">Всё</button>
+  </span>
+  <div class="fbar-sep"></div>
   <span class="fbar-label">Год</span>
-  <select id="gYear" onchange="onGlobalFilter()">
+  <select id="gYear" onchange="onYMDChange();onGlobalFilter()">
     <option value="all">Все</option>
     <option value="2026">2026</option>
     <option value="2025">2025</option>
@@ -338,7 +351,7 @@ input[type=file]{display:none}
     <option value="2021">2021</option>
   </select>
   <span class="fbar-label">Месяц</span>
-  <select id="gMonth" onchange="onGlobalFilter()">
+  <select id="gMonth" onchange="onYMDChange();onGlobalFilter()">
     <option value="all">Все</option>
     <option value="01">Янв</option>
     <option value="02">Фев</option>
@@ -354,7 +367,7 @@ input[type=file]{display:none}
     <option value="12">Дек</option>
   </select>
   <span class="fbar-label">День</span>
-  <select id="gDay" onchange="onGlobalFilter()">
+  <select id="gDay" onchange="onYMDChange();onGlobalFilter()">
     <option value="all">Все</option>
   </select>
   <div class="fbar-sep"></div>
@@ -1365,16 +1378,32 @@ input[type=file]{display:none}
   <div class="taza-filters" id="tzFilters">
     <div class="taza-row">
       <span class="taza-flbl">📅 Период:</span>
-      <input type="date" id="tzDateFrom" min="2024-06-01" max="2026-04-28" onchange="onTazaFilter()">
+      <span class="taza-flbl" style="margin-left:4px">Год</span>
+      <select id="tzYear" onchange="onTzYMChange();onTazaFilter()" style="width:90px">
+        <option value="all">Все</option>
+        <option value="2026">2026</option>
+        <option value="2025">2025</option>
+        <option value="2024">2024</option>
+      </select>
+      <span class="taza-flbl">Месяц</span>
+      <select id="tzMonth" onchange="onTzYMChange();onTazaFilter()" style="width:100px">
+        <option value="all">Все</option>
+        <option value="01">Январь</option><option value="02">Февраль</option><option value="03">Март</option>
+        <option value="04">Апрель</option><option value="05">Май</option><option value="06">Июнь</option>
+        <option value="07">Июль</option><option value="08">Август</option><option value="09">Сентябрь</option>
+        <option value="10">Октябрь</option><option value="11">Ноябрь</option><option value="12">Декабрь</option>
+      </select>
+      <span class="taza-flbl" style="margin-left:6px">или</span>
+      <input type="date" id="tzDateFrom" min="2024-06-01" max="2026-04-28" onchange="onTzDateRangeChange();onTazaFilter()">
       <span style="color:var(--text3);font-size:11px">—</span>
-      <input type="date" id="tzDateTo" min="2024-06-01" max="2026-04-28" onchange="onTazaFilter()">
+      <input type="date" id="tzDateTo" min="2024-06-01" max="2026-04-28" onchange="onTzDateRangeChange();onTazaFilter()">
       <span class="taza-quick">
         <button onclick="tzQuickPeriod(0)">Сегодня</button>
-        <button onclick="tzQuickPeriod(7)">7 дней</button>
-        <button onclick="tzQuickPeriod(30)">30 дней</button>
+        <button onclick="tzQuickPeriod(7)">7д</button>
+        <button onclick="tzQuickPeriod(30)">30д</button>
         <button onclick="tzQuickPeriod(90)">Квартал</button>
         <button onclick="tzQuickPeriod(365)">Год</button>
-        <button onclick="tzQuickPeriod(null)">Всё время</button>
+        <button onclick="tzQuickPeriod(null)">Всё</button>
       </span>
     </div>
     <div class="taza-row">
@@ -3112,8 +3141,21 @@ function tazaEngineFilterActive(){
   const F=id=>document.getElementById(id)?.value||'all';
   const df=document.getElementById('tzDateFrom')?.value||'';
   const dt=document.getElementById('tzDateTo')?.value||'';
-  return !!df||!!dt||F('tzReg')!=='all'||F('tzCat')!=='all'||F('tzStatus')!=='all'
+  return !!df||!!dt||F('tzYear')!=='all'||F('tzMonth')!=='all'
+    ||F('tzReg')!=='all'||F('tzCat')!=='all'||F('tzStatus')!=='all'
     ||F('tzOverdue')!=='all'||F('tzRating')!=='all';
+}
+
+function onTzYMChange(){
+  // Активирован Год/Месяц → сбрасываем диапазон
+  const df=document.getElementById('tzDateFrom'), dt=document.getElementById('tzDateTo');
+  if(df) df.value=''; if(dt) dt.value='';
+  document.querySelectorAll('.taza-quick button').forEach(b=>b.classList.remove('active'));
+}
+function onTzDateRangeChange(){
+  // Активирован диапазон → сбрасываем Y/M
+  ['tzYear','tzMonth'].forEach(id=>{const el=document.getElementById(id); if(el) el.selectedIndex=0;});
+  document.querySelectorAll('.taza-quick button').forEach(b=>b.classList.remove('active'));
 }
 
 function tzQuickPeriod(days){
@@ -3121,12 +3163,14 @@ function tzQuickPeriod(days){
   if(!from||!to) return;
   const maxD=new Date('2026-04-28');
   if(days===null){ from.value=''; to.value=''; }
+  else if(days===0){ const s=maxD.toISOString().slice(0,10); from.value=s; to.value=s; }
   else {
     to.value=maxD.toISOString().slice(0,10);
     const d=new Date(maxD); d.setDate(d.getDate()-days);
     from.value=d.toISOString().slice(0,10);
   }
-  // mark active button
+  // Сброс Y/M
+  ['tzYear','tzMonth'].forEach(id=>{const el=document.getElementById(id); if(el) el.selectedIndex=0;});
   document.querySelectorAll('.taza-quick button').forEach(b=>b.classList.remove('active'));
   const btn=event?.target; if(btn) btn.classList.add('active');
   onTazaFilter();
@@ -3151,6 +3195,9 @@ function applyTazaEngine(){
   const dtStr=document.getElementById('tzDateTo')?.value||'';
   const dfInt=dfStr?+dfStr.replace(/-/g,''):0;
   const dtInt=dtStr?+dtStr.replace(/-/g,''):99999999;
+  // Год/Месяц (взаимоисключающие с диапазоном — handler чистит другую сторону)
+  const yF=F('tzYear'), mF=F('tzMonth');
+  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF;
   const reg=F('tzReg'), cat=F('tzCat'), st=F('tzStatus'), ovd=F('tzOverdue'), rat=F('tzRating');
   const regI=reg==='all'?-1:_TAZA.regions.indexOf(reg);
   const catI=cat==='all'?-1:_TAZA.cats.findIndex(c=>c.id===cat);
@@ -3166,6 +3213,11 @@ function applyTazaEngine(){
   for(let i=0;i<n;i++){
     const o=i*w, ymd=D[o];
     if(ymd<dfInt||ymd>dtInt) continue;
+    if(yN>=0 || mN>=0){
+      const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100;
+      if(yN>=0 && yy!==yN) continue;
+      if(mN>=0 && mm!==mN) continue;
+    }
     const ri=D[o+1], ci=D[o+2], si=D[o+3], ra=D[o+4], od=D[o+5], cd=D[o+8];
     if(regI>=0&&ri!==regI) continue;
     if(catI>=0&&ci!==catI) continue;
@@ -4950,6 +5002,12 @@ function updateFilterChips(){
   const box=document.getElementById('fbarActive');
   if(!box) return;
   const chips=[]; let advActive=false;
+  // Период: кастомный диапазон
+  const dfV=document.getElementById('gDateFrom')?.value||'';
+  const dtV=document.getElementById('gDateTo')?.value||'';
+  if(dfV||dtV){
+    chips.push(`<span class="fchip"><b>Период:</b> ${dfV||'…'} — ${dtV||'…'}<span class="fchip-x" onclick="const df=document.getElementById('gDateFrom'),dt=document.getElementById('gDateTo');if(df)df.value='';if(dt)dt.value='';onGlobalFilter()">✕</span></span>`);
+  }
   _FCHIP_DEFS.forEach(d=>{
     const el=document.getElementById(d.id);
     if(!el) return;
@@ -5243,9 +5301,43 @@ function _chipRemoveOrg(name){
   _applyMinSelection();
 }
 
+// ── Универсальный временной блок: режим Год/Месяц/День ИЛИ диапазон ─────────
+function onYMDChange(){
+  // При активации Y/M/D — сбрасываем диапазон дат
+  const df=document.getElementById('gDateFrom'), dt=document.getElementById('gDateTo');
+  if(df) df.value=''; if(dt) dt.value='';
+  document.querySelectorAll('#gPeriodPresets button').forEach(b=>b.classList.remove('active'));
+}
+function onDateRangeChange(){
+  // При активации диапазона — сбрасываем Y/M/D
+  ['gYear','gMonth','gDay'].forEach(id=>{const el=document.getElementById(id); if(el) el.selectedIndex=0;});
+  document.querySelectorAll('#gPeriodPresets button').forEach(b=>b.classList.remove('active'));
+  onGlobalFilter();
+}
+function setQuickPeriod(days){
+  const df=document.getElementById('gDateFrom'), dt=document.getElementById('gDateTo');
+  if(!df||!dt) return;
+  // База — максимальная дата данных (2026-04-30)
+  const maxD = new Date('2026-04-30');
+  if(days===null){ df.value=''; dt.value=''; }
+  else if(days===0){ const s=maxD.toISOString().slice(0,10); df.value=s; dt.value=s; }
+  else {
+    dt.value = maxD.toISOString().slice(0,10);
+    const from = new Date(maxD); from.setDate(from.getDate()-days);
+    df.value = from.toISOString().slice(0,10);
+  }
+  ['gYear','gMonth','gDay'].forEach(id=>{const el=document.getElementById(id); if(el) el.selectedIndex=0;});
+  document.querySelectorAll('#gPeriodPresets button').forEach(b=>b.classList.remove('active'));
+  if(event && event.target) event.target.classList.add('active');
+  onGlobalFilter();
+}
+
 function engineFilterActive(){
   const F=id=>document.getElementById(id)?.value||'all';
   const orgV=(document.getElementById('gOrg')?.value||'').trim();
+  const dfV=(document.getElementById('gDateFrom')?.value||'');
+  const dtV=(document.getElementById('gDateTo')?.value||'');
+  if(dfV||dtV) return true;
   return F('gYear')!=='all'||F('gMonth')!=='all'||F('gDay')!=='all'||F('gReg')!=='all'
     ||F('gType')!=='all'||F('gStatus')!=='all'||F('gCatF')!=='all'||F('gIssueF')!=='all'
     ||F('gSubF')!=='all'||F('gCGO')!=='all'||F('gMIO')!=='all'||orgV!==''
@@ -5286,6 +5378,11 @@ function applyTimeEngine(){
   const orgFsel=(document.getElementById('gOrg')?.value||'').trim();
   const dupOnly=(typeof _gDupActive!=='undefined')&&_gDupActive;
   const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF, dN=dF==='all'?-1:+dF;
+  // Кастомный диапазон дат (взаимоисключающий с Y/M/D — handler чистит другую сторону)
+  const dfStr=document.getElementById('gDateFrom')?.value||'';
+  const dtStr=document.getElementById('gDateTo')?.value||'';
+  const dfInt=dfStr?+dfStr.replace(/-/g,''):0;
+  const dtInt=dtStr?+dtStr.replace(/-/g,''):99999999;
   const regI=regF==='all'?-1:_AC.regions.indexOf(regF);
   const catI=catF==='all'?-1:_AC.cats.indexOf(catF);
   const typI=typF==='all'?-1:_AC.types.indexOf(typF);
@@ -5310,6 +5407,7 @@ function applyTimeEngine(){
     if(yN>=0&&yy!==yN) continue;
     if(mN>=0&&mm!==mN) continue;
     if(dN>=0&&dd!==dN) continue;
+    if(ymd<dfInt||ymd>dtInt) continue;
     const rr=D[o+1],cc=D[o+2],tt=D[o+3],ss=D[o+4],ii=D[o+5],su=D[o+6],og=D[o+7],fl=D[o+8];
     const mn=w>=10?D[o+9]:-1;
     if(regI>=0&&rr!==regI) continue;
@@ -5509,6 +5607,9 @@ function _resetFiltersSilent(){
   ['gYear','gMonth','gDay','gReg','gStatus','gType','gCatF','gIssueF','gSubF','gCGO','gMIO'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.selectedIndex=0;
   });
+  const df=document.getElementById('gDateFrom'), dt=document.getElementById('gDateTo');
+  if(df) df.value=''; if(dt) dt.value='';
+  document.querySelectorAll('#gPeriodPresets button').forEach(b=>b.classList.remove('active'));
   const ds=document.getElementById('gDupSel'); if(ds) ds.selectedIndex=0;
   const org=document.getElementById('gOrg'); if(org) org.value='';
   if(typeof _minSelKeys!=='undefined') _minSelKeys.clear();
@@ -5768,6 +5869,10 @@ function resetGlobalFilter(){
   _gDupActive = false;
   const ds = document.getElementById('gDupSel');
   if(ds) ds.value = 'all';
+  // Сброс кастомного диапазона + активной кнопки пресета
+  const df=document.getElementById('gDateFrom'), dt=document.getElementById('gDateTo');
+  if(df) df.value=''; if(dt) dt.value='';
+  document.querySelectorAll('#gPeriodPresets button').forEach(b=>b.classList.remove('active'));
   ['gYear','gMonth','gDay','gReg','gStatus','gType','gCatF','gIssueF','gSubF','gCGO','gMIO'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='all';
   });
