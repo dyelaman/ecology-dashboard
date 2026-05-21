@@ -9,6 +9,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <style>
 :root{--bg:#f5f5f5;--surface:#fff;--surface2:#f9fafb;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.18);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--blue:#0891B2;--green:#16A34A;--red:#DC2626;--amber:#D97706;--radius:8px;--radius-lg:12px}
@@ -88,6 +92,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tz-gran{font-size:10px;padding:4px 9px;border-radius:14px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-weight:500;transition:all .15s}
 .tz-gran:hover{border-color:var(--green);color:var(--green)}
 .tz-gran.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
+.tz-mapmode{font-size:10px;padding:4px 10px;border-radius:14px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;font-weight:500;transition:all .15s}
+.tz-mapmode:hover{border-color:var(--green);color:var(--green)}
+.tz-mapmode.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
 .sat-row{display:flex;align-items:center;gap:8px;padding:5px 4px;border-bottom:0.5px solid var(--border);font-size:11px;min-height:28px}
 .sat-name{flex:0 0 130px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px}
 .sat-bar{flex:1;height:14px;background:var(--surface2);border-radius:7px;overflow:hidden;position:relative}
@@ -1453,6 +1460,21 @@ input[type=file]{display:none}
     <div class="kpi"><div class="kpi-lbl">Категорий услуг</div><div class="kpi-val" id="tzCatCount">—</div><div class="kpi-d nu">видов работ</div></div>
   </div>
 
+  <!-- КАРТА ТАЗА (4 режима) -->
+  <div class="card" style="padding:14px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <div class="card-title" style="margin:0">🗺️ Карта заявок Таза Казахстан <span style="font-size:10px;color:var(--text3);font-weight:400" id="tzMapCount"></span></div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+        <span style="font-size:10px;color:var(--text3);font-weight:600">Режим:</span>
+        <button class="tz-mapmode active" data-mode="choropleth" onclick="setTzMapMode('choropleth')">Хороплет</button>
+        <button class="tz-mapmode" data-mode="heatmap"    onclick="setTzMapMode('heatmap')">Тепловая</button>
+        <button class="tz-mapmode" data-mode="clusters"   onclick="setTzMapMode('clusters')">Кластеры</button>
+        <button class="tz-mapmode" data-mode="points"     onclick="setTzMapMode('points')">Точки</button>
+      </div>
+    </div>
+    <div id="mapTaza" style="height:520px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border);position:relative"></div>
+  </div>
+
   <!-- ROW 1: Тренд (на всю ширину, интерактивный) -->
   <div class="card" style="padding:14px;margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
@@ -1757,7 +1779,8 @@ function switchTab(id, el) {
     setTimeout(initKgsMap, 100);
   }
   if(id==='taza'){
-    if(!_tzInited && window._DATA_TAZA){ _tzInited=true; renderTazaTab(window._DATA_TAZA); }
+    if(!_tzInited && window._DATA_TAZA){ _tzInited=true; renderTazaTab(window._DATA_TAZA); _renderTazaMap(window._DATA_TAZA); }
+    else if(_tzInited) { _renderTazaMap(); }
     if(typeof populateTazaFilters==='function') populateTazaFilters();
     if(typeof tazaEngineFilterActive==='function' && tazaEngineFilterActive() && typeof rerenderTaza==='function') rerenderTaza();
   }
@@ -3292,10 +3315,221 @@ function applyTazaEngine(){
 }
 
 function rerenderTaza(){
-  if(!_TAZA){ if(window._DATA_TAZA) renderTazaTab(window._DATA_TAZA); updateTazaChips(); return; }
+  if(!_TAZA){ if(window._DATA_TAZA){ renderTazaTab(window._DATA_TAZA); _renderTazaMap(window._DATA_TAZA);} updateTazaChips(); return; }
   // Всегда через движок — для byDay/динамики
-  renderTazaTab(applyTazaEngine());
+  const eng = applyTazaEngine();
+  renderTazaTab(eng);
+  _renderTazaMap(eng);
   updateTazaChips();
+}
+
+// ── Интерактивная карта Таза (4 режима) ──
+let _tzMap=null, _tzMapMode='choropleth', _tzGeoLayer=null, _tzPointsLayer=null, _tzHeatLayer=null, _tzClusterLayer=null, _tzGeoData=null, _tzCanvas=null, _tzMapInitPromise=null, _tzRenderTimer=null;
+const TZ_STATUS_COLOR = {0:'#10b981', 1:'#9ca3af', 2:'#f59e0b', 3:'#3b82f6', 4:'#8b5cf6', 5:'#ef4444'};
+const TZ_GEO_TO_DATA = {
+  'СКО':'Северо-Казахстанская область',
+  'ЗКО':'Западно-Казахстанская область',
+  'ВКО':'Восточно-Казахстанская область',
+  'Алматинская обл.':'Алматинская область',
+  'Акмолинская':'Акмолинская область',
+  'Актюбинская':'Актюбинская область',
+  'Абайская':'Абайская область',
+  'Атырауская':'Атырауская область',
+  'Жамбылская':'Жамбылская область',
+  'Жетысуская':'Жетысуская область',
+  'Карагандинская':'Карагандинская область',
+  'Костанайская':'Костанайская область',
+  'Кызылординская':'Кызылординская область',
+  'Мангистауская':'Мангистауская область',
+  'Павлодарская':'Павлодарская область',
+  'Туркестанская':'Туркестанская область',
+  'Улытауская':'Улытауская область',
+};
+function _tzGeoName(geoName){ return TZ_GEO_TO_DATA[geoName] || geoName; }
+
+function setTzMapMode(m){
+  _tzMapMode=m;
+  document.querySelectorAll('.tz-mapmode').forEach(b=>b.classList.toggle('active', b.dataset.mode===m));
+  _renderTazaMap();
+}
+
+function _initTazaMap(){
+  if(_tzMap) return Promise.resolve();
+  if(_tzMapInitPromise) return _tzMapInitPromise;
+  _tzMapInitPromise = (async ()=>{
+    const el = document.getElementById('mapTaza'); if(!el) return;
+    _tzMap = L.map('mapTaza', {zoomControl:true, preferCanvas:true, attributionControl:true}).setView([48.5, 67.5], 5);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      {subdomains:'abcd', maxZoom:19, attribution:'🇰🇿 Таза Казахстан · &copy; OSM/Carto'}).addTo(_tzMap);
+    _tzCanvas = L.canvas({padding:0.4});
+    if(!_tzGeoData){
+      try { const r = await fetch('/kaz.geojson'); _tzGeoData = await r.json(); } catch(e){ _tzGeoData = null; }
+    }
+  })();
+  return _tzMapInitPromise;
+}
+
+function _tzClearLayers(){
+  if(!_tzMap) return;
+  for(const ref of ['_tzGeoLayer','_tzPointsLayer','_tzHeatLayer','_tzClusterLayer']){
+    if(window[ref]) { try{ _tzMap.removeLayer(window[ref]); }catch(_){} window[ref]=null; }
+  }
+  // local closure copies
+  if(_tzGeoLayer){ try{_tzMap.removeLayer(_tzGeoLayer);}catch(_){} _tzGeoLayer=null; }
+  if(_tzPointsLayer){ try{_tzMap.removeLayer(_tzPointsLayer);}catch(_){} _tzPointsLayer=null; }
+  if(_tzHeatLayer){ try{_tzMap.removeLayer(_tzHeatLayer);}catch(_){} _tzHeatLayer=null; }
+  if(_tzClusterLayer){ try{_tzMap.removeLayer(_tzClusterLayer);}catch(_){} _tzClusterLayer=null; }
+}
+
+function _tzRegionColor(v, maxV){
+  if(!v) return '#f3f4f6';
+  const t = Math.min(1, Math.log(1+v) / Math.log(1 + Math.max(maxV,1)));
+  if(t<0.20) return '#dcfce7';
+  if(t<0.40) return '#86efac';
+  if(t<0.60) return '#facc15';
+  if(t<0.80) return '#fb923c';
+  return '#dc2626';
+}
+
+function _tzCollectPoints(maxN){
+  if(!_TAZA) return [];
+  const F=id=>document.getElementById(id)?.value||'all';
+  const dfStr=document.getElementById('tzDateFrom')?.value||'';
+  const dtStr=document.getElementById('tzDateTo')?.value||'';
+  const dfInt=dfStr?+dfStr.replace(/-/g,''):0;
+  const dtInt=dtStr?+dtStr.replace(/-/g,''):99999999;
+  const yF=F('tzYear'), mF=F('tzMonth');
+  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF;
+  const reg=F('tzReg'), cat=F('tzCat'), st=F('tzStatus'), ovd=F('tzOverdue'), rat=F('tzRating');
+  const regI=reg==='all'?-1:_TAZA.regions.indexOf(reg);
+  const catI=cat==='all'?-1:_TAZA.cats.findIndex(c=>c.id===cat);
+  const stIdx=st==='all'?-1:_TAZA.statuses.findIndex(s=>s.key===st);
+  const ratN=rat==='all'?-1:+rat;
+  const w=_TAZA.w, D=_TAZA.data, n=_TAZA.n;
+  const out=[];
+  for(let i=0;i<n;i++){
+    const o=i*w, ymd=D[o];
+    if(ymd<dfInt||ymd>dtInt) continue;
+    if(yN>=0 || mN>=0){
+      const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100;
+      if(yN>=0 && yy!==yN) continue;
+      if(mN>=0 && mm!==mN) continue;
+    }
+    const ri=D[o+1], ci=D[o+2], si=D[o+3], ra=D[o+4], od=D[o+5], lat10k=D[o+6], lon10k=D[o+7];
+    if(regI>=0&&ri!==regI) continue;
+    if(catI>=0&&ci!==catI) continue;
+    if(stIdx>=0&&si!==stIdx) continue;
+    if(ovd==='true'&&od!==1) continue;
+    if(ovd==='false'&&od!==0) continue;
+    if(ratN>=0&&ra!==ratN) continue;
+    if(!lat10k || !lon10k) continue;
+    out.push([lat10k/10000, lon10k/10000, si, od, ymd, ri, ci]);
+    if(maxN && out.length>=maxN) break;
+  }
+  return out;
+}
+
+function _renderChoropleth(byReg){
+  if(!_tzGeoData) return;
+  const map={}; (byReg||[]).forEach(r=>{ map[r.name]=r; });
+  const max = Math.max(...(byReg||[]).map(r=>r.total||0), 1);
+  _tzGeoLayer = L.geoJSON(_tzGeoData, {
+    style: f=>{
+      const dataName = _tzGeoName(f.properties?.name_ru || '');
+      const m = map[dataName];
+      return {color:'#fff', weight:1.2, fillColor:_tzRegionColor(m?.total||0, max), fillOpacity:0.75};
+    },
+    onEachFeature: (f, lyr)=>{
+      const geoName = f.properties?.name_ru || '';
+      const dataName = _tzGeoName(geoName);
+      const m = map[dataName] || {total:0,done:0,done_pct:0,overdue:0,overdue_pct:0};
+      const tip = `<b>${dataName}</b><br>Заявок: <b>${(m.total||0).toLocaleString('ru')}</b><br>Исполнено: ${m.done||0} (${m.done_pct||0}%)<br>Просрочено: ${m.overdue||0} (${m.overdue_pct||0}%)`;
+      lyr.bindTooltip(tip, {sticky:true});
+      lyr.on('mouseover', e=>{ e.target.setStyle({weight:2.4, color:'#1B7A3A'}); });
+      lyr.on('mouseout',  e=>{ _tzGeoLayer.resetStyle(e.target); });
+      lyr.on('click', ()=>{
+        const sel = document.getElementById('tzReg');
+        if(!sel) return;
+        sel.value = (sel.value===dataName) ? 'all' : dataName;
+        onTazaFilter();
+      });
+    }
+  }).addTo(_tzMap);
+}
+
+function _renderHeatmap(pts){
+  if(typeof L.heatLayer !== 'function') return;
+  const data = pts.map(p=>[p[0], p[1], 0.5]);
+  _tzHeatLayer = L.heatLayer(data, {
+    radius:18, blur:22, maxZoom:11, max:0.9,
+    gradient:{0.2:'#22d3ee', 0.4:'#4ade80', 0.6:'#facc15', 0.8:'#fb923c', 1:'#dc2626'}
+  }).addTo(_tzMap);
+}
+
+function _renderClusters(pts){
+  if(typeof L.markerClusterGroup !== 'function') return;
+  _tzClusterLayer = L.markerClusterGroup({chunkedLoading:true, maxClusterRadius:55, spiderfyOnMaxZoom:true});
+  const batch = [];
+  for(let i=0;i<pts.length;i++){
+    const p = pts[i];
+    const m = L.circleMarker([p[0],p[1]], {renderer:_tzCanvas, radius:5, color:'#fff', weight:0.5, fillColor:TZ_STATUS_COLOR[p[2]]||'#999', fillOpacity:0.9});
+    m._tzMeta = p;
+    m.on('click', _tzPointPopup);
+    batch.push(m);
+  }
+  _tzClusterLayer.addLayers(batch);
+  _tzMap.addLayer(_tzClusterLayer);
+}
+
+function _renderPoints(pts){
+  _tzPointsLayer = L.layerGroup();
+  for(let i=0;i<pts.length;i++){
+    const p = pts[i];
+    const m = L.circleMarker([p[0],p[1]], {renderer:_tzCanvas, radius:3, weight:0, fillColor:TZ_STATUS_COLOR[p[2]]||'#999', fillOpacity:0.7});
+    m._tzMeta = p;
+    m.on('click', _tzPointPopup);
+    _tzPointsLayer.addLayer(m);
+  }
+  _tzPointsLayer.addTo(_tzMap);
+}
+
+function _tzPointPopup(e){
+  const p = e.target._tzMeta; if(!p) return;
+  const stNm = _TAZA.statuses[p[2]]?.name_ru || '?';
+  const ctNm = _TAZA.cats[p[6]]?.name_ru || '?';
+  const rgNm = _TAZA.regions[p[5]] || '?';
+  const ymd = p[4];
+  const ds = `${(ymd/10000)|0}-${String(((ymd/100)|0)%100).padStart(2,'0')}-${String(ymd%100).padStart(2,'0')}`;
+  const ovdHtml = p[3] ? ' · <span style="color:#dc2626;font-weight:600">просрочено</span>' : '';
+  e.target.bindPopup(`<div style="font-size:11px;line-height:1.4">
+    <b>${ds}</b><br>${rgNm}<br>
+    <span style="color:#555">${ctNm}</span><br>
+    Статус: <b style="color:${TZ_STATUS_COLOR[p[2]]||'#999'}">${stNm}</b>${ovdHtml}
+  </div>`).openPopup();
+}
+
+function _renderTazaMap(d){
+  if(_tzRenderTimer) clearTimeout(_tzRenderTimer);
+  _tzRenderTimer = setTimeout(async ()=>{
+    if(!document.getElementById('mapTaza')) return;
+    await _initTazaMap();
+    if(!_tzMap) return;
+    setTimeout(()=>{ try{ _tzMap.invalidateSize(); }catch(_){} }, 30);
+    _tzClearLayers();
+    const dd = d || (typeof applyTazaEngine==='function' && _TAZA ? applyTazaEngine() : (window._DATA_TAZA||{}));
+    const cntEl = document.getElementById('tzMapCount');
+    if(_tzMapMode === 'choropleth'){
+      _renderChoropleth(dd?.by_region||[]);
+      const total = (dd?.by_region||[]).reduce((s,r)=>s+(r.total||0),0);
+      if(cntEl) cntEl.textContent = '· ' + total.toLocaleString('ru') + ' заявок';
+    } else {
+      const pts = _tzCollectPoints();
+      if(cntEl) cntEl.textContent = '· ' + pts.length.toLocaleString('ru') + ' точек';
+      if(_tzMapMode === 'heatmap')   _renderHeatmap(pts);
+      else if(_tzMapMode === 'clusters') _renderClusters(pts);
+      else if(_tzMapMode === 'points')   _renderPoints(pts);
+    }
+  }, 180);
 }
 
 // ── Гранулярность динамики ──
