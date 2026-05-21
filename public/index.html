@@ -1838,7 +1838,47 @@ function switchTab(id, el) {
     if(typeof populateTazaFilters==='function') populateTazaFilters();
     if(typeof tazaEngineFilterActive==='function' && tazaEngineFilterActive() && typeof rerenderTaza==='function') rerenderTaza();
   }
+  try { _saveUiState(id); _restoreScrollForTab(id); } catch(_){}
 }
+
+// ── Сохранение/восстановление вкладки и позиции скролла между перезагрузками ──
+const _UI_STATE_KEY = 'tazaEco:ui';
+function _readState(){ try{ return JSON.parse(sessionStorage.getItem(_UI_STATE_KEY))||{}; } catch(_){ return {}; } }
+function _writeState(s){ try{ sessionStorage.setItem(_UI_STATE_KEY, JSON.stringify(s)); } catch(_){} }
+function _saveUiState(tab){
+  const s = _readState();
+  s.tab = tab || s.tab || 'main';
+  _writeState(s);
+}
+function _saveScroll(){
+  const s = _readState();
+  s.tab = s.tab || (document.querySelector('.tab.active')?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] || 'main');
+  s['y_'+s.tab] = window.scrollY;
+  _writeState(s);
+}
+let _scrollSaveT=null;
+window.addEventListener('scroll', ()=>{
+  if(_scrollSaveT) clearTimeout(_scrollSaveT);
+  _scrollSaveT = setTimeout(_saveScroll, 180);
+}, {passive:true});
+function _restoreScrollForTab(tab){
+  const y = _readState()['y_'+tab] || 0;
+  if(y<=0) return;
+  // Графики/карта рендерятся асинхронно — пробуем несколько раз пока высота страницы не дотянется до целевого Y
+  const tryScroll = (n)=>{
+    const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    window.scrollTo(0, Math.min(y, maxY));
+    if(window.scrollY < y && n>0) setTimeout(()=>tryScroll(n-1), 220);
+  };
+  setTimeout(()=>tryScroll(8), 80);
+}
+// Восстановить активную вкладку при загрузке (после того как все обработчики таб-кликов привязаны)
+document.addEventListener('DOMContentLoaded', ()=>{
+  const tab = _readState().tab;
+  if(!tab || tab==='main') { _restoreScrollForTab('main'); return; }
+  const btn = [...document.querySelectorAll('.tab')].find(b=>b.getAttribute('onclick')?.includes(`'${tab}'`));
+  if(btn) btn.click(); // запускает switchTab — он же восстановит скролл
+});
 
 function switchSubTab(group, panelId, el) {
   const parent = el.closest('.panel');
@@ -2420,6 +2460,11 @@ function renderMainCharts() {
       window._DATA_TAZA = tzData; _tzInited = false;
       const tzEl = document.getElementById('kpiTaza');
       if(tzEl) tzEl.textContent = tzData.total.toLocaleString('ru-RU');
+      // Если пользователь приземлился на Таза до загрузки данных (восстановление из sessionStorage) — отрендерить сейчас
+      if(document.getElementById('panel-taza')?.classList.contains('active')){
+        _tzInited = true; renderTazaTab(tzData); _renderTazaMap(tzData);
+        try { _restoreScrollForTab('taza'); } catch(_){}
+      }
     }
     fetch('/data/chunks/manifest.json').then(r=>r.json()).then(m=>{_CHUNK_MANIFEST=m;}).catch(()=>{});
     // Per-request датасет Таза Казахстан — для клиентской кросс-фильтрации
