@@ -66,6 +66,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .region-list-scroll::-webkit-scrollbar-track{background:transparent}
 .region-list-scroll::-webkit-scrollbar-thumb{background:#c4c4c4;border-radius:3px}
 .region-list-scroll::-webkit-scrollbar-thumb:hover{background:#999}
+/* Stacked-bar чарт «Количество заявок по регионам» */
+.region-stat-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.region-stat-controls{display:flex;gap:4px;flex-wrap:wrap}
+.sort-btn{background:transparent;border:1px solid var(--border2);padding:4px 10px;border-radius:14px;font-size:10px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s}
+.sort-btn:hover{border-color:#1B7A3A;color:#1B7A3A;background:rgba(27,122,58,.05)}
+.sort-btn.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
+.region-stat-scroll{max-height:450px;overflow-y:auto;padding-right:6px}
+.region-stat-scroll::-webkit-scrollbar{width:6px}
+.region-stat-scroll::-webkit-scrollbar-thumb{background:#c4c4c4;border-radius:3px}
+.region-row{display:grid;grid-template-columns:170px 1fr 130px;align-items:center;gap:12px;padding:7px 6px;border-radius:6px;cursor:pointer;transition:background .15s}
+.region-row:hover,.region-row.hover{background:rgba(27,122,58,.05)}
+.region-row.selected{background:rgba(27,122,58,.12);box-shadow:inset 3px 0 0 #1B7A3A}
+.region-name{font-size:11px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.region-bar-container{height:14px;background:#f5f5f5;border-radius:7px;overflow:hidden}
+.region-bar{display:flex;height:100%;border-radius:7px;overflow:hidden;min-width:4px}
+.region-bar-done{background:linear-gradient(90deg,#66BB6A,#43A047);height:100%}
+.region-bar-overdue{background:linear-gradient(90deg,#EF5350,#E53935);height:100%}
+.region-numbers{text-align:right;font-size:11px;font-weight:600;display:flex;flex-direction:column;gap:1px;line-height:1.25}
+.region-total{color:var(--text)}
+.region-pct{font-size:10px;font-weight:500}
+.region-stat-legend{display:flex;gap:14px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text2);flex-wrap:wrap;align-items:center}
+.legend-item{display:flex;align-items:center;gap:5px}
+.legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+@media (max-width:768px){
+  .region-row{grid-template-columns:110px 1fr 92px;gap:8px}
+  .region-name{font-size:10px}
+  .sort-btn{padding:3px 7px;font-size:9px}
+}
 .rc-host{position:relative}
 .qpresets{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px}
 .qp-title{font-size:12px;font-weight:700;color:var(--text2);margin-right:2px}
@@ -1516,10 +1544,22 @@ input[type=file]{display:none}
     </div>
   </div>
 
-  <!-- ROW 3: Просрочка по регионам (HTML scroll) -->
-  <div class="card" style="padding:14px;margin-bottom:14px">
-    <div class="card-title">⚠️ Просроченные заявки по регионам</div>
-    <div id="tzOverdueList" class="region-list-scroll" style="max-height:430px;padding:4px 8px 4px 0"></div>
+  <!-- ROW 3: Количество заявок по регионам (stacked bar: исполнено / просрочено) -->
+  <div class="card region-stat-card" id="regionsStatCard" style="padding:14px;margin-bottom:14px">
+    <div class="region-stat-header">
+      <div class="card-title" style="margin:0">📊 Количество заявок по регионам</div>
+      <div class="region-stat-controls">
+        <button class="sort-btn active" data-sort="total"          onclick="setTzRegSort('total',this)">По количеству</button>
+        <button class="sort-btn"        data-sort="overdue_count"  onclick="setTzRegSort('overdue_count',this)">Просрочки (кол-во)</button>
+        <button class="sort-btn"        data-sort="overdue_pct"    onclick="setTzRegSort('overdue_pct',this)">Просрочки (%)</button>
+      </div>
+    </div>
+    <div id="tzRegionsList" class="region-stat-scroll"></div>
+    <div class="region-stat-legend">
+      <span class="legend-item"><span class="legend-dot" style="background:#43A047"></span> Выполнено / в работе</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#E53935"></span> Просрочено</span>
+      <span class="legend-item" style="margin-left:auto;color:var(--text3)">Клик по строке — фильтр по региону</span>
+    </div>
   </div>
 
   <!-- ROW 3: Скорость закрытия + Жалобы -->
@@ -3266,8 +3306,12 @@ function applyTazaEngine(){
     if(si===0) done++; else if(si===1) cancelled++; else if(si===2||si===3||si===4) in_work++;
     if(od) overdue++;
     const rNm=_TAZA.regions[ri]; if(rNm){
-      let a=regAgg[rNm]; if(!a){a={total:0,done:0,overdue:0,cats:{},ratSum:0,ratN:0};regAgg[rNm]=a;}
-      a.total++; if(si===0) a.done++; if(od) a.overdue++;
+      let a=regAgg[rNm]; if(!a){a={total:0,done:0,overdue:0,cancelled:0,working:0,cats:{},ratSum:0,ratN:0};regAgg[rNm]=a;}
+      a.total++;
+      if(si===0) a.done++;
+      else if(si===1) a.cancelled++;
+      else if(si===2||si===3||si===4) a.working++;
+      if(od) a.overdue++;
       if(ci>=0){ a.cats[ci]=(a.cats[ci]||0)+1; }
       if(ra>0){ a.ratSum+=ra; a.ratN++; }
     }
@@ -3307,6 +3351,8 @@ function applyTazaEngine(){
             done_pct:v.total?+((v.done/v.total)*100).toFixed(1):0,
             overdue:v.overdue,
             overdue_pct:v.total?+((v.overdue/v.total)*100).toFixed(1):0,
+            cancelled: v.cancelled||0,
+            working:   v.working||0,
             avg_rating: v.ratN ? +(v.ratSum/v.ratN).toFixed(2) : null,
             top_cats: topCats,
             satisfaction:o.satisfaction??null,
@@ -3343,6 +3389,52 @@ function rerenderTaza(){
   renderTazaTab(eng);
   _renderTazaMap(eng);
   updateTazaChips();
+}
+
+// ── Stacked-bar чарт «Количество заявок по регионам» ──
+let _tzRegSort = 'total';
+function setTzRegSort(s, btn){
+  _tzRegSort = s;
+  document.querySelectorAll('#regionsStatCard .sort-btn').forEach(b=>b.classList.toggle('active', b.dataset.sort===s));
+  // re-render только из последних данных
+  if(_TAZA){ _renderTzRegionsBar(applyTazaEngine().by_region); }
+  else if(window._DATA_TAZA){ _renderTzRegionsBar(window._DATA_TAZA.by_region||[]); }
+}
+function _renderTzRegionsBar(byReg){
+  const el = document.getElementById('tzRegionsList'); if(!el) return;
+  const regs = (byReg||[]).filter(r=>r.total>0);
+  if(!regs.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет данных по фильтрам</div>'; return; }
+  if(_tzRegSort==='overdue_count') regs.sort((a,b)=>b.overdue-a.overdue);
+  else if(_tzRegSort==='overdue_pct') regs.sort((a,b)=>b.overdue_pct-a.overdue_pct);
+  else regs.sort((a,b)=>b.total-a.total);
+  const maxTotal = Math.max(...regs.map(r=>r.total), 1);
+  const curReg = document.getElementById('tzReg')?.value || 'all';
+  el.innerHTML = regs.map(r=>{
+    const widthPct = Math.max(1, (r.total/maxTotal)*100);
+    const ovdPct = r.overdue_pct||0;
+    const okPct = Math.max(0, 100 - ovdPct);
+    const pctColor = ovdPct>=15 ? '#E53935' : ovdPct>=7 ? '#FB8C00' : ovdPct>=3 ? '#D97706' : '#43A047';
+    const done = r.done||0, working = r.working||0, cancelled = r.cancelled||0;
+    const title = `${r.name}\nВсего: ${r.total.toLocaleString('ru-RU')}\n✓ Выполнено: ${done.toLocaleString('ru-RU')} (${r.done_pct||0}%)\n⏱ В работе: ${working.toLocaleString('ru-RU')}\n🚫 Отменено: ${cancelled.toLocaleString('ru-RU')}\n🔴 Просрочено: ${r.overdue.toLocaleString('ru-RU')} (${ovdPct}%)\n\nКлик — фильтр по региону`;
+    const sel = curReg===r.name ? ' selected' : '';
+    return `<div class="region-row${sel}" data-region="${r.name.replace(/"/g,'&quot;')}" title="${title}" onclick="_tzRegionRowClick(this)">
+      <div class="region-name">${r.name}</div>
+      <div class="region-bar-container"><div class="region-bar" style="width:${widthPct}%">
+        <div class="region-bar-done" style="width:${okPct}%"></div>
+        <div class="region-bar-overdue" style="width:${ovdPct}%"></div>
+      </div></div>
+      <div class="region-numbers">
+        <span class="region-total">${r.total.toLocaleString('ru-RU')}</span>
+        <span class="region-pct" style="color:${pctColor}">${ovdPct.toFixed(1)}% просроч.</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+function _tzRegionRowClick(row){
+  const name = row.dataset.region; if(!name) return;
+  const sel = document.getElementById('tzReg'); if(!sel) return;
+  sel.value = (sel.value===name) ? 'all' : name;
+  onTazaFilter();
 }
 
 // ── Интерактивная карта Таза (4 режима, реальные границы) ──
@@ -3809,18 +3901,8 @@ function renderTazaTab(d) {
     if(typeof _fitRegionCanvas==='function') _fitRegionCanvas('cTzCats', cats.length);
   })();
 
-  // ── Просрочка по регионам (HTML, все регионы) ──
-  (function(){
-    const el = document.getElementById('tzOverdueList'); if(!el) return;
-    const regs = [...d.by_region].filter(r=>r.overdue>0).sort((a,b)=>b.overdue-a.overdue);
-    if(!regs.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет просроченных по фильтрам</div>'; return; }
-    const maxOvd = Math.max(...regs.map(r=>r.overdue), 1);
-    el.innerHTML = regs.map(r=>{
-      const c = r.overdue_pct>=12 ? '#dc2626' : r.overdue_pct>=7 ? '#f97316' : '#d97706';
-      const w = Math.max(2, Math.min(100, r.overdue/maxOvd*100));
-      return `<div class="sat-row"><span class="sat-name" title="${r.name}">${r.name}</span><div class="sat-bar"><div class="sat-bar-fill" style="width:${w}%;background:${c}"></div></div><span class="sat-val" style="color:${c}">${r.overdue.toLocaleString('ru-RU')}</span></div>`;
-    }).join('');
-  })();
+  // ── Количество заявок по регионам (stacked bar: исполнено + просрочено) ──
+  _renderTzRegionsBar(d.by_region);
 
   // ── Удовлетворённость (HTML, все регионы) ──
   (function(){
