@@ -76,7 +76,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .qp-reset:hover{color:var(--red);border-color:var(--red)}
 @keyframes pulse-highlight{0%,100%{box-shadow:0 0 0 0 rgba(27,122,58,0)}50%{box-shadow:0 0 0 8px rgba(27,122,58,0.3)}}
 .highlighted{animation:pulse-highlight 2s ease-in-out}
-.taza-filters{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;flex-direction:column;gap:8px}
+.taza-filters{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;flex-direction:column;gap:8px;position:sticky;top:84px;z-index:498;box-shadow:0 4px 12px rgba(0,0,0,.06)}
+@media (max-width:768px){
+  .taza-filters{top:80px;padding:8px 10px}
+}
 .taza-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .taza-flbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-right:2px}
 .taza-filters input[type=date]{font-size:11px;padding:5px 10px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none;width:130px}
