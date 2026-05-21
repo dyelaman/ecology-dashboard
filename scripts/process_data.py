@@ -2030,6 +2030,7 @@ def main():
 
     taza_data = process_taza_kz()
     make_taza_compact()
+    make_taza_table()
     taza_path = os.path.join(OUT_DIR, "taza_kz.json")
     with open(taza_path, "w", encoding="utf-8") as f:
         json.dump(taza_data, f, ensure_ascii=False, indent=2)
@@ -2212,6 +2213,79 @@ def make_taza_compact():
     print(f"  taza_compact.json → {os.path.getsize(path)/1024:,.0f} KB ({out['n']:,} заявок · {len(regions)} рег. · {len(cat_ids)} кат.)")
     if skipped_no_date or skipped_no_region:
         print(f"  пропущено: без даты {skipped_no_date:,} · без региона {skipped_no_region:,}")
+
+
+def make_taza_table():
+    """Полный per-request датасет с текстовыми полями для таблицы.
+    Порядок строк 1:1 совпадает с taza_compact.json (тот же фильтр + та же итерация CSV).
+    """
+    import csv
+    print("\nПолный per-request датасет Таза Казахстан для таблицы...")
+
+    # Иерархия регионов (для skip-проверки — идентично compact)
+    reg_info = {}
+    try:
+        with open(TAZA_REGIONS_CSV, encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                reg_info[row["id"]] = {"name": row["name_ru"], "parent": row.get("parent_id", "") or ""}
+    except Exception as e:
+        print(f"  ⚠ {e}")
+
+    def top_ok(rid):
+        rid = str(rid); visited = set()
+        while rid and rid not in visited:
+            visited.add(rid)
+            info = reg_info.get(rid)
+            if not info: return False
+            if not info["parent"]: return True
+            rid = info["parent"]
+        return False
+
+    def trunc(s, n):
+        s = (s or "").replace("\n", " ").replace("\r", " ").strip()
+        return s if len(s) <= n else s[:n] + "…"
+
+    code, addr, desc, sccm, rtcm = [], [], [], [], []
+    cat_at, don_at, lat, lon = [], [], [], []
+
+    with open(TAZA_REQUESTS_CSV, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            created = (r.get("created_at") or "")[:10]
+            if not created or len(created) < 10: continue
+            try:
+                int(created[:4]); int(created[5:7]); int(created[8:10])
+            except Exception: continue
+            if not top_ok(r.get("region_id", "")): continue
+            code.append(r.get("uniq_code", "") or "")
+            addr.append(trunc(r.get("address", ""), 140))
+            desc.append(trunc(r.get("description", ""), 220))
+            sccm.append(trunc(r.get("state_comment", ""), 160))
+            rtcm.append(trunc(r.get("rating_comment", ""), 140))
+            cat_at.append((r.get("created_at") or "")[:19])
+            don_at.append((r.get("done_at") or "")[:19] if r.get("done_at") else "")
+            try: lat.append(round(float(r.get("latitude", "") or 0), 6))
+            except Exception: lat.append(0)
+            try: lon.append(round(float(r.get("longitude", "") or 0), 6))
+            except Exception: lon.append(0)
+
+    out = {
+        "n": len(code),
+        "fields": ["uniq_code", "address", "description", "state_comment",
+                   "rating_comment", "created_at", "done_at", "lat", "lon"],
+        "uniq_code": code,
+        "address":   addr,
+        "description": desc,
+        "state_comment": sccm,
+        "rating_comment": rtcm,
+        "created_at": cat_at,
+        "done_at": don_at,
+        "lat": lat,
+        "lon": lon,
+    }
+    path = os.path.join(OUT_DIR, "taza_table.json")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"  taza_table.json → {os.path.getsize(path)/1024:,.0f} KB ({out['n']:,} заявок)")
 
 
 def process_taza_kz():

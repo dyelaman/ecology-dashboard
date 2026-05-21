@@ -75,7 +75,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .region-stat-scroll{max-height:450px;overflow-y:auto;padding-right:6px}
 .region-stat-scroll::-webkit-scrollbar{width:6px}
 .region-stat-scroll::-webkit-scrollbar-thumb{background:#c4c4c4;border-radius:3px}
-.region-row{display:grid;grid-template-columns:170px 1fr 130px;align-items:center;gap:12px;padding:7px 6px;border-radius:6px;cursor:pointer;transition:background .15s}
+.region-row{display:grid;grid-template-columns:170px 1fr 200px;align-items:center;gap:12px;padding:7px 6px;border-radius:6px;cursor:pointer;transition:background .15s}
 .region-row:hover,.region-row.hover{background:rgba(27,122,58,.05)}
 .region-row.selected{background:rgba(27,122,58,.12);box-shadow:inset 3px 0 0 #1B7A3A}
 .region-name{font-size:11px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -83,16 +83,80 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .region-bar{display:flex;height:100%;border-radius:7px;overflow:hidden;min-width:4px}
 .region-bar-done{background:linear-gradient(90deg,#66BB6A,#43A047);height:100%}
 .region-bar-overdue{background:linear-gradient(90deg,#EF5350,#E53935);height:100%}
-.region-numbers{text-align:right;font-size:11px;font-weight:600;display:flex;flex-direction:column;gap:1px;line-height:1.25}
-.region-total{color:var(--text)}
-.region-pct{font-size:10px;font-weight:500}
+.region-numbers{display:flex;flex-direction:column;gap:2px;text-align:right;min-width:180px}
+.region-stat{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;gap:8px;line-height:1.3}
+.stat-label{color:var(--text3);font-weight:400}
+.stat-value{font-weight:600;color:var(--text)}
 .region-stat-legend{display:flex;gap:14px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text2);flex-wrap:wrap;align-items:center}
 .legend-item{display:flex;align-items:center;gap:5px}
 .legend-dot{width:9px;height:9px;border-radius:50%;display:inline-block}
 @media (max-width:768px){
-  .region-row{grid-template-columns:110px 1fr 92px;gap:8px}
+  .region-row{grid-template-columns:100px 1fr 140px;gap:8px}
   .region-name{font-size:10px}
+  .region-stat{font-size:10px}
+  .region-numbers{min-width:140px}
   .sort-btn{padding:3px 7px;font-size:9px}
+}
+/* ── Таблица заявок Таза ── */
+.appeals-table-card .table-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.found-count{font-size:11px;color:var(--text3);font-weight:500}
+.table-controls{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.table-controls input[type="search"]{flex:1;min-width:200px;padding:6px 10px;border:1px solid var(--border2);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text)}
+.table-controls select{padding:6px 10px;border:1px solid var(--border2);border-radius:8px;font-size:12px;background:var(--surface);color:var(--text);cursor:pointer}
+.table-controls .reset-btn,.table-controls .export-btn{padding:6px 12px;border:1px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text2);cursor:pointer;font-size:12px;font-weight:500}
+.table-controls .export-btn{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
+.table-controls .export-btn:hover{background:#155f2c}
+.table-controls .reset-btn:hover{border-color:#1B7A3A;color:#1B7A3A}
+.table-scroll{max-height:600px;overflow:auto;border:1px solid var(--border);border-radius:8px}
+.appeals-table{width:100%;border-collapse:collapse;font-size:11px}
+.appeals-table thead{position:sticky;top:0;background:var(--surface2);z-index:5}
+.appeals-table thead th{padding:8px 10px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap;font-size:11px}
+.appeals-table thead th:hover{background:#eef3ee}
+.appeals-table thead th.sort-asc::after{content:' ▲';font-size:9px;color:#1B7A3A}
+.appeals-table thead th.sort-desc::after{content:' ▼';font-size:9px;color:#1B7A3A}
+.appeals-table tbody tr{cursor:pointer;transition:background .1s}
+.appeals-table tbody tr:hover{background:rgba(27,122,58,.05)}
+.appeals-table tbody td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+.cell-code{font-family:'SF Mono','Menlo',monospace;font-size:10px;color:var(--text2);white-space:nowrap}
+.cell-date{white-space:nowrap;font-size:10px;color:var(--text2)}
+.cell-category,.cell-region{font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell-address{font-size:10px;color:var(--text2);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell-days{white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.cell-rating{white-space:nowrap}
+.state-badge{padding:2px 7px;border-radius:10px;font-size:10px;font-weight:500;display:inline-block;white-space:nowrap}
+.state-done{background:#E8F5E9;color:#2E7D32}
+.state-cancelled{background:#ECEFF1;color:#455A64}
+.state-working{background:#E3F2FD;color:#1565C0}
+.state-other{background:#FFF3E0;color:#E65100}
+.overdue-badge{color:#C62828;font-weight:600;font-size:10px;white-space:nowrap}
+.ontime-badge{color:#2E7D32;font-weight:500;font-size:10px;white-space:nowrap}
+.no-rating{color:#999;font-size:10px}
+.empty-row{text-align:center;padding:30px;color:var(--text3);font-size:12px}
+.table-pagination{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+.table-pagination button{padding:4px 12px;border:1px solid var(--border2);background:var(--surface);color:var(--text);border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.table-pagination button:hover{border-color:#1B7A3A;color:#1B7A3A}
+.table-pagination button:disabled{opacity:.35;cursor:not-allowed}
+.table-pagination select{padding:4px 8px;border:1px solid var(--border2);border-radius:6px;font-size:11px;background:var(--surface);color:var(--text)}
+#tazaPageInfo{font-size:11px;color:var(--text2);min-width:60px;text-align:center;font-variant-numeric:tabular-nums}
+/* ── Модалка заявки ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999;animation:fadeIn .15s ease}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal-content{background:var(--surface);border-radius:12px;padding:22px 26px;max-width:680px;width:92%;max-height:88vh;overflow-y:auto;position:relative;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.modal-close{position:absolute;top:8px;right:10px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);line-height:1;padding:4px 8px}
+.modal-close:hover{color:var(--text)}
+.modal-content h2{margin:0 0 12px;font-size:15px;font-weight:700;color:var(--text);font-family:'SF Mono','Menlo',monospace}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;margin:12px 0;font-size:12px}
+.detail-grid div{line-height:1.5}
+.detail-grid b{color:var(--text2);font-weight:500;margin-right:4px}
+.detail-section{margin:12px 0;padding-top:10px;border-top:1px solid var(--border);font-size:12px}
+.detail-section b{display:block;margin-bottom:4px;font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+.detail-section p{margin:0;color:var(--text);line-height:1.5}
+.detail-section a{color:#1B7A3A;font-weight:500;text-decoration:none}
+.detail-section a:hover{text-decoration:underline}
+@media (max-width:768px){
+  .table-controls input[type="search"]{min-width:0;width:100%}
+  .appeals-table thead th,.appeals-table tbody td{padding:5px 6px;font-size:10px}
+  .detail-grid{grid-template-columns:1fr}
 }
 .rc-host{position:relative}
 .qpresets{display:flex;flex-wrap:wrap;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:14px}
@@ -1621,6 +1685,62 @@ input[type=file]{display:none}
     </div>
   </div>
 
+  <!-- ROW N: Общая информация по заявкам Таза Казахстан -->
+  <div class="card appeals-table-card" id="tazaRequestsTableCard" style="padding:16px 20px;margin-bottom:14px">
+    <div class="table-header">
+      <div class="card-title" style="margin:0">📋 Общая информация по заявкам Таза Казахстан</div>
+      <span id="tazaTableFoundCount" class="found-count">—</span>
+    </div>
+    <div class="table-controls">
+      <input type="search" id="tazaTableSearch" placeholder="🔍 Поиск: номер заявки, описание, адрес…" />
+      <select id="tazaTableState"><option value="">Все статусы</option>
+        <option value="DONE">Выполнено</option><option value="CANCELLED">Отменено</option>
+        <option value="WORKING">В работе</option><option value="CREATED">Создано</option>
+        <option value="RETURNED_TO_OPERATOR">Возвращено оператору</option>
+      </select>
+      <select id="tazaTableCategory"><option value="">Все категории</option></select>
+      <select id="tazaTableRegion"><option value="">Все регионы</option></select>
+      <select id="tazaTableOverdue"><option value="">Все</option>
+        <option value="true">Только просроченные</option>
+        <option value="false">Только в срок</option>
+      </select>
+      <select id="tazaTableRating"><option value="">Любой рейтинг</option>
+        <option value="5">5 ⭐</option><option value="4">4 ⭐</option>
+        <option value="3">3 ⭐</option><option value="2">2 ⭐</option>
+        <option value="1">1 ⭐</option><option value="no_rating">Без оценки</option>
+      </select>
+      <button id="tazaTableResetBtn" class="reset-btn">× Сбросить</button>
+      <button id="tazaTableExportBtn" class="export-btn">📥 Экспорт CSV</button>
+    </div>
+    <div class="table-scroll">
+      <table id="tazaRequestsTable" class="appeals-table">
+        <thead><tr>
+          <th data-sort="uniq_code">Номер заявки</th>
+          <th data-sort="created_at" class="sort-desc">Дата подачи</th>
+          <th data-sort="category">Категория</th>
+          <th data-sort="region">Регион</th>
+          <th data-sort="address">Адрес</th>
+          <th data-sort="service_state">Статус</th>
+          <th data-sort="processing_days">Закрыто за</th>
+          <th data-sort="is_overdue">Просрочка</th>
+          <th data-sort="rating">Рейтинг</th>
+        </tr></thead>
+        <tbody id="tazaTableBody"><tr><td colspan="9" class="empty-row">Загрузка…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="table-pagination">
+      <button id="tazaPrevPage">‹</button>
+      <span id="tazaPageInfo">1 / 1</span>
+      <button id="tazaNextPage">›</button>
+      <select id="tazaPageSize">
+        <option value="20">20 на странице</option>
+        <option value="50" selected>50 на странице</option>
+        <option value="100">100 на странице</option>
+        <option value="200">200 на странице</option>
+      </select>
+    </div>
+  </div>
+
 </div>
 <!-- /ТАЗА КАЗАХСТАН -->
 
@@ -1837,6 +1957,8 @@ function switchTab(id, el) {
     else if(_tzInited) { _renderTazaMap(); }
     if(typeof populateTazaFilters==='function') populateTazaFilters();
     if(typeof tazaEngineFilterActive==='function' && tazaEngineFilterActive() && typeof rerenderTaza==='function') rerenderTaza();
+    // Таблица заявок (ленивая инициализация + загрузка датасета 1 раз)
+    try { _tazaTableInit(); if(_TAZA) _loadTazaTable(); } catch(_){}
   }
   try { _saveUiState(id); _restoreScrollForTab(id); } catch(_){}
 }
@@ -3433,6 +3555,7 @@ function rerenderTaza(){
   const eng = applyTazaEngine();
   renderTazaTab(eng);
   _renderTazaMap(eng);
+  if(_TAZA_TBL){ _tazaTableState.page = 1; renderTazaRequestsTable(); }
   updateTazaChips();
 }
 
@@ -3458,7 +3581,7 @@ function _renderTzRegionsBar(byReg){
     const widthPct = Math.max(1, (r.total/maxTotal)*100);
     const ovdPct = r.overdue_pct||0;
     const okPct = Math.max(0, 100 - ovdPct);
-    const pctColor = ovdPct>=15 ? '#E53935' : ovdPct>=7 ? '#FB8C00' : ovdPct>=3 ? '#D97706' : '#43A047';
+    const pctColor = (r.overdue===0||ovdPct<5) ? '#43A047' : ovdPct>=15 ? '#E53935' : '#FB8C00';
     const done = r.done||0, working = r.working||0, cancelled = r.cancelled||0;
     const title = `${r.name}\nВсего: ${r.total.toLocaleString('ru-RU')}\n✓ Выполнено: ${done.toLocaleString('ru-RU')} (${r.done_pct||0}%)\n⏱ В работе: ${working.toLocaleString('ru-RU')}\n🚫 Отменено: ${cancelled.toLocaleString('ru-RU')}\n🔴 Просрочено: ${r.overdue.toLocaleString('ru-RU')} (${ovdPct}%)\n\nКлик — фильтр по региону`;
     const sel = curReg===r.name ? ' selected' : '';
@@ -3469,8 +3592,8 @@ function _renderTzRegionsBar(byReg){
         <div class="region-bar-overdue" style="width:${ovdPct}%"></div>
       </div></div>
       <div class="region-numbers">
-        <span class="region-total">${r.total.toLocaleString('ru-RU')}</span>
-        <span class="region-pct" style="color:${pctColor}">${ovdPct.toFixed(1)}% просроч.</span>
+        <div class="region-stat"><span class="stat-label">Всего заявок:</span><span class="stat-value">${r.total.toLocaleString('ru-RU')}</span></div>
+        <div class="region-stat"><span class="stat-label">Просроченных:</span><span class="stat-value" style="color:${pctColor}">${r.overdue.toLocaleString('ru-RU')}</span></div>
       </div>
     </div>`;
   }).join('');
@@ -3480,6 +3603,298 @@ function _tzRegionRowClick(row){
   const sel = document.getElementById('tzReg'); if(!sel) return;
   sel.value = (sel.value===name) ? 'all' : name;
   onTazaFilter();
+}
+
+// ── Таблица заявок Таза: lazy-loaded full-text dataset ──
+let _TAZA_TBL = null;            // {n, uniq_code[], address[], description[], state_comment[], rating_comment[], created_at[], done_at[], lat[], lon[]}
+let _TAZA_TBL_LOADING = false;
+const _tazaTableState = {page:1, size:50, sortBy:'created_at', sortDir:'desc',
+                          search:'', state:'', category:'', region:'', overdue:'', rating:''};
+let _tazaTblFilterT=null, _tazaTblSearchT=null;
+
+async function _loadTazaTable(){
+  if(_TAZA_TBL || _TAZA_TBL_LOADING) return;
+  _TAZA_TBL_LOADING = true;
+  const tbody = document.getElementById('tazaTableBody');
+  if(tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-row">Загрузка ~19 МБ (~4 МБ gzip)…</td></tr>';
+  try {
+    const r = await fetch('/data/taza_table.json');
+    _TAZA_TBL = await r.json();
+    _populateTazaTableSelects();
+    renderTazaRequestsTable();
+  } catch(e){
+    if(tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-row">Ошибка загрузки: '+e.message+'</td></tr>';
+  } finally { _TAZA_TBL_LOADING = false; }
+}
+
+function _populateTazaTableSelects(){
+  if(!_TAZA) return;
+  const cs = document.getElementById('tazaTableCategory');
+  if(cs && cs.options.length<=1){
+    _TAZA.cats.forEach(c=>{ if(c.id){ const o=document.createElement('option'); o.value=c.id; o.textContent=c.name_ru; cs.appendChild(o);} });
+  }
+  const rs = document.getElementById('tazaTableRegion');
+  if(rs && rs.options.length<=1){
+    _TAZA.regions.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; rs.appendChild(o); });
+  }
+}
+
+function _tzStateLabel(idx){ return _TAZA?.statuses?.[idx]?.label_ru || '—'; }
+function _tzStateKey(idx){ return _TAZA?.statuses?.[idx]?.key || ''; }
+function _tzCatName(ci){ return _TAZA?.cats?.[ci]?.name_ru || '—'; }
+function _tzCatId(ci){ return _TAZA?.cats?.[ci]?.id || ''; }
+function _tzRegName(ri){ return _TAZA?.regions?.[ri] || '—'; }
+
+// Список индексов, соответствующих текущим ГЛОБАЛЬНЫМ фильтрам Таза (как в applyTazaEngine, но возвращаем индексы)
+function _tzFilteredIndexes(){
+  if(!_TAZA) return [];
+  const F=id=>document.getElementById(id)?.value||'all';
+  const dfStr=document.getElementById('tzDateFrom')?.value||'';
+  const dtStr=document.getElementById('tzDateTo')?.value||'';
+  const dfInt=dfStr?+dfStr.replace(/-/g,''):0;
+  const dtInt=dtStr?+dtStr.replace(/-/g,''):99999999;
+  const yF=F('tzYear'), mF=F('tzMonth');
+  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF;
+  const reg=F('tzReg'), cat=F('tzCat'), st=F('tzStatus'), ovd=F('tzOverdue'), rat=F('tzRating');
+  const regI=reg==='all'?-1:_TAZA.regions.indexOf(reg);
+  const catI=cat==='all'?-1:_TAZA.cats.findIndex(c=>c.id===cat);
+  const stIdx=st==='all'?-1:_TAZA.statuses.findIndex(s=>s.key===st);
+  const ratN=rat==='all'?-1:+rat;
+  const w=_TAZA.w, D=_TAZA.data, n=_TAZA.n;
+  const out=[];
+  for(let i=0;i<n;i++){
+    const o=i*w, ymd=D[o];
+    if(ymd<dfInt||ymd>dtInt) continue;
+    if(yN>=0 || mN>=0){
+      const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100;
+      if(yN>=0 && yy!==yN) continue;
+      if(mN>=0 && mm!==mN) continue;
+    }
+    const ri=D[o+1], ci=D[o+2], si=D[o+3], ra=D[o+4], od=D[o+5];
+    if(regI>=0&&ri!==regI) continue;
+    if(catI>=0&&ci!==catI) continue;
+    if(stIdx>=0&&si!==stIdx) continue;
+    if(ovd==='true'&&od!==1) continue;
+    if(ovd==='false'&&od!==0) continue;
+    if(ratN>=0&&ra!==ratN) continue;
+    out.push(i);
+  }
+  return out;
+}
+
+function _ymdToDate(ymd){
+  const y=(ymd/10000)|0, m=((ymd/100)|0)%100, d=ymd%100;
+  return `${String(d).padStart(2,'0')}.${String(m).padStart(2,'0')}.${y}`;
+}
+function _tazaProcessingDays(i){
+  const cd = _TAZA.data[i*_TAZA.w + 8];
+  return cd>=0 ? cd : null;
+}
+function _truncate(s,n){ return (s||'').length>n ? (s||'').slice(0,n)+'…' : (s||''); }
+
+function renderTazaRequestsTable(){
+  if(!_TAZA_TBL || !_TAZA){ return; }
+  const tbody = document.getElementById('tazaTableBody'); if(!tbody) return;
+  const S = _tazaTableState;
+
+  // 1) Глобальные фильтры → индексы
+  const globalIdx = _tzFilteredIndexes();
+  // 2) Локальные фильтры (search/state/cat/region/overdue/rating)
+  const T = _TAZA_TBL, D = _TAZA.data, w = _TAZA.w;
+  const q = S.search.trim().toLowerCase();
+  const stKey = S.state, catId = S.category, regNm = S.region, ovd = S.overdue, rat = S.rating;
+  let filtered = [];
+  for(const i of globalIdx){
+    if(stKey){ if(_tzStateKey(D[i*w+3])!==stKey) continue; }
+    if(catId){ if(_tzCatId(D[i*w+2])!==catId) continue; }
+    if(regNm){ if(_tzRegName(D[i*w+1])!==regNm) continue; }
+    const od = D[i*w+5];
+    if(ovd==='true' && od!==1) continue;
+    if(ovd==='false' && od!==0) continue;
+    if(rat){
+      const r = D[i*w+4];
+      if(rat==='no_rating'){ if(r) continue; }
+      else { if(r !== +rat) continue; }
+    }
+    if(q){
+      const code = (T.uniq_code[i]||'').toLowerCase();
+      const desc = (T.description[i]||'').toLowerCase();
+      const addr = (T.address[i]||'').toLowerCase();
+      if(!code.includes(q) && !desc.includes(q) && !addr.includes(q)) continue;
+    }
+    filtered.push(i);
+  }
+
+  // 3) Сортировка
+  const dir = S.sortDir==='asc'?1:-1;
+  const byKey = (i)=>{
+    switch(S.sortBy){
+      case 'uniq_code':       return T.uniq_code[i]||'';
+      case 'created_at':      return T.created_at[i]||D[i*w]; // string compare ISO-format
+      case 'category':        return _tzCatName(D[i*w+2]);
+      case 'region':          return _tzRegName(D[i*w+1]);
+      case 'address':         return T.address[i]||'';
+      case 'service_state':   return _tzStateLabel(D[i*w+3]);
+      case 'processing_days': { const v = _tazaProcessingDays(i); return v==null?Number.MAX_SAFE_INTEGER:v; }
+      case 'is_overdue':      return D[i*w+5];
+      case 'rating':          return D[i*w+4];
+      default: return 0;
+    }
+  };
+  filtered.sort((a,b)=>{ const va=byKey(a), vb=byKey(b); return va<vb?-dir:va>vb?dir:0; });
+
+  // 4) Пагинация
+  const total = filtered.length;
+  const pages = Math.max(1, Math.ceil(total/S.size));
+  if(S.page>pages) S.page=pages;
+  const start = (S.page-1)*S.size;
+  const slice = filtered.slice(start, start+S.size);
+
+  document.getElementById('tazaTableFoundCount').textContent = `Найдено ${total.toLocaleString('ru-RU')} заявок`;
+  document.getElementById('tazaPageInfo').textContent = `${S.page} / ${pages}`;
+  document.getElementById('tazaPrevPage').disabled = S.page<=1;
+  document.getElementById('tazaNextPage').disabled = S.page>=pages;
+
+  if(!slice.length){
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-row">Нет заявок по выбранным фильтрам</td></tr>';
+    return;
+  }
+  tbody.innerHTML = slice.map(i=>{
+    const si = D[i*w+3];
+    const stCls = si===0?'state-done':si===1?'state-cancelled':(si===2||si===3||si===4)?'state-working':'state-other';
+    const od = D[i*w+5];
+    const days = _tazaProcessingDays(i);
+    const r = D[i*w+4];
+    const rating = r>0 ? '⭐'.repeat(r) : '<span class="no-rating">—</span>';
+    const cAt = T.created_at[i]||''; const dDate = cAt ? cAt.slice(8,10)+'.'+cAt.slice(5,7)+'.'+cAt.slice(0,4) : _ymdToDate(D[i*w]);
+    const addr = T.address[i]||'';
+    return `<tr data-i="${i}" onclick="_tazaShowRequestModal(${i})">
+      <td class="cell-code" title="${(T.uniq_code[i]||'').replace(/"/g,'&quot;')}">${_truncate(T.uniq_code[i]||'—',16)}</td>
+      <td class="cell-date">${dDate}</td>
+      <td class="cell-category" title="${_tzCatName(D[i*w+2]).replace(/"/g,'&quot;')}">${_tzCatName(D[i*w+2])}</td>
+      <td class="cell-region">${_tzRegName(D[i*w+1])}</td>
+      <td class="cell-address" title="${addr.replace(/"/g,'&quot;')}">${_truncate(addr,50)||'—'}</td>
+      <td><span class="state-badge ${stCls}">${_tzStateLabel(si)}</span></td>
+      <td class="cell-days">${days!=null ? days+' дн.' : '—'}</td>
+      <td>${od ? '<span class="overdue-badge">🔴 Да</span>' : '<span class="ontime-badge">🟢 В срок</span>'}</td>
+      <td class="cell-rating">${rating}</td>
+    </tr>`;
+  }).join('');
+}
+
+function _tazaShowRequestModal(i){
+  if(!_TAZA_TBL || !_TAZA) return;
+  const T=_TAZA_TBL, D=_TAZA.data, w=_TAZA.w;
+  const si=D[i*w+3], od=D[i*w+5], r=D[i*w+4], days=_tazaProcessingDays(i);
+  const lat=T.lat[i], lon=T.lon[i];
+  const cAt=T.created_at[i]||'', dAt=T.done_at[i]||'';
+  const codeEsc = (T.uniq_code[i]||'—');
+  const desc = T.description[i]||'';
+  const stCom = T.state_comment[i]||'';
+  const rtCom = T.rating_comment[i]||'';
+  const escHtml = s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const html = `
+    <div class="modal-content">
+      <button class="modal-close" onclick="this.parentElement.parentElement.remove()">×</button>
+      <h2>Заявка ${escHtml(codeEsc)}</h2>
+      <div class="detail-grid">
+        <div><b>Дата подачи:</b> ${cAt?cAt.replace('T',' '):'—'}</div>
+        <div><b>Дата закрытия:</b> ${dAt?dAt.replace('T',' '):'—'}</div>
+        <div><b>Время исполнения:</b> ${days!=null?days+' дн.':'—'}</div>
+        <div><b>Статус:</b> ${_tzStateLabel(si)}</div>
+        <div><b>Категория:</b> ${escHtml(_tzCatName(D[i*w+2]))}</div>
+        <div><b>Регион:</b> ${escHtml(_tzRegName(D[i*w+1]))}</div>
+        <div><b>Просрочка:</b> ${od?'🔴 Да':'🟢 В срок'}</div>
+        <div><b>Рейтинг:</b> ${r>0?'⭐'.repeat(r)+' ('+r+'/5)':'Без оценки'}</div>
+      </div>
+      ${T.address[i]?`<div class="detail-section"><b>Адрес</b><p>${escHtml(T.address[i])}</p></div>`:''}
+      <div class="detail-section"><b>Описание заявки</b><p>${desc?escHtml(desc):'<i style="color:var(--text3)">описание отсутствует</i>'}</p></div>
+      ${stCom?`<div class="detail-section"><b>Комментарий оператора</b><p>${escHtml(stCom)}</p></div>`:''}
+      ${rtCom?`<div class="detail-section"><b>Комментарий гражданина к оценке</b><p>${escHtml(rtCom)}</p></div>`:''}
+      ${(lat&&lon)?`<div class="detail-section"><b>GPS координаты</b><p>${lat}, ${lon} · <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank" rel="noopener">Открыть на карте ↗</a></p></div>`:''}
+    </div>`;
+  const overlay=document.createElement('div'); overlay.className='modal-overlay';
+  overlay.innerHTML=html;
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  const onEsc=ev=>{ if(ev.key==='Escape'){ overlay.remove(); document.removeEventListener('keydown',onEsc);} };
+  document.addEventListener('keydown', onEsc);
+}
+
+function _tazaTableSort(th){
+  const key = th.dataset.sort; if(!key) return;
+  const S = _tazaTableState;
+  if(S.sortBy===key) S.sortDir = S.sortDir==='asc'?'desc':'asc';
+  else { S.sortBy = key; S.sortDir = (key==='created_at'||key==='processing_days'||key==='rating'||key==='is_overdue')?'desc':'asc'; }
+  document.querySelectorAll('#tazaRequestsTable thead th').forEach(t=>t.classList.remove('sort-asc','sort-desc'));
+  th.classList.add(S.sortDir==='asc'?'sort-asc':'sort-desc');
+  S.page = 1;
+  renderTazaRequestsTable();
+}
+
+function _tazaTableInit(){
+  const $=id=>document.getElementById(id);
+  if(!$('tazaRequestsTable') || $('tazaRequestsTable').dataset._wired) return;
+  $('tazaRequestsTable').dataset._wired = '1';
+  document.querySelectorAll('#tazaRequestsTable thead th').forEach(th=>th.addEventListener('click', ()=>_tazaTableSort(th)));
+  const onChange = (k, getVal)=>()=>{ _tazaTableState[k] = getVal(); _tazaTableState.page = 1; renderTazaRequestsTable(); };
+  $('tazaTableSearch').addEventListener('input', ()=>{
+    clearTimeout(_tazaTblSearchT);
+    _tazaTblSearchT = setTimeout(()=>{ _tazaTableState.search = $('tazaTableSearch').value; _tazaTableState.page=1; renderTazaRequestsTable(); }, 220);
+  });
+  $('tazaTableState').addEventListener('change', onChange('state', ()=>$('tazaTableState').value));
+  $('tazaTableCategory').addEventListener('change', onChange('category', ()=>$('tazaTableCategory').value));
+  $('tazaTableRegion').addEventListener('change', onChange('region', ()=>$('tazaTableRegion').value));
+  $('tazaTableOverdue').addEventListener('change', onChange('overdue', ()=>$('tazaTableOverdue').value));
+  $('tazaTableRating').addEventListener('change', onChange('rating', ()=>$('tazaTableRating').value));
+  $('tazaPrevPage').addEventListener('click', ()=>{ if(_tazaTableState.page>1){_tazaTableState.page--; renderTazaRequestsTable();} });
+  $('tazaNextPage').addEventListener('click', ()=>{ _tazaTableState.page++; renderTazaRequestsTable(); });
+  $('tazaPageSize').addEventListener('change', ()=>{ _tazaTableState.size = +$('tazaPageSize').value; _tazaTableState.page=1; renderTazaRequestsTable(); });
+  $('tazaTableResetBtn').addEventListener('click', ()=>{
+    Object.assign(_tazaTableState, {page:1, search:'', state:'', category:'', region:'', overdue:'', rating:''});
+    ['tazaTableSearch','tazaTableState','tazaTableCategory','tazaTableRegion','tazaTableOverdue','tazaTableRating'].forEach(id=>{const el=$(id); if(el) el.value='';});
+    renderTazaRequestsTable();
+  });
+  $('tazaTableExportBtn').addEventListener('click', _tazaTableExportCSV);
+}
+
+function _tazaTableExportCSV(){
+  if(!_TAZA_TBL || !_TAZA) return;
+  const globalIdx = _tzFilteredIndexes();
+  const S = _tazaTableState; const T=_TAZA_TBL, D=_TAZA.data, w=_TAZA.w;
+  const q = S.search.trim().toLowerCase();
+  const filt=[];
+  for(const i of globalIdx){
+    if(S.state && _tzStateKey(D[i*w+3])!==S.state) continue;
+    if(S.category && _tzCatId(D[i*w+2])!==S.category) continue;
+    if(S.region && _tzRegName(D[i*w+1])!==S.region) continue;
+    if(S.overdue==='true' && D[i*w+5]!==1) continue;
+    if(S.overdue==='false' && D[i*w+5]!==0) continue;
+    if(S.rating){ const r=D[i*w+4]; if(S.rating==='no_rating'?r:r!==+S.rating) continue; }
+    if(q){ const a=(T.uniq_code[i]||'').toLowerCase(), b=(T.description[i]||'').toLowerCase(), c=(T.address[i]||'').toLowerCase();
+           if(!a.includes(q)&&!b.includes(q)&&!c.includes(q)) continue; }
+    filt.push(i);
+  }
+  const head = ['Номер заявки','Дата подачи','Дата закрытия','Категория','Регион','Адрес','Статус','Закрыто за (дн.)','Просрочка','Рейтинг','Описание','Комментарий оператора','Latitude','Longitude'];
+  const esc = v => { const s=String(v??''); return /[",\n;]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  const rows = filt.map(i=>{
+    const days = _tazaProcessingDays(i);
+    return [
+      T.uniq_code[i], T.created_at[i], T.done_at[i],
+      _tzCatName(D[i*w+2]), _tzRegName(D[i*w+1]), T.address[i],
+      _tzStateLabel(D[i*w+3]), days==null?'':days,
+      D[i*w+5]?'Да':'Нет', D[i*w+4]||'',
+      T.description[i], T.state_comment[i],
+      T.lat[i]||'', T.lon[i]||''
+    ].map(esc).join(';');
+  });
+  const csv = '﻿' + head.map(esc).join(';') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `taza_requests_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
 }
 
 // ── Интерактивная карта Таза (4 режима, реальные границы) ──
