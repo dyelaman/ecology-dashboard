@@ -439,18 +439,6 @@ input[type=file]{display:none}
 <!-- ── ГЛОБАЛЬНАЯ ПАНЕЛЬ ФИЛЬТРОВ ── -->
 <div class="fbar" id="globalFbar">
   <span class="fbar-label">📅 Период</span>
-  <input type="date" id="gDateFrom" min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" style="font-size:11px;padding:4px 8px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none;width:130px" placeholder="С">
-  <span style="color:var(--text3);font-size:11px">—</span>
-  <input type="date" id="gDateTo"   min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" style="font-size:11px;padding:4px 8px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none;width:130px" placeholder="По">
-  <span style="display:inline-flex;gap:4px;flex-wrap:wrap;margin-left:4px" id="gPeriodPresets">
-    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(0)">Сегодня</button>
-    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(7)">7д</button>
-    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(30)">30д</button>
-    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(90)">Квартал</button>
-    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(365)">Год</button>
-    <button class="fbar-chip" style="font-size:10px;padding:3px 9px" onclick="setQuickPeriod(null)">Всё</button>
-  </span>
-  <div class="fbar-sep"></div>
   <span class="fbar-label">Год</span>
   <select id="gYear" onchange="onYMDChange();onGlobalFilter()">
     <option value="all">Все</option>
@@ -481,6 +469,11 @@ input[type=file]{display:none}
   <select id="gDay" onchange="onYMDChange();onGlobalFilter()">
     <option value="all">Все</option>
   </select>
+  <div class="fbar-sep"></div>
+  <span class="fbar-label">Диапазон</span>
+  <input type="date" id="gDateFrom" min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" style="font-size:11px;padding:4px 8px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none;width:130px" placeholder="С">
+  <span style="color:var(--text3);font-size:11px">—</span>
+  <input type="date" id="gDateTo"   min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" style="font-size:11px;padding:4px 8px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none;width:130px" placeholder="По">
   <div class="fbar-sep"></div>
   <span class="fbar-label">Регион</span>
   <select id="gReg" onchange="cascadeIssueFilter();onGlobalFilter()">
@@ -694,37 +687,8 @@ input[type=file]{display:none}
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <input type="text" id="prvSearch" placeholder="Поиск..." oninput="filterPrvTable()" style="border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;width:130px;background:var(--surface2);color:var(--text1)">
-        <select id="prvType" onchange="filterPrvTable()" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;width:130px;background:var(--surface2);color:var(--text1)">
-          <option value="">Все типы</option>
-          <option>Жалоба</option><option>Заявление</option><option>Запрос</option><option>Предложение</option><option>Сообщение</option><option>Отклик</option>
-        </select>
-        <select id="prvStatus" onchange="filterPrvTable()" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;width:130px;background:var(--surface2);color:var(--text1)">
-          <option value="">Все статусы</option>
-          <option>Завершено</option><option>В работе</option><option>Просрочено</option>
-        </select>
-        <select id="prvCat" onchange="cascadePrvIssFilter();filterPrvTable()" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;width:130px;background:var(--surface2);color:var(--text1)">
-          <option value="all">Все категории</option>
-        </select>
-        <select id="prvIss" onchange="cascadePrvSubFilter();filterPrvTable()" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;width:130px;background:var(--surface2);color:var(--text1)">
-          <option value="all">Все подкатегории</option>
-        </select>
-        <select id="prvSub" onchange="filterPrvTable()" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;width:130px;background:var(--surface2);color:var(--text1)">
-          <option value="all">Все характеры вопроса</option>
-        </select>
-        <select id="prvRegion" onchange="filterPrvTable()" style="border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:12px;width:130px;background:var(--surface2);color:var(--text1)">
-          <option value="">Все регионы</option>
-          <option>Астана</option><option>Алматы</option><option>Алматинская обл.</option><option>Абайская</option><option>Карагандинская</option><option>Жамбылская</option><option>Акмолинская</option><option>ВКО</option><option>Атырауская</option><option>Кызылординская</option><option>Шымкент</option><option>Туркестанская</option><option>Костанайская</option><option>Актюбинская</option><option>Павлодарская</option><option>ЗКО</option><option>Жетысуская</option><option>Мангистауская</option><option>СКО</option><option>Улытауская</option>
-        </select>
-        <label style="font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:4px">
-          <input type="checkbox" id="prvDup" onchange="filterPrvTable()" style="accent-color:#d97706">
-          <span style="color:#d97706;font-weight:500">Повторные</span>
-        </label>
-        <label style="font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:4px">
-          <input type="checkbox" id="prvFwd" onchange="filterPrvTable()" style="accent-color:#7c3aed">
-          <span style="color:#7c3aed;font-weight:500">Перенаправлено</span>
-        </label>
-        <button onclick="resetPrvFilters()" style="font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;white-space:nowrap" onmouseover="this.style.color='#dc2626';this.style.borderColor='#dc2626'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border2)'">✕ Сбросить</button>
+        <input type="text" id="prvSearch" placeholder="🔍 Поиск..." oninput="filterPrvTable()" style="border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:12px;width:200px;background:var(--surface2);color:var(--text1)">
+        <button onclick="resetPrvFilters()" style="font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;white-space:nowrap" onmouseover="this.style.color='#dc2626';this.style.borderColor='#dc2626'" onmouseout="this.style.color='var(--text3)';this.style.borderColor='var(--border2)'">✕ Сбросить поиск</button>
         <span id="prvCount" style="font-size:11px;color:var(--text3)"></span>
       </div>
     </div>
@@ -1571,18 +1535,15 @@ input[type=file]{display:none}
         <option value="07">Июль</option><option value="08">Август</option><option value="09">Сентябрь</option>
         <option value="10">Октябрь</option><option value="11">Ноябрь</option><option value="12">Декабрь</option>
       </select>
-      <span class="taza-flbl" style="margin-left:6px">или</span>
+      <span class="taza-flbl">День</span>
+      <select id="tzDay" onchange="onTzYMChange();onTazaFilter()" style="width:80px">
+        <option value="all">Все</option>
+      </select>
+      <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 6px"></span>
+      <span class="taza-flbl">Диапазон</span>
       <input type="date" id="tzDateFrom" min="2024-06-01" max="2026-04-28" onchange="onTzDateRangeChange();onTazaFilter()">
       <span style="color:var(--text3);font-size:11px">—</span>
       <input type="date" id="tzDateTo" min="2024-06-01" max="2026-04-28" onchange="onTzDateRangeChange();onTazaFilter()">
-      <span class="taza-quick">
-        <button onclick="tzQuickPeriod(0)">Сегодня</button>
-        <button onclick="tzQuickPeriod(7)">7д</button>
-        <button onclick="tzQuickPeriod(30)">30д</button>
-        <button onclick="tzQuickPeriod(90)">Квартал</button>
-        <button onclick="tzQuickPeriod(365)">Год</button>
-        <button onclick="tzQuickPeriod(null)">Всё</button>
-      </span>
     </div>
     <div class="taza-row">
       <span class="taza-flbl">Регион</span>
@@ -1763,23 +1724,7 @@ input[type=file]{display:none}
     </div>
     <div class="table-controls">
       <input type="search" id="tazaTableSearch" placeholder="🔍 Поиск: номер заявки, описание, адрес…" />
-      <select id="tazaTableState"><option value="">Все статусы</option>
-        <option value="DONE">Выполнено</option><option value="CANCELLED">Отменено</option>
-        <option value="WORKING">В работе</option><option value="CREATED">Создано</option>
-        <option value="RETURNED_TO_OPERATOR">Возвращено оператору</option>
-      </select>
-      <select id="tazaTableCategory"><option value="">Все категории</option></select>
-      <select id="tazaTableRegion"><option value="">Все регионы</option></select>
-      <select id="tazaTableOverdue"><option value="">Все</option>
-        <option value="true">Только просроченные</option>
-        <option value="false">Только в срок</option>
-      </select>
-      <select id="tazaTableRating"><option value="">Любой рейтинг</option>
-        <option value="5">5 ⭐</option><option value="4">4 ⭐</option>
-        <option value="3">3 ⭐</option><option value="2">2 ⭐</option>
-        <option value="1">1 ⭐</option><option value="no_rating">Без оценки</option>
-      </select>
-      <button id="tazaTableResetBtn" class="reset-btn">× Сбросить</button>
+      <button id="tazaTableResetBtn" class="reset-btn">× Сбросить поиск</button>
       <button id="tazaTableExportBtn" class="export-btn">📥 Экспорт CSV</button>
     </div>
     <div class="table-scroll">
@@ -3460,40 +3405,25 @@ function tazaEngineFilterActive(){
   const F=id=>document.getElementById(id)?.value||'all';
   const df=document.getElementById('tzDateFrom')?.value||'';
   const dt=document.getElementById('tzDateTo')?.value||'';
-  return !!df||!!dt||F('tzYear')!=='all'||F('tzMonth')!=='all'
+  return !!df||!!dt||F('tzYear')!=='all'||F('tzMonth')!=='all'||F('tzDay')!=='all'
     ||F('tzReg')!=='all'||F('tzCat')!=='all'||F('tzStatus')!=='all'
     ||F('tzOverdue')!=='all'||F('tzRating')!=='all';
 }
 
 function onTzYMChange(){
-  // Активирован Год/Месяц → сбрасываем диапазон
+  // Активирован Год/Месяц/День → сбрасываем диапазон
   const df=document.getElementById('tzDateFrom'), dt=document.getElementById('tzDateTo');
   if(df) df.value=''; if(dt) dt.value='';
-  document.querySelectorAll('.taza-quick button').forEach(b=>b.classList.remove('active'));
+  // Каскад: подгрузить дни по году+месяцу
+  const y=document.getElementById('tzYear')?.value, m=document.getElementById('tzMonth')?.value;
+  _populateDays('tzDay', y, m);
 }
 function onTzDateRangeChange(){
-  // Активирован диапазон → сбрасываем Y/M
-  ['tzYear','tzMonth'].forEach(id=>{const el=document.getElementById(id); if(el) el.selectedIndex=0;});
-  document.querySelectorAll('.taza-quick button').forEach(b=>b.classList.remove('active'));
+  // Активирован диапазон → сбрасываем Y/M/D
+  ['tzYear','tzMonth','tzDay'].forEach(id=>{const el=document.getElementById(id); if(el) el.selectedIndex=0;});
 }
-
-function tzQuickPeriod(days){
-  const from=document.getElementById('tzDateFrom'), to=document.getElementById('tzDateTo');
-  if(!from||!to) return;
-  const maxD=new Date('2026-04-28');
-  if(days===null){ from.value=''; to.value=''; }
-  else if(days===0){ const s=maxD.toISOString().slice(0,10); from.value=s; to.value=s; }
-  else {
-    to.value=maxD.toISOString().slice(0,10);
-    const d=new Date(maxD); d.setDate(d.getDate()-days);
-    from.value=d.toISOString().slice(0,10);
-  }
-  // Сброс Y/M
-  ['tzYear','tzMonth'].forEach(id=>{const el=document.getElementById(id); if(el) el.selectedIndex=0;});
-  document.querySelectorAll('.taza-quick button').forEach(b=>b.classList.remove('active'));
-  const btn=event?.target; if(btn) btn.classList.add('active');
-  onTazaFilter();
-}
+// Заглушка — пресеты убраны
+function tzQuickPeriod(){ /* no-op: presets removed */ }
 
 function onTazaFilter(){
   if(!_TAZA){ if(window._DATA_TAZA) renderTazaTab(window._DATA_TAZA); updateTazaChips(); return; }
@@ -3514,9 +3444,9 @@ function applyTazaEngine(){
   const dtStr=document.getElementById('tzDateTo')?.value||'';
   const dfInt=dfStr?+dfStr.replace(/-/g,''):0;
   const dtInt=dtStr?+dtStr.replace(/-/g,''):99999999;
-  // Год/Месяц (взаимоисключающие с диапазоном — handler чистит другую сторону)
-  const yF=F('tzYear'), mF=F('tzMonth');
-  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF;
+  // Год/Месяц/День (взаимоисключающие с диапазоном — handler чистит другую сторону)
+  const yF=F('tzYear'), mF=F('tzMonth'), dF=F('tzDay');
+  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF, dN=dF==='all'?-1:+dF;
   const reg=F('tzReg'), cat=F('tzCat'), st=F('tzStatus'), ovd=F('tzOverdue'), rat=F('tzRating');
   const regI=reg==='all'?-1:_TAZA.regions.indexOf(reg);
   const catI=cat==='all'?-1:_TAZA.cats.findIndex(c=>c.id===cat);
@@ -3532,9 +3462,10 @@ function applyTazaEngine(){
   for(let i=0;i<n;i++){
     const o=i*w, ymd=D[o];
     if(ymd<dfInt||ymd>dtInt) continue;
-    if(yN>=0 || mN>=0){
-      const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100;
+    if(yN>=0 || mN>=0 || dN>=0){
+      const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100, dd=ymd%100;
       if(yN>=0 && yy!==yN) continue;
+      if(dN>=0 && dd!==dN) continue;
       if(mN>=0 && mm!==mN) continue;
     }
     const ri=D[o+1], ci=D[o+2], si=D[o+3], ra=D[o+4], od=D[o+5], cd=D[o+8];
@@ -3695,23 +3626,10 @@ async function _loadTazaTable(){
   try {
     const r = await fetch('/data/taza_table.json');
     _TAZA_TBL = await r.json();
-    _populateTazaTableSelects();
     renderTazaRequestsTable();
   } catch(e){
     if(tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-row">Ошибка загрузки: '+e.message+'</td></tr>';
   } finally { _TAZA_TBL_LOADING = false; }
-}
-
-function _populateTazaTableSelects(){
-  if(!_TAZA) return;
-  const cs = document.getElementById('tazaTableCategory');
-  if(cs && cs.options.length<=1){
-    _TAZA.cats.forEach(c=>{ if(c.id){ const o=document.createElement('option'); o.value=c.id; o.textContent=c.name_ru; cs.appendChild(o);} });
-  }
-  const rs = document.getElementById('tazaTableRegion');
-  if(rs && rs.options.length<=1){
-    _TAZA.regions.forEach(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; rs.appendChild(o); });
-  }
 }
 
 function _tzStateLabel(idx){ return _TAZA?.statuses?.[idx]?.label_ru || '—'; }
@@ -3728,8 +3646,8 @@ function _tzFilteredIndexes(){
   const dtStr=document.getElementById('tzDateTo')?.value||'';
   const dfInt=dfStr?+dfStr.replace(/-/g,''):0;
   const dtInt=dtStr?+dtStr.replace(/-/g,''):99999999;
-  const yF=F('tzYear'), mF=F('tzMonth');
-  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF;
+  const yF=F('tzYear'), mF=F('tzMonth'), dF=F('tzDay');
+  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF, dN=dF==='all'?-1:+dF;
   const reg=F('tzReg'), cat=F('tzCat'), st=F('tzStatus'), ovd=F('tzOverdue'), rat=F('tzRating');
   const regI=reg==='all'?-1:_TAZA.regions.indexOf(reg);
   const catI=cat==='all'?-1:_TAZA.cats.findIndex(c=>c.id===cat);
@@ -3740,10 +3658,11 @@ function _tzFilteredIndexes(){
   for(let i=0;i<n;i++){
     const o=i*w, ymd=D[o];
     if(ymd<dfInt||ymd>dtInt) continue;
-    if(yN>=0 || mN>=0){
-      const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100;
+    if(yN>=0 || mN>=0 || dN>=0){
+      const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100, dd=ymd%100;
       if(yN>=0 && yy!==yN) continue;
       if(mN>=0 && mm!==mN) continue;
+      if(dN>=0 && dd!==dN) continue;
     }
     const ri=D[o+1], ci=D[o+2], si=D[o+3], ra=D[o+4], od=D[o+5];
     if(regI>=0&&ri!==regI) continue;
@@ -3911,23 +3830,19 @@ function _tazaTableInit(){
   const $=id=>document.getElementById(id);
   if(!$('tazaRequestsTable') || $('tazaRequestsTable').dataset._wired) return;
   $('tazaRequestsTable').dataset._wired = '1';
+  // Локальные фильтры (статус/категория/регион/просрочка/рейтинг) убраны —
+  // они дублировали глобальную панель фильтров вкладки. Оставлен только поиск.
   document.querySelectorAll('#tazaRequestsTable thead th').forEach(th=>th.addEventListener('click', ()=>_tazaTableSort(th)));
-  const onChange = (k, getVal)=>()=>{ _tazaTableState[k] = getVal(); _tazaTableState.page = 1; renderTazaRequestsTable(); };
   $('tazaTableSearch').addEventListener('input', ()=>{
     clearTimeout(_tazaTblSearchT);
     _tazaTblSearchT = setTimeout(()=>{ _tazaTableState.search = $('tazaTableSearch').value; _tazaTableState.page=1; renderTazaRequestsTable(); }, 220);
   });
-  $('tazaTableState').addEventListener('change', onChange('state', ()=>$('tazaTableState').value));
-  $('tazaTableCategory').addEventListener('change', onChange('category', ()=>$('tazaTableCategory').value));
-  $('tazaTableRegion').addEventListener('change', onChange('region', ()=>$('tazaTableRegion').value));
-  $('tazaTableOverdue').addEventListener('change', onChange('overdue', ()=>$('tazaTableOverdue').value));
-  $('tazaTableRating').addEventListener('change', onChange('rating', ()=>$('tazaTableRating').value));
   $('tazaPrevPage').addEventListener('click', ()=>{ if(_tazaTableState.page>1){_tazaTableState.page--; renderTazaRequestsTable();} });
   $('tazaNextPage').addEventListener('click', ()=>{ _tazaTableState.page++; renderTazaRequestsTable(); });
   $('tazaPageSize').addEventListener('change', ()=>{ _tazaTableState.size = +$('tazaPageSize').value; _tazaTableState.page=1; renderTazaRequestsTable(); });
   $('tazaTableResetBtn').addEventListener('click', ()=>{
-    Object.assign(_tazaTableState, {page:1, search:'', state:'', category:'', region:'', overdue:'', rating:''});
-    ['tazaTableSearch','tazaTableState','tazaTableCategory','tazaTableRegion','tazaTableOverdue','tazaTableRating'].forEach(id=>{const el=$(id); if(el) el.value='';});
+    _tazaTableState.search = ''; _tazaTableState.page = 1;
+    const s = $('tazaTableSearch'); if(s) s.value = '';
     renderTazaRequestsTable();
   });
   $('tazaTableExportBtn').addEventListener('click', _tazaTableExportCSV);
@@ -4107,8 +4022,8 @@ function _tzCollectPoints(maxN){
   const dtStr=document.getElementById('tzDateTo')?.value||'';
   const dfInt=dfStr?+dfStr.replace(/-/g,''):0;
   const dtInt=dtStr?+dtStr.replace(/-/g,''):99999999;
-  const yF=F('tzYear'), mF=F('tzMonth');
-  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF;
+  const yF=F('tzYear'), mF=F('tzMonth'), dF=F('tzDay');
+  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF, dN=dF==='all'?-1:+dF;
   const reg=F('tzReg'), cat=F('tzCat'), st=F('tzStatus'), ovd=F('tzOverdue'), rat=F('tzRating');
   const regI=reg==='all'?-1:_TAZA.regions.indexOf(reg);
   const catI=cat==='all'?-1:_TAZA.cats.findIndex(c=>c.id===cat);
@@ -4119,10 +4034,11 @@ function _tzCollectPoints(maxN){
   for(let i=0;i<n;i++){
     const o=i*w, ymd=D[o];
     if(ymd<dfInt||ymd>dtInt) continue;
-    if(yN>=0 || mN>=0){
-      const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100;
+    if(yN>=0 || mN>=0 || dN>=0){
+      const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100, dd=ymd%100;
       if(yN>=0 && yy!==yN) continue;
       if(mN>=0 && mm!==mN) continue;
+      if(dN>=0 && dd!==dN) continue;
     }
     const ri=D[o+1], ci=D[o+2], si=D[o+3], ra=D[o+4], od=D[o+5], lat10k=D[o+6], lon10k=D[o+7];
     if(regI>=0&&ri!==regI) continue;
@@ -6235,36 +6151,39 @@ function _chipRemoveOrg(name){
   _applyMinSelection();
 }
 
-// ── Универсальный временной блок: режим Год/Месяц/День ИЛИ диапазон ─────────
+// ── Универсальный временной блок: Год/Месяц/День ИЛИ диапазон ──────────────
+function _daysInMonth(year, monthIdx /* 0-11 */){
+  return new Date(year, monthIdx + 1, 0).getDate();
+}
+function _populateDays(daySelId, year, month){
+  const sel = document.getElementById(daySelId); if(!sel) return;
+  const prev = sel.value;
+  const y = (year && year!=='all') ? +year : null;
+  const m = (month && month!=='all') ? +month : null;
+  // если ни год, ни месяц не выбраны — сбрасываем до "Все" и ничего не каскадируем
+  if(!y && !m){ sel.innerHTML = '<option value="all">Все</option>'; return; }
+  const days = (y && m) ? _daysInMonth(y, m-1) : 31;
+  let html = '<option value="all">Все</option>';
+  for(let d=1; d<=days; d++){ const dd = String(d).padStart(2,'0'); html += `<option value="${dd}">${d}</option>`; }
+  sel.innerHTML = html;
+  // восстановим прошлый выбор если он валиден
+  if(prev && [...sel.options].some(o=>o.value===prev)) sel.value = prev;
+}
 function onYMDChange(){
   // При активации Y/M/D — сбрасываем диапазон дат
   const df=document.getElementById('gDateFrom'), dt=document.getElementById('gDateTo');
   if(df) df.value=''; if(dt) dt.value='';
-  document.querySelectorAll('#gPeriodPresets button').forEach(b=>b.classList.remove('active'));
+  // Каскад: подгрузить дни по году+месяцу
+  const y=document.getElementById('gYear')?.value, m=document.getElementById('gMonth')?.value;
+  _populateDays('gDay', y, m);
 }
 function onDateRangeChange(){
   // При активации диапазона — сбрасываем Y/M/D
   ['gYear','gMonth','gDay'].forEach(id=>{const el=document.getElementById(id); if(el) el.selectedIndex=0;});
-  document.querySelectorAll('#gPeriodPresets button').forEach(b=>b.classList.remove('active'));
   onGlobalFilter();
 }
-function setQuickPeriod(days){
-  const df=document.getElementById('gDateFrom'), dt=document.getElementById('gDateTo');
-  if(!df||!dt) return;
-  // База — максимальная дата данных (2026-04-30)
-  const maxD = new Date('2026-04-30');
-  if(days===null){ df.value=''; dt.value=''; }
-  else if(days===0){ const s=maxD.toISOString().slice(0,10); df.value=s; dt.value=s; }
-  else {
-    dt.value = maxD.toISOString().slice(0,10);
-    const from = new Date(maxD); from.setDate(from.getDate()-days);
-    df.value = from.toISOString().slice(0,10);
-  }
-  ['gYear','gMonth','gDay'].forEach(id=>{const el=document.getElementById(id); if(el) el.selectedIndex=0;});
-  document.querySelectorAll('#gPeriodPresets button').forEach(b=>b.classList.remove('active'));
-  if(event && event.target) event.target.classList.add('active');
-  onGlobalFilter();
-}
+// Заглушка — пресеты убраны, но старые ссылки могут остаться
+function setQuickPeriod(){ /* no-op: presets removed */ }
 
 function engineFilterActive(){
   const F=id=>document.getElementById(id)?.value||'all';
@@ -7630,12 +7549,10 @@ function loadAppealsCsv(event){
 function isTrueVal(v){const t=String(v||'').toLowerCase();return t==='y'||t==='1'||t==='true'||t==='да';}
 
 function resetPrvFilters(){
-  const ids=['prvSearch','prvType','prvStatus','prvCat','prvIss','prvSub','prvRegion'];
-  ids.forEach(id=>{const el=document.getElementById(id);if(el)el.value=el.tagName==='INPUT'?'':'all';});
-  ['prvDup','prvFwd'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});
-  // также сбросить каскадные списки до первоначального состояния
-  cascadePrvIssFilter();cascadePrvSubFilter();
-  _prvPage=0;filterPrvTable();
+  // Локальные фильтры таблицы убраны — сбрасывается только поиск.
+  // Глобальные фильтры страницы остаются как есть.
+  const s = document.getElementById('prvSearch'); if(s) s.value='';
+  _prvPage=0; filterPrvTable();
 }
 
 function _rowYMD(r){
