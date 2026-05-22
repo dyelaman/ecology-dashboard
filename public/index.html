@@ -190,6 +190,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tz-mapmode{font-size:11px;padding:6px 10px;border-radius:6px;border:1px solid #e0e0e0;background:#fff;color:#444;cursor:pointer;font-weight:500;transition:all .15s;text-align:left;min-width:130px}
 .tz-mapmode:hover{border-color:#1B7A3A;color:#1B7A3A;background:#f1f8f3}
 .tz-mapmode.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
+.nbd2025-tab{font-size:11px;padding:6px 12px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-weight:500;transition:all .15s}
+.nbd2025-tab:hover{border-color:#1B7A3A;color:#1B7A3A}
+.nbd2025-tab.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
 @media (max-width:768px){
   #tazaMapContainer{height:400px!important}
   #tzMapModes{top:6px;right:6px;padding:3px;gap:2px}
@@ -940,6 +943,73 @@ input[type=file]{display:none}
       </div>
     </div>
     <div id="mapNbd" style="height:420px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border)"></div>
+  </div>
+
+  <!-- ── СВЕЖИЕ ДАННЫЕ НБД СОС (2025-09 → 2026-05) ── -->
+  <div class="card" id="nbd2025Card" style="padding:14px;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <div class="card-title" style="margin:0">🆕 Свежие данные НБД СОС <span style="font-size:10px;color:var(--text3);font-weight:400" id="nbd2025Period">— загрузка…</span></div>
+      <div style="display:flex;gap:5px" id="nbd2025Tabs">
+        <button class="nbd2025-tab active" data-tab="air"   onclick="setNbd2025Tab('air')">💨 Воздух</button>
+        <button class="nbd2025-tab"        data-tab="water" onclick="setNbd2025Tab('water')">💧 Вода</button>
+        <button class="nbd2025-tab"        data-tab="fire"  onclick="setNbd2025Tab('fire')">🔥 Факел</button>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" id="nbd2025Kpis">
+      <div class="kpi"><div class="kpi-lbl">Замеров</div><div class="kpi-val" id="nbd2025KpiMeas">—</div><div class="kpi-d" id="nbd2025KpiMeasSub">—</div></div>
+      <div class="kpi"><div class="kpi-lbl">Организаций</div><div class="kpi-val" id="nbd2025KpiOrgs">—</div><div class="kpi-d" id="nbd2025KpiOrgsSub">с замерами</div></div>
+      <div class="kpi"><div class="kpi-lbl" id="nbd2025KpiExLbl">Превышения</div><div class="kpi-val" style="color:#dc2626" id="nbd2025KpiEx">—</div><div class="kpi-d up" id="nbd2025KpiExSub">—</div></div>
+      <div class="kpi"><div class="kpi-lbl">Регионов</div><div class="kpi-val" id="nbd2025KpiRegs">—</div><div class="kpi-d" id="nbd2025KpiRegsSub">охвачено</div></div>
+    </div>
+
+    <!-- Top substances + Top orgs -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="card" style="padding:12px">
+        <div class="card-title">Топ-10 веществ</div>
+        <div id="nbd2025SubList" class="region-list-scroll" style="max-height:300px;padding-right:6px"></div>
+      </div>
+      <div class="card" style="padding:12px">
+        <div class="card-title">Топ-20 организаций-эмиттеров</div>
+        <div id="nbd2025OrgList" class="region-list-scroll" style="max-height:300px;padding-right:6px"></div>
+      </div>
+    </div>
+
+    <!-- Monthly trend + Region list -->
+    <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="card" style="padding:12px">
+        <div class="card-title">Месячный тренд</div>
+        <div class="rc-host" style="height:240px"><canvas id="nbd2025MonthlyChart"></canvas></div>
+      </div>
+      <div class="card" style="padding:12px">
+        <div class="card-title">По регионам</div>
+        <div id="nbd2025RegionList" class="region-list-scroll" style="max-height:240px;padding-right:6px"></div>
+      </div>
+    </div>
+
+    <!-- Превышения (только для воздуха) -->
+    <div id="nbd2025ExceedBlock" style="display:none">
+      <div class="card-title" style="margin:8px 0">⚠️ Превышения нормативов (air_excess_ratio &gt; 1)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="card" style="padding:12px">
+          <div class="card-title">Топ организаций по превышениям</div>
+          <div id="nbd2025ExOrgs" class="region-list-scroll" style="max-height:240px;padding-right:6px"></div>
+        </div>
+        <div class="card" style="padding:12px">
+          <div class="card-title">Топ веществ по превышениям</div>
+          <div id="nbd2025ExSubs" class="region-list-scroll" style="max-height:240px;padding-right:6px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- water pH -->
+    <div id="nbd2025WaterPhBlock" style="display:none;margin-top:8px">
+      <div class="card" style="padding:12px">
+        <div class="card-title">pH сточных вод</div>
+        <div id="nbd2025WaterPh" style="font-size:12px;color:var(--text2)"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ПОДВКЛАДКИ -->
@@ -1947,7 +2017,7 @@ function switchTab(id, el) {
   if(id==='news' && !newsInit) initNews();
   if(id==='waste' && !_wasteInited) { _wasteInited=true; initWasteTab(); }
   if(id==='map' && !mapInit) initLeafletMap();
-  if(id==='emissions') { setTimeout(initNbdMap, 100); }
+  if(id==='emissions') { setTimeout(initNbdMap, 100); if(window._NBD_2025) renderNbd2025(); }
   if(id==='kgs') {
     if(_DATA_KGS && !_kgsCharts._rendered) renderKgsCharts(_DATA_KGS);
     setTimeout(initKgsMap, 100);
@@ -2589,6 +2659,11 @@ function renderMainCharts() {
       }
     }
     fetch('/data/chunks/manifest.json').then(r=>r.json()).then(m=>{_CHUNK_MANIFEST=m;}).catch(()=>{});
+    // Свежие агрегаты НБД СОС 2025-09 → 2026-05 (фоновая загрузка)
+    fetch('/data/nbd_2025.json').then(r=>r.json()).then(j=>{
+      window._NBD_2025 = j;
+      if(typeof renderNbd2025 === 'function') renderNbd2025();
+    }).catch(e=>console.warn('nbd_2025 load failed:', e.message));
     // Per-request датасет Таза Казахстан — для клиентской кросс-фильтрации
     fetch('/data/taza_compact.json').then(r=>r.json()).then(tc=>{
       _TAZA=tc; populateTazaFilters();
@@ -6925,6 +7000,144 @@ function updateChoropleth(){
   });
   // Тултипы: если фильтры не активны — восстанавливаем полные (за всё время)
   if(!engineFilterActive()) _restoreRichTooltips();
+}
+
+// ── НБД СОС: свежие данные 2025-09 → 2026-05 ────────────────────────────────
+let _nbd2025Tab = 'air';
+let _nbd2025MonthlyChart = null;
+
+function setNbd2025Tab(t){
+  _nbd2025Tab = t;
+  document.querySelectorAll('.nbd2025-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===t));
+  renderNbd2025();
+}
+
+const _NBD_UNIT = {
+  air:   {meas:'замеров', sub_unit:'мг/м³·замеры', org_unit:'мг/м³·замеры',
+          col:'#dc2626', label:'Воздух', what:'Концентрация загрязнителя'},
+  water: {meas:'замеров', sub_unit:'замеров', org_unit:'замеров',
+          col:'#1E88E5', label:'Вода', what:'Замеров сточных вод'},
+  fire:  {meas:'замеров', sub_unit:'замеров', org_unit:'замеров',
+          col:'#ea580c', label:'Факел', what:'Замеров факельных выбросов'},
+};
+
+function _fmtNum(n){
+  if(n==null||isNaN(n)) return '—';
+  const abs=Math.abs(n);
+  if(abs>=1e9) return (n/1e9).toFixed(2).replace('.',',')+' млрд';
+  if(abs>=1e6) return (n/1e6).toFixed(2).replace('.',',')+' млн';
+  if(abs>=1e3) return Math.round(n).toLocaleString('ru-RU');
+  return (Math.round(n*100)/100).toLocaleString('ru-RU');
+}
+
+function _esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function _renderNbdList(elId, items, opts){
+  const el = document.getElementById(elId); if(!el) return;
+  if(!items||!items.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет данных</div>'; return; }
+  const maxV = Math.max(...items.map(x => x[opts.barKey]||0), 1);
+  el.innerHTML = items.map(r=>{
+    const w = Math.max(1, ((r[opts.barKey]||0)/maxV)*100);
+    const nm = _esc(r.name||'—');
+    const truncated = nm.length>opts.nameMax ? nm.slice(0,opts.nameMax)+'…' : nm;
+    const measStr = r.measurements!=null ? r.measurements.toLocaleString('ru-RU')+' зам.' : '';
+    const exStr = r.exceed ? ` · <span style="color:#dc2626">${r.exceed.toLocaleString('ru-RU')} прев.</span>` : '';
+    const valStr = opts.showTotal && r.total!=null ? `<span style="font-weight:600">${_fmtNum(r.total)}</span> · ${measStr}` : measStr;
+    return `<div class="sat-row" title="${nm}">
+      <span class="sat-name">${truncated}</span>
+      <div class="sat-bar"><div class="sat-bar-fill" style="width:${w}%;background:${opts.col}"></div></div>
+      <span class="sat-val" style="text-align:right;min-width:130px">${valStr}${exStr}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderNbd2025(){
+  const d = window._NBD_2025; if(!d) return;
+  const T = _nbd2025Tab;
+  const k = d[T]; if(!k) return;
+  const U = _NBD_UNIT[T];
+
+  // KPI
+  const total_orgs = (k.top_orgs||[]).length;
+  const total_meas = (k.top_substances||[]).reduce((s,x)=>s+(x.measurements||0),0);
+  document.getElementById('nbd2025KpiMeas').textContent = _fmtNum(total_meas);
+  document.getElementById('nbd2025KpiMeasSub').textContent = U.what;
+  document.getElementById('nbd2025KpiOrgs').textContent = total_orgs.toLocaleString('ru-RU')+'+';
+  document.getElementById('nbd2025KpiRegs').textContent = (k.top_regions||[]).length.toLocaleString('ru-RU');
+  const exEl = document.getElementById('nbd2025KpiEx');
+  const exSub = document.getElementById('nbd2025KpiExSub');
+  const exLbl = document.getElementById('nbd2025KpiExLbl');
+  if(T==='air' && k.exceed){
+    exLbl.textContent = 'Превышений нормативов';
+    exEl.textContent = _fmtNum(k.exceed.total);
+    exSub.textContent = `${k.exceed.share_pct}% от ${k.exceed.measurements.toLocaleString('ru-RU')} замеров`;
+    document.getElementById('nbd2025ExceedBlock').style.display = '';
+    _renderNbdList('nbd2025ExOrgs', (k.exceed.by_org||[]).slice(0,15), {barKey:'exceed', col:'#dc2626', nameMax:42, showTotal:false});
+    _renderNbdList('nbd2025ExSubs', (k.exceed.by_substance||[]).slice(0,15), {barKey:'exceed', col:'#dc2626', nameMax:40, showTotal:false});
+    // Замени структуру: вместо meas покажем количество прев.
+    document.querySelectorAll('#nbd2025ExOrgs .sat-val, #nbd2025ExSubs .sat-val').forEach(el=>{
+      const txt = el.textContent; const m = txt.match(/^([\d ]+) зам/); // первый блок — это measurements
+    });
+  } else if(T==='water' && k.ph){
+    exLbl.textContent = 'pH вне нормы (6–9)';
+    exEl.textContent = _fmtNum(k.ph.out_of_range_n);
+    exSub.textContent = `${k.ph.out_of_range_pct}% от ${k.ph.n.toLocaleString('ru-RU')} замеров · avg pH ${k.ph.avg}`;
+    document.getElementById('nbd2025ExceedBlock').style.display = 'none';
+    const wph = document.getElementById('nbd2025WaterPh');
+    document.getElementById('nbd2025WaterPhBlock').style.display = '';
+    wph.innerHTML = `Средний pH сточных вод: <b>${k.ph.avg}</b><br>` +
+      `Замеров с pH вне нормы 6–9: <b style="color:#dc2626">${k.ph.out_of_range_n.toLocaleString('ru-RU')}</b> (${k.ph.out_of_range_pct}%)<br>` +
+      `Всего корректных замеров pH: <b>${k.ph.n.toLocaleString('ru-RU')}</b>`;
+  } else {
+    exLbl.textContent = 'Замеров с веществом';
+    exEl.textContent = '—'; exEl.style.color = 'var(--text3)';
+    exSub.textContent = '— (нет нормативов в выгрузке)';
+    document.getElementById('nbd2025ExceedBlock').style.display = 'none';
+  }
+  if(T!=='water'){ document.getElementById('nbd2025WaterPhBlock').style.display = 'none'; }
+
+  // Период
+  document.getElementById('nbd2025Period').textContent = `· ${k.period_from} → ${k.period_to} · ${k.rows.toLocaleString('ru-RU')} строк`;
+
+  // Топ-веществ + топ-орг
+  _renderNbdList('nbd2025SubList', (k.top_substances||[]).slice(0,10),
+    {barKey:'measurements', col:U.col, nameMax:46, showTotal: T==='air'});
+  _renderNbdList('nbd2025OrgList', (k.top_orgs||[]).slice(0,20),
+    {barKey:'measurements', col:U.col, nameMax:46, showTotal: T==='air'});
+
+  // По регионам
+  _renderNbdList('nbd2025RegionList', (k.top_regions||[]).slice(0,20),
+    {barKey:'measurements', col:U.col, nameMax:32, showTotal:false});
+
+  // Месячный тренд
+  const ctx = document.getElementById('nbd2025MonthlyChart');
+  if(ctx && k.monthly){
+    if(_nbd2025MonthlyChart){ _nbd2025MonthlyChart.destroy(); _nbd2025MonthlyChart=null; }
+    const labels = k.monthly.map(m=>m.ym);
+    const meas = k.monthly.map(m=>m.measurements||0);
+    const ex = (T==='air') ? k.monthly.map(m=>m.exceed||0) : null;
+    const datasets = [{
+      label:'Замеры', data:meas, borderColor:U.col, backgroundColor:U.col+'22',
+      borderWidth:2, tension:0.25, fill:true, yAxisID:'y',
+    }];
+    if(ex){
+      datasets.push({label:'Превышения', data:ex, borderColor:'#dc2626', backgroundColor:'transparent',
+        borderWidth:2, borderDash:[4,3], tension:0.25, yAxisID:'y',});
+    }
+    _nbd2025MonthlyChart = new Chart(ctx, {
+      type:'line',
+      data:{labels, datasets},
+      options:{responsive:true, maintainAspectRatio:false,
+        interaction:{intersect:false,mode:'index'},
+        plugins:{legend:{display:datasets.length>1, labels:{font:{size:10}, color:'#6b7280'}}},
+        scales:{
+          y:{beginAtZero:true, ticks:{font:{size:9}, color:'#9ca3af',
+              callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?Math.round(v/1e3)+'K':v}},
+          x:{ticks:{font:{size:9}, color:'#9ca3af', maxRotation:0, autoSkip:true, maxTicksLimit:12}},
+        }
+      }
+    });
+  }
 }
 
 // ── КАРТА НБД СОС ────────────────────────────────────────────────────────────
