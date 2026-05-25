@@ -222,6 +222,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .soc-anom-icon{font-size:14px;line-height:1}
 .soc-anom.soc-anom-warn{background:rgba(251,140,0,.05);border-left-color:#FB8C00}
 .soc-anom.soc-anom-crit{background:rgba(33,33,33,.08);border-left-color:#212121}
+/* Госорганы — расширенная карточка с бейджем министерства */
+.soc-org-mode{font-size:10px;padding:4px 10px;border-radius:12px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-weight:500;transition:all .12s}
+.soc-org-mode:hover{border-color:#1B7A3A;color:#1B7A3A}
+.soc-org-mode.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
+.executor-row{padding:10px 12px;border-radius:8px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .12s}
+.executor-row:hover{background:rgba(27,122,58,.04)}
+.executor-row.active{background:rgba(27,122,58,.10)}
+.executor-header{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
+.executor-name{font-size:12px;font-weight:500;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;flex:1}
+.ministry-badge{flex-shrink:0;font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;text-transform:uppercase;letter-spacing:.3px}
+.ministry-badge[data-min="mepr"]   {background:rgba(27,122,58,.14);color:#1B7A3A}
+.ministry-badge[data-min="mvri"]   {background:rgba(2,136,209,.14);color:#0277BD}
+.ministry-badge[data-min="mz"]     {background:rgba(229,57,53,.14);color:#C62828}
+.ministry-badge[data-min="me"]     {background:rgba(251,140,0,.14);color:#E65100}
+.ministry-badge[data-min="msh"]    {background:rgba(124,179,66,.14);color:#558B2F}
+.ministry-badge[data-min="mio"]    {background:rgba(120,120,120,.14);color:#555}
+.ministry-badge[data-min="mchs"]   {background:rgba(211,47,47,.14);color:#D32F2F}
+.ministry-badge[data-min="mps"]    {background:rgba(124,77,255,.14);color:#5E35B1}
+.ministry-badge[data-min="mt"]     {background:rgba(0,121,107,.14);color:#00796B}
+.ministry-badge[data-min="mne"]    {background:rgba(63,81,181,.14);color:#3F51B5}
+.ministry-badge[data-min="mtszn"]  {background:rgba(255,87,34,.14);color:#E64A19}
+.ministry-badge[data-min="mvd"]    {background:rgba(96,125,139,.14);color:#455A64}
+.ministry-badge[data-min="other"]  {background:rgba(150,150,150,.10);color:#777}
+.executor-bar-row{display:flex;align-items:center;gap:10px}
+.executor-bar-wrap{flex:1;height:11px;background:#f0f0f0;border-radius:5px;overflow:hidden}
+.executor-bar{height:100%;border-radius:5px}
+.executor-pct{font-size:11px;font-weight:700;white-space:nowrap;min-width:130px;text-align:right;font-variant-numeric:tabular-nums}
+.executor-sub{font-size:10px;color:var(--text3);margin-top:4px}
 /* Корреляция — таблица «Индекс экологического давления» */
 .pressure-table{width:100%;border-collapse:collapse;font-size:11px}
 .pressure-table thead th{padding:8px 10px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);background:var(--surface2);position:sticky;top:0;z-index:1;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
@@ -239,7 +267,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .insight-text{font-size:12px;color:var(--text);line-height:1.55}
 .insight-text b{color:#1B7A3A}
 /* Sticky-зона НБД (переключатель + покрытие + фильтр-бар + чипы) — прилипает только на этой вкладке */
-.nbd-sticky-zone{position:sticky;top:84px;z-index:498;background:var(--surface);padding:8px 0;margin:-8px -2px 8px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.06);max-height:260px;overflow-y:auto}
+.nbd-sticky-zone{position:sticky;top:84px;z-index:498;background:var(--surface);padding:10px 14px;margin-bottom:12px;border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.08);max-height:260px;overflow-y:auto}
 .nbd-sticky-zone::-webkit-scrollbar{width:5px}
 .nbd-sticky-zone::-webkit-scrollbar-thumb{background:#c4c4c4;border-radius:3px}
 @media (max-width:768px){.nbd-sticky-zone{top:80px;max-height:240px}}
@@ -945,7 +973,7 @@ input[type=file]{display:none}
       <div class="kpi"><div class="kpi-lbl">Всего звонков</div><div class="kpi-val" id="ikKpiTotal">16 103</div><div class="kpi-d nu">с 01.04.2019</div></div>
       <div class="kpi"><div class="kpi-lbl">Закрыто</div><div class="kpi-val" style="color:#16a34a" id="ikKpiClosed">99.3%</div><div class="kpi-d nu" id="ikKpiClosedAbs">из 16 000</div></div>
       <div class="kpi"><div class="kpi-lbl">Регион-лидер</div><div class="kpi-val" style="font-size:16px" id="ikKpiTopReg">ВКО</div><div class="kpi-d nu" id="ikKpiTopRegPct">77.6% всех звонков</div></div>
-      <div class="kpi"><div class="kpi-lbl">Топ тематика</div><div class="kpi-val" style="font-size:13px;line-height:1.2" id="ikKpiTopTheme">Экология</div><div class="kpi-d nu" id="ikKpiTopThemePct">84.9% от всех</div></div>
+      <div class="kpi"><div class="kpi-lbl">Главная тематика</div><div class="kpi-val" style="font-size:13px;line-height:1.2" id="ikKpiTopTheme">Экология</div><div class="kpi-d nu" id="ikKpiTopThemePct">84.9% от всех</div></div>
     </div>
 
     <!-- Характер + Тренд -->
@@ -972,33 +1000,6 @@ input[type=file]{display:none}
 
 <!-- МОНИТОРИНГ НБД СОС -->
 <div id="panel-emissions" class="panel">
-
-  <!-- ГЛАВНЫЙ АЛЕРТ — динамический по режиму (Воздух / Вода / Факел) -->
-  <div class="nbd-alert nbd-alert-critical" id="nbdAlert">
-    <div class="alert-body">
-      <div class="alert-main" id="nbdAlertMain">Загрузка свежих данных НБД СОС…</div>
-      <div class="alert-detail" id="nbdAlertDetail"><b>НБД СОС</b> — Национальный банк данных состояния окружающей среды</div>
-    </div>
-    <span class="alert-badge" id="nbdAlertBadge">⚠️ Требует контроля</span>
-  </div>
-
-  <!-- КАРТА НБД СОС -->
-  <div class="card" style="padding:10px;margin-bottom:14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.3px">Карта объектов НБД СОС</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
-          <input type="checkbox" id="nbdLyrPek" checked style="width:11px;height:11px;accent-color:#ef4444" onchange="toggleNbdLayer('pek',this.checked)">
-          <span style="width:7px;height:7px;border-radius:50%;background:#ef4444"></span>ПЭК объекты
-        </label>
-      </div>
-    </div>
-    <div id="mapNbd" style="height:420px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border)"></div>
-  </div>
-
-  <!-- ── СВЕЖИЕ ДАННЫЕ НБД СОС (2025-09 → 2026-05) ── -->
-  <div class="card" id="nbd2025Card" style="padding:14px;margin-bottom:14px">
-    <!-- Sticky-зона: переключатель сред + плашка покрытия + фильтр-бар + чипы -->
     <div class="nbd-sticky-zone" id="nbdStickyZone">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
       <div class="card-title" style="margin:0">🆕 Свежие данные НБД СОС <span style="font-size:10px;color:var(--text3);font-weight:400" id="nbd2025Period">— загрузка…</span></div>
@@ -1047,6 +1048,34 @@ input[type=file]{display:none}
     <div id="nbdFltChips" class="nbd-flt-chips"></div>
     </div><!-- /nbd-sticky-zone -->
 
+
+  <!-- ГЛАВНЫЙ АЛЕРТ — динамический по режиму (Воздух / Вода / Факел) -->
+  <div class="nbd-alert nbd-alert-critical" id="nbdAlert">
+    <div class="alert-body">
+      <div class="alert-main" id="nbdAlertMain">Загрузка свежих данных НБД СОС…</div>
+      <div class="alert-detail" id="nbdAlertDetail"><b>НБД СОС</b> — Национальный банк данных состояния окружающей среды</div>
+    </div>
+    <span class="alert-badge" id="nbdAlertBadge">⚠️ Требует контроля</span>
+  </div>
+
+  <!-- КАРТА НБД СОС -->
+  <div class="card" style="padding:10px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.3px">Карта объектов НБД СОС</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
+          <input type="checkbox" id="nbdLyrPek" checked style="width:11px;height:11px;accent-color:#ef4444" onchange="toggleNbdLayer('pek',this.checked)">
+          <span style="width:7px;height:7px;border-radius:50%;background:#ef4444"></span>ПЭК объекты
+        </label>
+      </div>
+    </div>
+    <div id="mapNbd" style="height:420px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border)"></div>
+  </div>
+
+  <!-- ── СВЕЖИЕ ДАННЫЕ НБД СОС (2025-09 → 2026-05) ── -->
+  <div class="card" id="nbd2025Card" style="padding:14px;margin-bottom:14px">
+    <!-- Sticky-зона: переключатель сред + плашка покрытия + фильтр-бар + чипы -->
+
     <!-- KPI -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" id="nbd2025Kpis">
       <div class="kpi"><div class="kpi-lbl">Замеров</div><div class="kpi-val" id="nbd2025KpiMeas">—</div><div class="kpi-d" id="nbd2025KpiMeasSub">—</div></div>
@@ -1064,11 +1093,11 @@ input[type=file]{display:none}
     <!-- Top substances + Top orgs -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div class="card" style="padding:12px">
-        <div class="card-title">Топ-10 веществ <span id="nbd2025SubUnitNote" style="font-size:9px;color:var(--text3);font-weight:400" title="единица измерения требует уточнения у источника"></span></div>
+        <div class="card-title">Загрязняющие вещества <span id="nbd2025SubUnitNote" style="font-size:9px;color:var(--text3);font-weight:400" title="единица измерения требует уточнения у источника"></span></div>
         <div id="nbd2025SubList" class="region-list-scroll" style="max-height:300px;padding-right:6px"></div>
       </div>
       <div class="card" style="padding:12px">
-        <div class="card-title">Топ-20 организаций-эмиттеров</div>
+        <div class="card-title">Организации-эмиттеры</div>
         <div id="nbd2025OrgList" class="region-list-scroll" style="max-height:300px;padding-right:6px"></div>
       </div>
     </div>
@@ -1090,11 +1119,11 @@ input[type=file]{display:none}
       <div class="card-title" style="margin:8px 0">⚠️ Превышения нормативов (air_excess_ratio &gt; 1)</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="card" style="padding:12px">
-          <div class="card-title">Топ организаций по превышениям</div>
+          <div class="card-title">Организации по превышениям</div>
           <div id="nbd2025ExOrgs" class="region-list-scroll" style="max-height:240px;padding-right:6px"></div>
         </div>
         <div class="card" style="padding:12px">
-          <div class="card-title">Топ веществ по превышениям</div>
+          <div class="card-title">Вещества по превышениям</div>
           <div id="nbd2025ExSubs" class="region-list-scroll" style="max-height:240px;padding-right:6px"></div>
         </div>
       </div>
@@ -1219,8 +1248,14 @@ input[type=file]{display:none}
       <div id="socRegionsList" class="region-list-scroll" style="max-height:450px"></div>
     </div>
     <div class="card" style="padding:12px">
-      <div class="card-title">🏛️ Госорганы с наибольшими просрочками</div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Минимум 50 обращений · сортировка по доле просрочек</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+        <div class="card-title" style="margin:0">🏛️ Госорганы с наибольшими просрочками</div>
+        <div style="display:flex;gap:3px">
+          <button class="soc-org-mode active" data-mode="org" onclick="_socSetOrgMode('org')">По органам</button>
+          <button class="soc-org-mode" data-mode="ministry" onclick="_socSetOrgMode('ministry')">По министерствам</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px" id="socOrgsHint">Минимум 50 обращений · сортировка по доле просрочек</div>
       <div id="socOrgsList" class="region-list-scroll" style="max-height:450px"></div>
     </div>
   </div>
@@ -1254,11 +1289,11 @@ input[type=file]{display:none}
     <span id="appKpiExtFwd" style="display:none"></span>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
-    <div class="card"><div class="card-title">Топ регионов по обращениям</div>
+    <div class="card"><div class="card-title">Регионы по обращениям</div>
       <div class="cw" style="height:270px"><canvas id="c12"></canvas></div></div>
     <div class="card"><div class="card-title">Темы обращений (Экология)</div>
       <div class="cw" style="height:270px"><canvas id="c13"></canvas></div></div>
-    <div class="card" style="padding:12px"><div class="card-title" style="margin-bottom:10px">Топ исполнителей обращений</div>
+    <div class="card" style="padding:12px"><div class="card-title" style="margin-bottom:10px">Органы-исполнители</div>
       <div id="envPlants" style="font-size:10px;display:flex;flex-direction:column;gap:3px;max-height:270px;overflow:auto"></div></div>
   </div>
   <div class="card" style="margin-top:14px">
@@ -5034,7 +5069,7 @@ function showOrgDrilldown(orgName){
       </div>
     </div>
     <div style="margin-bottom:12px">
-      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px">Топ категорий</div>
+      <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px">Основные категории</div>
       ${org.top_cats.map(([n,v])=>`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:0.5px solid var(--border)"><span style="color:var(--text2)">${n}</span><span style="font-weight:600">${v.toLocaleString('ru-RU')}</span></div>`).join('')}
     </div>
     <div>
@@ -5108,13 +5143,13 @@ function _rechartOnFilter(){
       const byReg=Object.entries(_TYPE_CROSS[type].by_region||{}).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
       c12Chart.data.labels=byReg.map(([n])=>trunc12(n));
       c12Chart.data.datasets[0].data=byReg.map(([,d])=>d.total);
-      if(c12TitleEl)c12TitleEl.textContent='Топ регионов · '+type;
+      if(c12TitleEl)c12TitleEl.textContent='Регионы · '+type;
     } else if(year!=='all'&&_YEAR_CROSS?.[year]){
       // Год → топ регионов для этого года
       const byReg=Object.entries(_YEAR_CROSS[year].by_region||{}).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
       c12Chart.data.labels=byReg.map(([n])=>trunc12(n));
       c12Chart.data.datasets[0].data=byReg.map(([,d])=>d.total);
-      if(c12TitleEl)c12TitleEl.textContent='Топ регионов · '+year;
+      if(c12TitleEl)c12TitleEl.textContent='Регионы · '+year;
     } else if(cat!=='all'&&_CROSS){
       // Категория → регионы в этой категории
       const byReg=Object.entries(_CROSS[cat]?.by_region||{}).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
@@ -8650,7 +8685,7 @@ function _socRenderIndex(idx, components){
       <span class="soc-comp-name">${name}</span>
       <span class="soc-comp-w">вес ${c.weight.toFixed(1)}</span>
       <div class="soc-comp-bar"><div class="soc-comp-bar-fill" style="width:${w}%"></div></div>
-      <span class="soc-comp-val">${c.pct.toFixed(1)}% · ${c.count.toLocaleString('ru-RU')}</span>
+      <span class="soc-comp-val">${c.count.toLocaleString('ru-RU')} <span style="color:var(--text3);font-weight:400">(${c.pct.toFixed(1)}%)</span></span>
     </div>`;
   }).join('');
   document.getElementById('socIndexComponents').innerHTML = html;
@@ -8658,15 +8693,14 @@ function _socRenderIndex(idx, components){
 
 function _socRenderKPI(components, total){
   const fmt = n => (n||0).toLocaleString('ru-RU');
-  const pct = c => `${(c?.pct||0).toFixed(1)}% от обращений`;
-  document.getElementById('socKpiOverdue').textContent  = fmt(components.overdue?.count);
-  document.getElementById('socKpiOverduePct').textContent = pct(components.overdue);
-  document.getElementById('socKpiRepeat').textContent   = fmt(components.repeat?.count);
-  document.getElementById('socKpiRepeatPct').textContent = `${(components.repeat?.pct||0).toFixed(1)}% не решены с 1-го раза`;
-  document.getElementById('socKpiForward').textContent  = fmt(components.forwarded?.count);
-  document.getElementById('socKpiForwardPct').textContent = `${(components.forwarded?.pct||0).toFixed(1)}% — футбол ответственности`;
-  document.getElementById('socKpiInaction').textContent = fmt(components.inaction?.count);
-  document.getElementById('socKpiInactionPct').textContent = `${(components.inaction?.pct||0).toFixed(1)}% жалоб на бездействие`;
+  document.getElementById('socKpiOverdue').textContent   = fmt(components.overdue?.count);
+  document.getElementById('socKpiOverduePct').textContent = `(${(components.overdue?.pct||0).toFixed(1)}% от ${fmt(total)} обр.)`;
+  document.getElementById('socKpiRepeat').textContent    = fmt(components.repeat?.count);
+  document.getElementById('socKpiRepeatPct').textContent = `(${(components.repeat?.pct||0).toFixed(1)}%) не решены с 1-го раза`;
+  document.getElementById('socKpiForward').textContent   = fmt(components.forwarded?.count);
+  document.getElementById('socKpiForwardPct').textContent = `(${(components.forwarded?.pct||0).toFixed(1)}%) футбол ответственности`;
+  document.getElementById('socKpiInaction').textContent  = fmt(components.inaction?.count);
+  document.getElementById('socKpiInactionPct').textContent = `(${(components.inaction?.pct||0).toFixed(1)}%) жалоб на бездействие`;
 }
 
 // Рейтинг регионов по индексу
@@ -8694,7 +8728,7 @@ function _socRenderRegions(offsets){
     const active = cur===r.region ? ' active' : '';
     return `<div class="soc-row${active}" onclick="_socToggleRegion('${r.region.replace(/'/g,"\\'")}')">
       <div><div class="soc-name" title="${_esc(r.region)}">${_esc(r.region)}</div>
-        <div class="soc-meta">${r.total.toLocaleString('ru-RU')} обр. · просроч. ${r.components.overdue.pct.toFixed(0)}% · повтор. ${r.components.repeat.pct.toFixed(0)}%</div></div>
+        <div class="soc-meta">${r.total.toLocaleString('ru-RU')} обр. · просроч. ${r.components.overdue.count.toLocaleString('ru-RU')} (${r.components.overdue.pct.toFixed(0)}%) · повтор. ${r.components.repeat.count.toLocaleString('ru-RU')} (${r.components.repeat.pct.toFixed(0)}%)</div></div>
       <div class="soc-bar-wrap"><div class="soc-bar" style="width:${w}%;background:${lvl.color}"></div></div>
       <div class="soc-idx" style="color:${lvl.color}">${r.index.toFixed(1)}</div>
     </div>`;
@@ -8706,10 +8740,65 @@ function _socToggleRegion(name){
   rerenderSocial();
 }
 
-// Худшие госорганы по % просрочек (минимум 50 обращений)
+let _socOrgMode = 'org';  // 'org' | 'ministry'
+function _socSetOrgMode(m){
+  _socOrgMode = m;
+  document.querySelectorAll('.soc-org-mode').forEach(b=>b.classList.toggle('active', b.dataset.mode===m));
+  rerenderSocial();
+}
+
+// Худшие госорганы / министерства по % просрочек
 function _socRenderOrgs(offsets){
   const el = document.getElementById('socOrgsList'); if(!el) return;
-  const D = _AC.data, w = _AC.w, orgs = _AC.orgs;
+  const hint = document.getElementById('socOrgsHint');
+  const D = _AC.data, w = _AC.w, orgs = _AC.orgs, mins = _AC.ministries||[], orgMin = _AC.org_ministry||{};
+  const minByOrgIdx = (oi)=>{
+    // org_ministry — может быть {orgIdx: minIdx} или плоский массив
+    if(Array.isArray(orgMin)) return orgMin[oi];
+    if(typeof orgMin === 'object') return orgMin[oi] ?? orgMin[String(oi)];
+    return null;
+  };
+  if(_socOrgMode === 'ministry'){
+    // Группируем по министерству — берём поле data[o+9]
+    if(hint) hint.textContent = 'Агрегация по центральным госорганам · клик — фильтр по органам этого ЦГО (TBD)';
+    const acc = new Map();
+    for(let i=0;i<offsets.length;i++){
+      const o = offsets[i], mi = D[o+9], st = D[o+4], fl = D[o+8];
+      let a = acc.get(mi); if(!a){ a={total:0, overdue:0, repeat:0}; acc.set(mi,a); }
+      a.total++;
+      if(st===2||st===3) a.overdue++;
+      if(_socFlagsHas(fl,1)) a.repeat++;
+    }
+    const rows = [];
+    acc.forEach((a, mi)=>{
+      const meta = mins[mi]||{label:'?',short:'?',key:'other',icon:'❓'};
+      rows.push({mi, label:meta.label, short:meta.short, key:meta.key, icon:meta.icon,
+        total:a.total, overdue:a.overdue, repeat:a.repeat,
+        pct: a.total?a.overdue/a.total*100:0,
+        repeatPct: a.total?a.repeat/a.total*100:0});
+    });
+    rows.sort((a,b)=>b.pct-a.pct);
+    if(!rows.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет данных</div>'; return; }
+    const maxPct = rows[0].pct || 1;
+    el.innerHTML = rows.map(r=>{
+      const col = r.pct>=50?'#212121':r.pct>=30?'#E53935':r.pct>=15?'#FB8C00':r.pct>=5?'#FDD835':'#43A047';
+      const w2 = Math.max(3, r.pct/maxPct*100);
+      return `<div class="executor-row" title="${_esc(r.short)}">
+        <div class="executor-header">
+          <span class="ministry-badge" data-min="${r.key}">${r.icon} ${_esc(r.label)}</span>
+          <span class="executor-name">${_esc(r.short)}</span>
+        </div>
+        <div class="executor-bar-row">
+          <div class="executor-bar-wrap"><div class="executor-bar" style="width:${w2}%;background:${col}"></div></div>
+          <span class="executor-pct" style="color:${col}">${r.overdue.toLocaleString('ru-RU')} из ${r.total.toLocaleString('ru-RU')} (${r.pct.toFixed(0)}%)</span>
+        </div>
+        <div class="executor-sub">просрочено <b>${r.overdue.toLocaleString('ru-RU')}</b> · повторных ${r.repeat.toLocaleString('ru-RU')} (${r.repeatPct.toFixed(0)}%)</div>
+      </div>`;
+    }).join('');
+    return;
+  }
+  // Режим «По органам» (по умолчанию)
+  if(hint) hint.textContent = 'Минимум 50 обращений в выборке · сортировка по доле просрочек';
   const acc = new Map();
   for(let i=0;i<offsets.length;i++){
     const o = offsets[i], oi = D[o+7], st = D[o+4], fl = D[o+8];
@@ -8721,22 +8810,39 @@ function _socRenderOrgs(offsets){
   const rows = [];
   acc.forEach((a, oi)=>{
     if(a.total<50) return;
-    rows.push({org: orgs[oi]||'—', total:a.total, overdue:a.overdue,
+    const mi = D[ acc.values().next().value !== undefined ? 0 : 0 ]; // placeholder, real lookup below
+    // ministry index for this org: возьмём из первой записи этого orgIdx
+    rows.push({org: orgs[oi]||'—', orgIdx:oi, total:a.total, overdue:a.overdue, repeat:a.repeat,
       pct:a.overdue/a.total*100, repeatPct:a.repeat/a.total*100});
   });
+  // Для каждой строки определим министерство по первой встретившейся записи с этим orgIdx
+  // Быстро: построим map orgIdx → ministryIdx из любой записи (министерство для одного органа стабильно)
+  const orgToMin = new Map();
+  for(let i=0;i<offsets.length;i++){
+    const o = offsets[i], oi = D[o+7];
+    if(!orgToMin.has(oi)) orgToMin.set(oi, D[o+9]);
+  }
+  rows.forEach(r=>{
+    const mi = orgToMin.get(r.orgIdx);
+    const meta = mins[mi]||{label:'?',short:'?',key:'other',icon:'❓'};
+    r.minKey = meta.key; r.minLabel = meta.label; r.minShort = meta.short; r.minIcon = meta.icon;
+  });
   rows.sort((a,b)=>b.pct-a.pct);
-  const top = rows.slice(0, 30);
-  if(!top.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет органов с ≥50 обращениями в выборке</div>'; return; }
-  const maxPct = top[0].pct || 1;
-  el.innerHTML = top.map(r=>{
-    const col = r.pct>=50?'#212121':r.pct>=30?'#E53935':r.pct>=15?'#FB8C00':'#FDD835';
-    const w = Math.max(3, r.pct/maxPct*100);
-    const orgShort = r.org.length>56 ? r.org.slice(0,54)+'…' : r.org;
-    return `<div class="soc-row" title="${_esc(r.org)}">
-      <div><div class="soc-name">${_esc(orgShort)}</div>
-        <div class="soc-meta">${r.total.toLocaleString('ru-RU')} обр. · ${r.overdue.toLocaleString('ru-RU')} просроч. · повтор. ${r.repeatPct.toFixed(0)}%</div></div>
-      <div class="soc-bar-wrap"><div class="soc-bar" style="width:${w}%;background:${col}"></div></div>
-      <div class="soc-idx" style="color:${col}">${r.pct.toFixed(0)}%</div>
+  if(!rows.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет органов с ≥50 обращениями в выборке</div>'; return; }
+  const maxPct = rows[0].pct || 1;
+  el.innerHTML = rows.map(r=>{
+    const col = r.pct>=50?'#212121':r.pct>=30?'#E53935':r.pct>=15?'#FB8C00':r.pct>=5?'#FDD835':'#43A047';
+    const w2 = Math.max(3, r.pct/maxPct*100);
+    return `<div class="executor-row" title="${_esc(r.org)}">
+      <div class="executor-header">
+        <span class="ministry-badge" data-min="${r.minKey}" title="${_esc(r.minShort)}">${r.minIcon} ${_esc(r.minLabel)}</span>
+        <span class="executor-name">${_esc(r.org)}</span>
+      </div>
+      <div class="executor-bar-row">
+        <div class="executor-bar-wrap"><div class="executor-bar" style="width:${w2}%;background:${col}"></div></div>
+        <span class="executor-pct" style="color:${col}">${r.overdue.toLocaleString('ru-RU')} из ${r.total.toLocaleString('ru-RU')} (${r.pct.toFixed(0)}%)</span>
+      </div>
+      <div class="executor-sub">просрочено <b>${r.overdue.toLocaleString('ru-RU')}</b> · повторных ${r.repeat.toLocaleString('ru-RU')} (${r.repeatPct.toFixed(0)}%)</div>
     </div>`;
   }).join('');
 }
@@ -8769,7 +8875,7 @@ function _socRenderAnomalies(offsets, globalAvgOverdue){
     if(pct > globalAvgOverdue * 1.8 && pct >= 5){
       anoms.push({
         sev: pct>=20?'crit':pct>=10?'high':'warn',
-        text: `<b>${regions[ri]||'—'}</b>: ${pct.toFixed(0)}% просрочек — это в ${(pct/Math.max(globalAvgOverdue,0.01)).toFixed(1)}× выше среднего по выборке (${globalAvgOverdue.toFixed(1)}%)`
+        text: `<b>${regions[ri]||'—'}</b>: <b>${a.overdue.toLocaleString('ru-RU')} просрочек из ${a.total.toLocaleString('ru-RU')}</b> (${pct.toFixed(0)}%) — в ${(pct/Math.max(globalAvgOverdue,0.01)).toFixed(1)}× выше среднего по выборке (${globalAvgOverdue.toFixed(1)}%)`
       });
     }
   });
@@ -8780,7 +8886,7 @@ function _socRenderAnomalies(offsets, globalAvgOverdue){
       const org = orgs[oi]||'—';
       anoms.push({
         sev: 'crit',
-        text: `<b>${org.length>70?org.slice(0,68)+'…':org}</b>: ${pct.toFixed(0)}% обращений просрочены — критический уровень (${a.total.toLocaleString('ru-RU')} обр.)`
+        text: `<b>${org.length>70?org.slice(0,68)+'…':org}</b>: <b>${a.overdue.toLocaleString('ru-RU')} из ${a.total.toLocaleString('ru-RU')}</b> обращений просрочены (${pct.toFixed(0)}%) — критический уровень`
       });
     }
   });
