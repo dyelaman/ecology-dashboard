@@ -873,14 +873,14 @@ input[type=file]{display:none}
 <!-- МОНИТОРИНГ НБД СОС -->
 <div id="panel-emissions" class="panel">
 
-  <!-- СВЕТОФОР -->
+  <!-- СВЕТОФОР — данные из свежих выгрузок 2025-2026 -->
   <div class="tl tl-y">
-    <div class="tl-dot" style="background:#d97706"></div>
+    <div class="tl-dot" style="background:#dc2626"></div>
     <div>
-      <div class="tl-main" style="color:#92400e" id="emTlMain">Зафиксировано 5 289 превышений лимита по аварийным выбросам</div>
-      <div class="tl-sub" id="emTlSub">5 478 объектов ПЭК I–III кат. · 6 720 аварийных инцидентов (2024–2026) · <b>НБД СОС</b> — Национальный банк данных состояния окружающей среды</div>
+      <div class="tl-main" style="color:#991b1b" id="emTlMain">Загрузка свежих данных НБД СОС…</div>
+      <div class="tl-sub" id="emTlSub"><b>НБД СОС</b> — Национальный банк данных состояния окружающей среды · выгрузки за 2025-01 → 2026-05</div>
     </div>
-    <span class="tl-badge" style="background:#fef3c7;color:#92400e">⚠️ Требует контроля</span>
+    <span class="tl-badge" style="background:#fee2e2;color:#991b1b">⚠️ Требует контроля</span>
   </div>
 
   <!-- КАРТА НБД СОС -->
@@ -891,18 +891,6 @@ input[type=file]{display:none}
         <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
           <input type="checkbox" id="nbdLyrPek" checked style="width:11px;height:11px;accent-color:#ef4444" onchange="toggleNbdLayer('pek',this.checked)">
           <span style="width:7px;height:7px;border-radius:50%;background:#ef4444"></span>ПЭК объекты
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
-          <input type="checkbox" id="nbdLyrEmerg" checked style="width:11px;height:11px;accent-color:#eab308" onchange="toggleNbdLayer('emerg',this.checked)">
-          <span style="width:7px;height:7px;border-radius:50%;background:#eab308"></span>Аварийные выбросы
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
-          <input type="checkbox" id="nbdLyrFire" checked style="width:11px;height:11px;accent-color:#ea580c" onchange="toggleNbdLayer('fire',this.checked)">
-          <span style="width:7px;height:7px;border-radius:50%;background:#ea580c"></span>Факелы
-        </label>
-        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
-          <input type="checkbox" id="nbdLyrOil" checked style="width:11px;height:11px;accent-color:#E53935" onchange="toggleNbdLayer('oil',this.checked)">
-          <span style="width:7px;height:7px;border-radius:50%;background:#E53935"></span>🛢️ Месторождения (15)
         </label>
       </div>
     </div>
@@ -976,183 +964,6 @@ input[type=file]{display:none}
     </div>
   </div>
 
-  <!-- ПОДВКЛАДКИ -->
-  <div class="subtabs">
-    <button class="subtab active" onclick="switchSubTab('em','subpanel-atm',this)">Атмосфера</button>
-    <button class="subtab" onclick="switchSubTab('em','subpanel-water',this)">Водные объекты</button>
-    <button class="subtab" onclick="switchSubTab('em','subpanel-land',this)">Отходы</button>
-  </div>
-
-  <!-- ПОДПАНЕЛЬ: АТМОСФЕРА -->
-  <div id="subpanel-atm" class="subpanel active">
-
-  <!-- БЛОК 1: ОБЩАЯ КАРТИНА -->
-  <div class="block-title">Общая картина <span style="font-size:10px;color:var(--text3);font-weight:400">· НБД СОС, данные с 2023-10</span></div>
-  <div class="stat-row">
-    <div class="stat-box"><div class="lbl">Объектов ПЭК</div><div class="val" id="emStatPek">5 478</div></div>
-    <div class="stat-box"><div class="lbl">Аварийных инцидентов</div><div class="val" style="color:#dc2626" id="emStatEmerg">6 720</div></div>
-    <div class="stat-box"><div class="lbl">Превышений лимита</div><div class="val" style="color:#dc2626" id="emStatExceed">5 289</div></div>
-    <div class="stat-box"><div class="lbl">Факт / Лимит (аварии)</div><div class="val" style="color:#d97706" id="emStatRatio">55%</div></div>
-    <div class="stat-box"><div class="lbl">Источников мониторинга</div><div class="val" id="emStatSrc">172</div></div>
-  </div>
-  <div class="r2">
-    <div class="card">
-      <div class="card-title">Аварийные выбросы: факт vs лимит по месяцам</div>
-      <div class="cw" style="height:300px"><canvas id="c5"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Тренд замеров по топ-5 веществам (2023–2026)</div>
-      <div class="cw" style="height:300px"><canvas id="c6"></canvas></div>
-    </div>
-  </div>
-
-  <!-- БЛОК 2: ДЕТАЛИЗАЦИЯ -->
-  <div class="block-title">Детализация</div>
-  <div class="r2">
-    <div class="card">
-      <div class="card-title">Структура замеров по веществам</div>
-      <div style="display:flex;align-items:center;gap:16px">
-        <div class="cw" style="height:200px;flex:1"><canvas id="cEmTypes"></canvas></div>
-        <div id="emTypesLegend" style="font-size:11px;display:flex;flex-direction:column;gap:5px;min-width:130px"></div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Аварийные выбросы: топ загрязнителей (факт vs лимит)</div>
-      <div class="cw" style="height:200px"><canvas id="cEmSeason"></canvas></div>
-    </div>
-  </div>
-
-  <!-- БЛОК 3: ТОП ИСТОЧНИКОВ -->
-  <div class="block-title">Топ источников и аварийные выбросы</div>
-  <div class="r2">
-    <div class="card">
-      <div class="card-title">Топ-15 источников по суммарным замерам</div>
-      <div id="emTopBars" style="padding:4px 0"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Аварийные выбросы: превышения по загрязнителям <span id="emEmergCount" style="font-size:10px;color:#dc2626;font-weight:400"></span></div>
-      <div class="tbl-wrap"><table><thead><tr><th>Вещество</th><th>Факт</th><th>Лимит</th><th>Превышений</th></tr></thead>
-      <tbody id="emAccidents"></tbody></table></div>
-    </div>
-  </div>
-
-  <!-- БЛОК 4: ФАКЕЛЬНЫЕ ВЫБРОСЫ -->
-  <div class="block-title">Факельные выбросы <span style="font-size:10px;color:var(--text3);font-weight:400">· НБД СОС · <span id="firePeriod">май 2024–апр 2026</span> · 2 организации · 6 факелов</span></div>
-  <div class="stat-row">
-    <div class="stat-box"><div class="lbl">Организаций</div><div class="val" id="fireStatOrgs">2</div></div>
-    <div class="stat-box"><div class="lbl">Источников (факелов)</div><div class="val" id="fireStatSrc">6</div></div>
-    <div class="stat-box"><div class="lbl">Регионы</div><div class="val" style="font-size:13px">Атырауская, Актюбинская</div></div>
-  </div>
-  <div class="r2">
-    <div class="card">
-      <div class="card-title">Средний объём факельных выбросов по месяцам (м³/ч)</div>
-      <div class="cw" style="height:240px"><canvas id="cFire"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Топ организаций по объёму факельных выбросов</div>
-      <div id="fireOrgBars" style="padding:8px 0"></div>
-    </div>
-  </div>
-
-  </div><!-- /subpanel-atm -->
-
-  <!-- ПОДПАНЕЛЬ: ВОДНЫЕ ОБЪЕКТЫ -->
-  <div id="subpanel-water" class="subpanel">
-  <!-- БЛОК 5: СТОЧНЫЕ ВОДЫ -->
-  <div class="block-title">Сточные воды <span style="font-size:10px;color:var(--text3);font-weight:400">· НБД СОС · <span id="wtrPeriod">июн 2024–апр 2026</span> · <span id="wtrStatOrgs">19</span> орг · 7 регионов</span></div>
-  <div class="stat-row">
-    <div class="stat-box"><div class="lbl">Источников сброса</div><div class="val" id="wtrStatSrc">31</div></div>
-    <div class="stat-box"><div class="lbl">pH в норме (6–9)</div><div class="val" style="color:#16a34a" id="wtrStatPh">63%</div></div>
-    <div class="stat-box"><div class="lbl">Кислые стоки (&lt;6)</div><div class="val" style="color:#dc2626" id="wtrStatAcid">—</div></div>
-    <div class="stat-box"><div class="lbl">Щелочные стоки (&gt;9)</div><div class="val" style="color:#d97706" id="wtrStatAlk">—</div></div>
-  </div>
-  <div class="r2">
-    <div class="card">
-      <div class="card-title">Средний pH сточных вод по месяцам <span style="font-size:10px;color:#6b7280;font-weight:400">(норма: 6–9)</span></div>
-      <div class="cw" style="height:240px"><canvas id="cWaterPh"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Средний объём сброса по месяцам (м³/ч)</div>
-      <div class="cw" style="height:240px"><canvas id="cWaterFlow"></canvas></div>
-    </div>
-  </div>
-  <div class="r2">
-    <div class="card">
-      <div class="card-title">Топ-12 источников сброса (ср. поток, м³/ч)</div>
-      <div id="wtrOrgBars" style="padding:4px 0"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Качество сточных вод по регионам</div>
-      <div class="tbl-wrap"><table><thead><tr><th>Регион</th><th>Поток, м³/ч</th><th>pH ср.</th><th>pH норма</th></tr></thead>
-      <tbody id="wtrRegionTable"></tbody></table></div>
-    </div>
-  </div>
-  </div><!-- /subpanel-water -->
-
-  <!-- ПОДПАНЕЛЬ: ОТХОДЫ (НБД СОС) -->
-  <div id="subpanel-land" class="subpanel">
-
-  <!-- СВЕТОФОР -->
-  <div class="tl" id="wasteTL" style="background:#fef2f2;border-color:#fecaca">
-    <div class="tl-dot" id="wasteTLDot" style="background:#dc2626"></div>
-    <div style="flex:1">
-      <div class="tl-main" id="wasteTLMain" style="color:#991b1b">Загрузка данных...</div>
-      <div class="tl-sub" id="wasteTLSub">НБД СОС · накопленные отходы · данные с 2023-11</div>
-    </div>
-    <span class="tl-badge" id="wasteTLBadge" style="background:#fee2e2;color:#991b1b">🔴 Критично</span>
-  </div>
-
-  <!-- KPI -->
-  <div class="block-title">Баланс отходов <span style="font-size:10px;color:var(--text3);font-weight:400">· НБД СОС · 29 298 отчётов · ноябрь 2023 → апрель 2026</span></div>
-  <div class="stat-row">
-    <div class="stat-box">
-      <div class="lbl">Накоплено (остаток)</div>
-      <div class="val" id="wKpiAccum" style="color:#dc2626">—</div>
-      <div style="font-size:9px;color:var(--text3)">млн тонн</div>
-    </div>
-    <div class="stat-box">
-      <div class="lbl">Образовано за период</div>
-      <div class="val" id="wKpiGen">—</div>
-      <div style="font-size:9px;color:var(--text3)">млн тонн</div>
-    </div>
-    <div class="stat-box">
-      <div class="lbl">Передано / утилизировано</div>
-      <div class="val" id="wKpiTrans" style="color:#16a34a">—</div>
-      <div style="font-size:9px;color:var(--text3)">млн тонн</div>
-    </div>
-    <div class="stat-box">
-      <div class="lbl">% утилизации</div>
-      <div class="val" id="wKpiUtil" style="color:#dc2626">—</div>
-      <div style="font-size:9px;color:var(--text3)">от образованного</div>
-    </div>
-    <div class="stat-box">
-      <div class="lbl">Мест хранения</div>
-      <div class="val" id="wKpiSites">—</div>
-      <div style="font-size:9px;color:var(--text3)">объектов в НБД СОС</div>
-    </div>
-  </div>
-
-  <!-- ЧАРТЫ -->
-  <div class="r2">
-    <div class="card">
-      <div class="card-title">Динамика образования и утилизации <span style="font-size:10px;color:var(--text3);font-weight:400">млн тонн/квартал</span></div>
-      <div class="cw" style="height:280px"><canvas id="c8"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Топ видов отходов по накоплению <span style="font-size:10px;color:var(--text3);font-weight:400">млн тонн (остаток)</span></div>
-      <div class="cw" style="height:280px"><canvas id="c9"></canvas></div>
-    </div>
-  </div>
-
-  <!-- ЗАПОЛНЕННОСТЬ -->
-  <div class="block-title">Заполненность мест хранения <span style="font-size:10px;color:var(--text3);font-weight:400">· % остатка от лимита · последнее показание датчика</span></div>
-  <div class="card">
-    <div id="landfillBars" style="padding:6px 4px">
-      <div style="color:var(--text3);font-size:11px;padding:8px">Загрузка...</div>
-    </div>
-  </div>
-
-  </div><!-- /subpanel-land -->
 
 </div>
 
@@ -2557,24 +2368,18 @@ function renderMainCharts() {
 
 (async () => {
   try {
-    const [sRes, pRes, airRes, kgsRes, fireRes, waterRes, kgsMapRes, tzRes] = await Promise.all([
+    const [sRes, pRes, kgsRes, kgsMapRes, tzRes] = await Promise.all([
       fetch('/data/summary.json'),
       fetch('/data/preview.json'),
-      fetch('/data/air_emissions.json'),
       fetch('/data/kgs.json'),
-      fetch('/data/fire_emissions.json'),
-      fetch('/data/water_emissions.json'),
       fetch('/data/kgs_map.json'),
       fetch('/data/taza_kz.json'),
     ]);
     if (!sRes.ok || !pRes.ok) return;
     const summary = await sRes.json();
     const preview = await pRes.json();
-    const air = airRes.ok ? await airRes.json() : null;
     const kgs = kgsRes.ok ? await kgsRes.json() : null;
-    const fireEm = fireRes.ok ? await fireRes.json() : null;
-    const waterEm = waterRes.ok ? await waterRes.json() : null;
-    _DATA = { summary, preview, air };
+    _DATA = { summary, preview };
     const byRegion = summary.appeals.by_region;
     Object.keys(byRegion).forEach(r => { REAL_ECO[r] = byRegion[r]; });
     applyRealKPIs();
@@ -2586,9 +2391,6 @@ function renderMainCharts() {
       window._APP_REAL = preview;
       initAppTable();
     }
-    if (air) renderEmissionsTab(air);
-    if (fireEm) { _DATA_FIRE = fireEm; renderFireEmissions(fireEm); }
-    if (waterEm) { _DATA_WATER = waterEm; renderWaterEmissions(waterEm); }
     if (kgs) { _DATA_KGS = kgs; renderKgsKPIs(kgs); }
     const kgsMap = kgsMapRes.ok ? await kgsMapRes.json() : null;
     if (kgsMap) _KGS_MAP = kgsMap;
@@ -5428,22 +5230,7 @@ setTimeout(()=>{
     {label:'Захоронено',data:ACTIVE_REGION?[1.8,1.4,1.1,0.6,0.3]:[76,64,51,38,10],backgroundColor:'#9ca3af',borderRadius:3,stack:'s'},
   ],{scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}},y:{stacked:true,grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}}},plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#6b7280',boxWidth:10,padding:6}},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ACTIVE_REGION?ctx.raw+' млн т':ctx.raw+' млн т')}}}});
 
-  // ── ВЫБРОСЫ ──
-  _emChartC5 = new Chart(document.getElementById('c5'),{type:'bar',data:{labels:[],datasets:[]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#6b7280',boxWidth:10}}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}}}});
-  _emChartC6 = new Chart(document.getElementById('c6'),{type:'line',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#6b7280',boxWidth:10,padding:6}}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af',maxTicksLimit:12}},y:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af'}}}}});
-  _emChartTypes = new Chart(document.getElementById('cEmTypes'),{type:'doughnut',data:{labels:[],datasets:[{data:[],backgroundColor:[],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
-  _emChartSeason = new Chart(document.getElementById('cEmSeason'),{type:'bar',data:{labels:[],datasets:[]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}}}});
-  // Факельные выбросы
-  _fireChart = new Chart(document.getElementById('cFire'),{type:'bar',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},color:'#6b7280',boxWidth:10,padding:6}}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af',maxTicksLimit:14}},y:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af'}}}}});
-  // Сточные воды — pH
-  _waterPhChart = new Chart(document.getElementById('cWaterPh'),{type:'line',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},annotation:{annotations:{ph6:{type:'line',yMin:6,yMax:6,borderColor:'rgba(220,38,38,0.4)',borderWidth:1,borderDash:[4,3]},ph9:{type:'line',yMin:9,yMax:9,borderColor:'rgba(220,38,38,0.4)',borderWidth:1,borderDash:[4,3]}}}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af',maxTicksLimit:14}},y:{min:0,max:14,grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af'}}}}});
-  // Сточные воды — поток
-  _waterFlowChart = new Chart(document.getElementById('cWaterFlow'),{type:'bar',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af',maxTicksLimit:14}},y:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af'}}}}});
-  if(_DATA && _DATA.air) renderEmissionsTab(_DATA.air);
-  if(_DATA_FIRE) renderFireEmissions(_DATA_FIRE);
-  if(_DATA_WATER) renderWaterEmissions(_DATA_WATER);
-
-  // ОТХОДЫ — lazy init при первом открытии вкладки (см. switchTab)
+  // ── НБД СОС (старые подвкладки Атмосфера/Воды/Отходы удалены, осталась карточка nbd_2025) ──
 
   // ── СОЦИАЛЬНОЕ НАПРЯЖЕНИЕ — рендерится из реальных данных после загрузки ──
 
@@ -6970,8 +6757,25 @@ function _renderNbdList(elId, items, opts){
   }).join('');
 }
 
+function _updateNbdTrafficLight(d){
+  if(!d) return;
+  const tlMain = document.getElementById('emTlMain');
+  const tlSub  = document.getElementById('emTlSub');
+  if(!tlMain || !tlSub) return;
+  const air = d.air||{}, water = d.water||{}, fire = d.fire||{};
+  const airEx  = air.exceed?.total || 0;
+  const airSh  = air.exceed?.share_pct || 0;
+  const airTot = (air.exceed?.measurements || air.rows || 0);
+  const phOut  = water.ph?.out_of_range_n || 0;
+  const phSh   = water.ph?.out_of_range_pct || 0;
+  const phTot  = water.ph?.n || 0;
+  tlMain.innerHTML = `Зафиксировано <b>${airEx.toLocaleString('ru-RU')}</b> превышений ПДК по воздуху <span style="color:#dc2626">· ${airSh}%</span> от ${airTot.toLocaleString('ru-RU')} замеров`;
+  tlSub.innerHTML  = `<b>НБД СОС</b> · период <b>${air.period_from||'—'} → ${air.period_to||'—'}</b> · pH сточных вод вне нормы 6–9: <b>${phOut.toLocaleString('ru-RU')}</b> (${phSh}% от ${phTot.toLocaleString('ru-RU')} замеров) · факелы: ${(fire.rows||0).toLocaleString('ru-RU')} замеров`;
+}
+
 function renderNbd2025(){
   const d = window._NBD_2025; if(!d) return;
+  _updateNbdTrafficLight(d);
   const T = _nbd2025Tab;
   const k = d[T]; if(!k) return;
   const U = _NBD_UNIT[T];
@@ -7065,7 +6869,7 @@ function initNbdMap(){
   mapNbdInst=L.map('mapNbd',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.0,66.0],4);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.45}).addTo(mapNbdInst);
   L.control.attribution({prefix:'🇰🇿 НБД СОС'}).addTo(mapNbdInst);
-  // ПЭК объекты
+  // ПЭК объекты — единственный слой на карте НБД СОС
   nbdPekLayer=L.layerGroup().addTo(mapNbdInst);
   fetch('/data/pek_objects.json').then(r=>r.json()).then(data=>{
     _PEK_OBJECTS=data.objects||[];
@@ -7073,59 +6877,11 @@ function initNbdMap(){
     const cb=document.getElementById('nbdLyrPek');
     if(cb&&!cb.checked) mapNbdInst.removeLayer(nbdPekLayer);
   }).catch(e=>console.warn('NBD PEK load failed:',e.message));
-  // Аварийные выбросы
-  nbdEmergLayer=L.layerGroup().addTo(mapNbdInst);
-  fetch('/data/emergency_emissions.json').then(r=>r.json()).then(objs=>{
-    objs.forEach(o=>{
-      const color=o.closed?'#6b7280':'#eab308';
-      L.circleMarker([o.lat,o.lon],{radius:5,color:'#fff',weight:1,fillColor:color,fillOpacity:0.9})
-        .bindPopup(`<b style="font-size:12px">Аварийный выброс #${o.id}</b><br><span style="font-size:11px;color:${color}">● ${o.closed?'Закрыт':'Активен'}</span><br><span style="font-size:10px;color:#6b7280">${o.date}</span>`+(o.pollutants?.length?`<br><span style="font-size:9px;color:#6b7280">${o.pollutants.slice(0,3).join(', ')}</span>`:''),{maxWidth:220})
-        .addTo(nbdEmergLayer);
-    });
-    const cb=document.getElementById('nbdLyrEmerg');
-    if(cb&&!cb.checked) mapNbdInst.removeLayer(nbdEmergLayer);
-  }).catch(e=>console.warn('NBD Emerg load failed:',e.message));
-  // Факелы (из kgs_map.json)
-  nbdFireLayer=L.layerGroup().addTo(mapNbdInst);
-  if(_KGS_MAP) _addNbdFirePoints();
-  else fetch('/data/kgs_map.json').then(r=>r.json()).then(d=>{_KGS_MAP=d;_addNbdFirePoints();}).catch(()=>{});
-
-  // Слой месторождений
-  _renderOilLayer();
-
-  // Легенда (левый нижний угол)
-  const oilLegend=L.control({position:'bottomleft'});
-  oilLegend.onAdd=function(){
-    const div=L.DomUtil.create('div','map-legend');
-    div.innerHTML=
-      '<div><span class="lg-dot" style="background:#E53935"></span>Высокий экориск</div>'+
-      '<div><span class="lg-dot" style="background:#FB8C00"></span>Средний экориск</div>'+
-      '<div><span class="lg-dot" style="background:#43A047"></span>Низкий экориск</div>'+
-      '<div><span class="lg-dot" style="background:#7c3aed"></span>Пост Казгидромета</div>';
-    return div;
-  };
-  oilLegend.addTo(mapNbdInst);
-
-  // Клик по пустой карте закрывает панель месторождения
-  mapNbdInst.on('click', closeOilPanel);
 
   setTimeout(()=>mapNbdInst.invalidateSize(),400);
 }
-function _addNbdFirePoints(){
-  const icon=L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#ea580c;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(234,88,12,.6)"></div>',iconSize:[10,10],iconAnchor:[5,5]});
-  (_KGS_MAP.fire||[]).forEach(p=>{
-    L.marker([p.lat,p.lon],{icon})
-      .bindPopup(`<b style="font-size:12px">🔥 Факел</b><br><span style="font-size:11px">${p.name||''}</span><br><span style="font-size:10px;color:#6b7280">${p.region||''}</span><br><span style="font-size:10px">Ср. поток: ${(p.avg_flow||0).toLocaleString('ru-RU')} м³/ч</span>`,{maxWidth:220})
-      .addTo(nbdFireLayer);
-  });
-  const cb=document.getElementById('nbdLyrFire');
-  if(cb&&!cb.checked) mapNbdInst.removeLayer(nbdFireLayer);
-}
 function toggleNbdLayer(type,on){
-  if(type==='pek')   nbdPekLayer   && (on?mapNbdInst.addLayer(nbdPekLayer)  :mapNbdInst.removeLayer(nbdPekLayer));
-  if(type==='emerg') nbdEmergLayer && (on?mapNbdInst.addLayer(nbdEmergLayer):mapNbdInst.removeLayer(nbdEmergLayer));
-  if(type==='fire')  nbdFireLayer  && (on?mapNbdInst.addLayer(nbdFireLayer) :mapNbdInst.removeLayer(nbdFireLayer));
-  if(type==='oil')   oilLayerNbd   && (on?mapNbdInst.addLayer(oilLayerNbd)  :mapNbdInst.removeLayer(oilLayerNbd));
+  if(type==='pek') nbdPekLayer && (on?mapNbdInst.addLayer(nbdPekLayer):mapNbdInst.removeLayer(nbdPekLayer));
 }
 
 // ── КАРТА КГС ─────────────────────────────────────────────────────────────────
