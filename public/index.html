@@ -193,6 +193,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nbd2025-tab{font-size:11px;padding:6px 12px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-weight:500;transition:all .15s}
 .nbd2025-tab:hover{border-color:#1B7A3A;color:#1B7A3A}
 .nbd2025-tab.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
+/* Плашка покрытия данных (info / warning) */
+.coverage-note{font-size:11px;padding:8px 12px;border-radius:8px;margin:8px 0 14px;line-height:1.4}
+.coverage-info{background:rgba(33,150,243,.08);color:#1565C0;border-left:3px solid #2196F3}
+.coverage-warning{background:rgba(251,140,0,.08);color:#E65100;border-left:3px solid #FB8C00}
+/* KPI «Превышения ПДК» — два процента + сноска */
+#nbd2025KpiExceedTile .exceed-primary{font-weight:600;font-size:11px;color:#E53935}
+#nbd2025KpiExceedTile .exceed-secondary{font-size:10px;color:#757575;font-weight:500;margin-top:1px}
+#nbd2025KpiExceedTile .kpi-note{font-size:9px;color:#999;margin-top:3px;cursor:help;font-style:italic;line-height:1.3}
 @media (max-width:768px){
   #tazaMapContainer{height:400px!important}
   #tzMapModes{top:6px;right:6px;padding:3px;gap:2px}
@@ -908,18 +916,27 @@ input[type=file]{display:none}
       </div>
     </div>
 
+    <!-- Дисклеймер о покрытии — меняется в зависимости от режима -->
+    <div id="nbd2025CoverageNote" class="coverage-note coverage-info" style="display:none"></div>
+
     <!-- KPI -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" id="nbd2025Kpis">
       <div class="kpi"><div class="kpi-lbl">Замеров</div><div class="kpi-val" id="nbd2025KpiMeas">—</div><div class="kpi-d" id="nbd2025KpiMeasSub">—</div></div>
       <div class="kpi"><div class="kpi-lbl">Организаций</div><div class="kpi-val" id="nbd2025KpiOrgs">—</div><div class="kpi-d" id="nbd2025KpiOrgsSub">с замерами</div></div>
-      <div class="kpi"><div class="kpi-lbl" id="nbd2025KpiExLbl">Превышения</div><div class="kpi-val" style="color:#dc2626" id="nbd2025KpiEx">—</div><div class="kpi-d up" id="nbd2025KpiExSub">—</div></div>
+      <div class="kpi" id="nbd2025KpiExceedTile">
+        <div class="kpi-lbl" id="nbd2025KpiExLbl">Превышения ПДК</div>
+        <div class="kpi-val" style="color:#dc2626" id="nbd2025KpiEx">—</div>
+        <div class="kpi-d up exceed-primary"   id="nbd2025KpiExSub">—</div>
+        <div class="kpi-d   exceed-secondary"  id="nbd2025KpiExSub2"></div>
+        <div class="kpi-note"                  id="nbd2025KpiExNote" title="Коэффициент превышения ПДК заполнен не у всех замеров"></div>
+      </div>
       <div class="kpi"><div class="kpi-lbl">Регионов</div><div class="kpi-val" id="nbd2025KpiRegs">—</div><div class="kpi-d" id="nbd2025KpiRegsSub">охвачено</div></div>
     </div>
 
     <!-- Top substances + Top orgs -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div class="card" style="padding:12px">
-        <div class="card-title">Топ-10 веществ</div>
+        <div class="card-title">Топ-10 веществ <span id="nbd2025SubUnitNote" style="font-size:9px;color:var(--text3);font-weight:400" title="единица измерения требует уточнения у источника"></span></div>
         <div id="nbd2025SubList" class="region-list-scroll" style="max-height:300px;padding-right:6px"></div>
       </div>
       <div class="card" style="padding:12px">
@@ -6719,13 +6736,15 @@ function setNbd2025Tab(t){
 }
 
 const _NBD_UNIT = {
-  air:   {meas:'замеров', sub_unit:'мг/м³·замеры', org_unit:'мг/м³·замеры',
-          col:'#dc2626', label:'Воздух', what:'Концентрация загрязнителя'},
-  water: {meas:'замеров', sub_unit:'замеров', org_unit:'замеров',
-          col:'#1E88E5', label:'Вода', what:'Замеров сточных вод'},
-  fire:  {meas:'замеров', sub_unit:'замеров', org_unit:'замеров',
-          col:'#ea580c', label:'Факел', what:'Замеров факельных выбросов'},
+  // unit_label = «усл. ед.» с подсказкой про единицы (B3)
+  air:   {meas:'замеров', unit:'усл. ед.',
+          col:'#dc2626', label:'Воздух', what:'Замеров загрязнителей в атмосфере'},
+  water: {meas:'замеров', unit:'усл. ед.',
+          col:'#1E88E5', label:'Вода',   what:'Замеров сточных вод'},
+  fire:  {meas:'замеров', unit:'усл. ед.',
+          col:'#ea580c', label:'Факел',  what:'Замеров факельных выбросов'},
 };
+const CONCENTRATION_NOTE = 'единица измерения требует уточнения у источника';
 
 function _fmtNum(n){
   if(n==null||isNaN(n)) return '—';
@@ -6748,7 +6767,10 @@ function _renderNbdList(elId, items, opts){
     const truncated = nm.length>opts.nameMax ? nm.slice(0,opts.nameMax)+'…' : nm;
     const measStr = r.measurements!=null ? r.measurements.toLocaleString('ru-RU')+' зам.' : '';
     const exStr = r.exceed ? ` · <span style="color:#dc2626">${r.exceed.toLocaleString('ru-RU')} прев.</span>` : '';
-    const valStr = opts.showTotal && r.total!=null ? `<span style="font-weight:600">${_fmtNum(r.total)}</span> · ${measStr}` : measStr;
+    // B3: total отображаем с пометкой «усл. ед.*» вместо «мг/м³»
+    const valStr = opts.showTotal && r.total!=null
+      ? `<span style="font-weight:600" title="${CONCENTRATION_NOTE}">${_fmtNum(r.total)} <span style="color:#999;font-weight:400">усл. ед.*</span></span> · ${measStr}`
+      : measStr;
     return `<div class="sat-row" title="${nm}">
       <span class="sat-name">${truncated}</span>
       <div class="sat-bar"><div class="sat-bar-fill" style="width:${w}%;background:${opts.col}"></div></div>
@@ -6763,14 +6785,37 @@ function _updateNbdTrafficLight(d){
   const tlSub  = document.getElementById('emTlSub');
   if(!tlMain || !tlSub) return;
   const air = d.air||{}, water = d.water||{}, fire = d.fire||{};
-  const airEx  = air.exceed?.total || 0;
-  const airSh  = air.exceed?.share_pct || 0;
-  const airTot = (air.exceed?.measurements || air.rows || 0);
+  const es   = air.exceed_stats || {};
+  const airEx = es.exceed_count || 0;
+  const pctM  = es.pct_of_measured || 0;
+  const pctA  = es.pct_of_all || 0;
+  const ratioFilled = es.ratio_filled || 0;
   const phOut  = water.ph?.out_of_range_n || 0;
   const phSh   = water.ph?.out_of_range_pct || 0;
   const phTot  = water.ph?.n || 0;
-  tlMain.innerHTML = `Зафиксировано <b>${airEx.toLocaleString('ru-RU')}</b> превышений ПДК по воздуху <span style="color:#dc2626">· ${airSh}%</span> от ${airTot.toLocaleString('ru-RU')} замеров`;
+  tlMain.innerHTML = `Зафиксировано <b>${airEx.toLocaleString('ru-RU')}</b> превышений ПДК по воздуху <span style="color:#dc2626">· ${pctM}%</span> от ${ratioFilled.toLocaleString('ru-RU')} измеренных <span style="color:#999">(${pctA}% от всех замеров)</span>`;
   tlSub.innerHTML  = `<b>НБД СОС</b> · период <b>${air.period_from||'—'} → ${air.period_to||'—'}</b> · pH сточных вод вне нормы 6–9: <b>${phOut.toLocaleString('ru-RU')}</b> (${phSh}% от ${phTot.toLocaleString('ru-RU')} замеров) · факелы: ${(fire.rows||0).toLocaleString('ru-RU')} замеров`;
+}
+
+// ── B2: дисклеймеры о покрытии данных ───────────────────────────────────────
+const COVERAGE_NOTES = {
+  air:   {level:'info',    text:'Плановые замеры стационарных источников промпредприятий. 18 регионов, 69 организаций (после фильтра тест-данных).'},
+  water: {level:'warning', text:'⚠️ Сточные воды 23 крупных промпредприятий в 9 регионах. Не отражает качество воды по всему Казахстану.'},
+  fire:  {level:'warning', text:'⚠️ Факельные выбросы только 2 организаций: NCOC (Кашаган) и GAS PROCESSING COMPANY. Только Атырауская и Актюбинская области.'},
+};
+
+function _renderNbdCoverageNote(mode, metadata){
+  const el = document.getElementById('nbd2025CoverageNote');
+  if(!el) return;
+  const note = COVERAGE_NOTES[mode];
+  if(!note){ el.style.display = 'none'; return; }
+  // если в metadata есть свой coverage_note — берём оттуда (источник истины из JSON)
+  const text = metadata?.[mode]?.coverage_note
+    ? (mode==='air' ? note.text : '⚠️ ' + metadata[mode].coverage_note)
+    : note.text;
+  el.className = 'coverage-note coverage-' + note.level;
+  el.textContent = text;
+  el.style.display = '';
 }
 
 function renderNbd2025(){
@@ -6780,31 +6825,45 @@ function renderNbd2025(){
   const k = d[T]; if(!k) return;
   const U = _NBD_UNIT[T];
 
-  // KPI
-  const total_orgs = (k.top_orgs||[]).length;
+  // B2: плашка покрытия
+  _renderNbdCoverageNote(T, d.metadata);
+  // B3: подпись единиц концентрации (только для воздуха)
+  const subUnitNote = document.getElementById('nbd2025SubUnitNote');
+  if(subUnitNote) subUnitNote.textContent = (T==='air') ? '· усл. ед.* (требует уточнения)' : '';
+
+  // KPI: замеры / организации / регионы
+  const meta = d.metadata?.[T] || {};
   const total_meas = (k.top_substances||[]).reduce((s,x)=>s+(x.measurements||0),0);
   document.getElementById('nbd2025KpiMeas').textContent = _fmtNum(total_meas);
   document.getElementById('nbd2025KpiMeasSub').textContent = U.what;
-  document.getElementById('nbd2025KpiOrgs').textContent = total_orgs.toLocaleString('ru-RU')+'+';
-  document.getElementById('nbd2025KpiRegs').textContent = (k.top_regions||[]).length.toLocaleString('ru-RU');
-  const exEl = document.getElementById('nbd2025KpiEx');
+  document.getElementById('nbd2025KpiOrgs').textContent = (meta.orgs ?? (k.top_orgs||[]).length).toLocaleString('ru-RU');
+  document.getElementById('nbd2025KpiOrgsSub').textContent = 'с замерами';
+  document.getElementById('nbd2025KpiRegs').textContent = (meta.regions ?? (k.top_regions||[]).length).toLocaleString('ru-RU');
+
+  // KPI «Превышения ПДК» — два процента + сноска (A3 / B1)
+  const exEl  = document.getElementById('nbd2025KpiEx');
   const exSub = document.getElementById('nbd2025KpiExSub');
+  const exSub2= document.getElementById('nbd2025KpiExSub2');
   const exLbl = document.getElementById('nbd2025KpiExLbl');
-  if(T==='air' && k.exceed){
-    exLbl.textContent = 'Превышений нормативов';
-    exEl.textContent = _fmtNum(k.exceed.total);
-    exSub.textContent = `${k.exceed.share_pct}% от ${k.exceed.measurements.toLocaleString('ru-RU')} замеров`;
+  const exNote= document.getElementById('nbd2025KpiExNote');
+  if(T==='air' && k.exceed_stats){
+    const es = k.exceed_stats;
+    exLbl.textContent = 'Превышения ПДК';
+    exEl.textContent  = _fmtNum(es.exceed_count);
+    exEl.style.color  = '#dc2626';
+    exSub.textContent  = `${es.pct_of_measured}% от измеренных`;
+    exSub2.textContent = `${es.pct_of_all}% от всех замеров`;
+    exNote.textContent = `ℹ️ Коэф. ПДК заполнен у ${es.ratio_coverage_pct}% замеров`;
     document.getElementById('nbd2025ExceedBlock').style.display = '';
-    _renderNbdList('nbd2025ExOrgs', (k.exceed.by_org||[]).slice(0,15), {barKey:'exceed', col:'#dc2626', nameMax:42, showTotal:false});
+    _renderNbdList('nbd2025ExOrgs', (k.exceed.by_org||[]).slice(0,15),       {barKey:'exceed', col:'#dc2626', nameMax:42, showTotal:false});
     _renderNbdList('nbd2025ExSubs', (k.exceed.by_substance||[]).slice(0,15), {barKey:'exceed', col:'#dc2626', nameMax:40, showTotal:false});
-    // Замени структуру: вместо meas покажем количество прев.
-    document.querySelectorAll('#nbd2025ExOrgs .sat-val, #nbd2025ExSubs .sat-val').forEach(el=>{
-      const txt = el.textContent; const m = txt.match(/^([\d ]+) зам/); // первый блок — это measurements
-    });
   } else if(T==='water' && k.ph){
     exLbl.textContent = 'pH вне нормы (6–9)';
-    exEl.textContent = _fmtNum(k.ph.out_of_range_n);
-    exSub.textContent = `${k.ph.out_of_range_pct}% от ${k.ph.n.toLocaleString('ru-RU')} замеров · avg pH ${k.ph.avg}`;
+    exEl.textContent  = _fmtNum(k.ph.out_of_range_n);
+    exEl.style.color  = '#dc2626';
+    exSub.textContent  = `${k.ph.out_of_range_pct}% от ${k.ph.n.toLocaleString('ru-RU')} замеров pH`;
+    exSub2.textContent = `средний pH: ${k.ph.avg}`;
+    exNote.textContent = '';
     document.getElementById('nbd2025ExceedBlock').style.display = 'none';
     const wph = document.getElementById('nbd2025WaterPh');
     document.getElementById('nbd2025WaterPhBlock').style.display = '';
@@ -6812,9 +6871,12 @@ function renderNbd2025(){
       `Замеров с pH вне нормы 6–9: <b style="color:#dc2626">${k.ph.out_of_range_n.toLocaleString('ru-RU')}</b> (${k.ph.out_of_range_pct}%)<br>` +
       `Всего корректных замеров pH: <b>${k.ph.n.toLocaleString('ru-RU')}</b>`;
   } else {
-    exLbl.textContent = 'Замеров с веществом';
-    exEl.textContent = '—'; exEl.style.color = 'var(--text3)';
-    exSub.textContent = '— (нет нормативов в выгрузке)';
+    exLbl.textContent = 'Превышения';
+    exEl.textContent  = '—';
+    exEl.style.color  = 'var(--text3)';
+    exSub.textContent  = 'нет нормативов в выгрузке';
+    exSub2.textContent = '';
+    exNote.textContent = '';
     document.getElementById('nbd2025ExceedBlock').style.display = 'none';
   }
   if(T!=='water'){ document.getElementById('nbd2025WaterPhBlock').style.display = 'none'; }
