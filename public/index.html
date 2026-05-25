@@ -197,6 +197,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .coverage-note{font-size:11px;padding:8px 12px;border-radius:8px;margin:8px 0 14px;line-height:1.4}
 .coverage-info{background:rgba(33,150,243,.08);color:#1565C0;border-left:3px solid #2196F3}
 .coverage-warning{background:rgba(251,140,0,.08);color:#E65100;border-left:3px solid #FB8C00}
+/* Главный алерт НБД — крупная плашка наверху вкладки, динамическая по режиму */
+.nbd-alert{display:flex;align-items:flex-start;gap:14px;padding:14px 18px;border-radius:10px;margin-bottom:16px;transition:all .2s}
+.nbd-alert .alert-body{flex:1;min-width:0}
+.nbd-alert .alert-main{font-size:16px;font-weight:700;line-height:1.3;margin-bottom:4px}
+.nbd-alert .alert-detail{font-size:12px;line-height:1.45;color:#555}
+.nbd-alert .alert-detail b{color:inherit}
+.nbd-alert .alert-badge{display:inline-block;padding:4px 11px;border-radius:14px;font-size:11px;font-weight:600;white-space:nowrap;color:#fff;align-self:flex-start;margin-top:2px}
+.nbd-alert-critical{background:linear-gradient(135deg,rgba(229,57,53,.10),rgba(229,57,53,.04));border-left:4px solid #E53935}
+.nbd-alert-critical .alert-main{color:#C62828}
+.nbd-alert-critical .alert-badge{background:#E53935}
+.nbd-alert-warning{background:linear-gradient(135deg,rgba(251,140,0,.10),rgba(251,140,0,.04));border-left:4px solid #FB8C00}
+.nbd-alert-warning .alert-main{color:#E65100}
+.nbd-alert-warning .alert-badge{background:#FB8C00}
+.nbd-alert-info{background:linear-gradient(135deg,rgba(30,136,229,.10),rgba(30,136,229,.04));border-left:4px solid #1E88E5}
+.nbd-alert-info .alert-main{color:#1565C0}
+.nbd-alert-info .alert-badge{background:#1E88E5}
+@media (max-width:768px){
+  .nbd-alert{flex-direction:column;gap:8px;padding:12px 14px}
+  .nbd-alert .alert-main{font-size:14px}
+  .nbd-alert .alert-detail{font-size:11px}
+}
 /* KPI «Превышения ПДК» — два процента + сноска */
 #nbd2025KpiExceedTile .exceed-primary{font-weight:600;font-size:11px;color:#E53935}
 #nbd2025KpiExceedTile .exceed-secondary{font-size:10px;color:#757575;font-weight:500;margin-top:1px}
@@ -881,14 +902,13 @@ input[type=file]{display:none}
 <!-- МОНИТОРИНГ НБД СОС -->
 <div id="panel-emissions" class="panel">
 
-  <!-- СВЕТОФОР — данные из свежих выгрузок 2025-2026 -->
-  <div class="tl tl-y">
-    <div class="tl-dot" style="background:#dc2626"></div>
-    <div>
-      <div class="tl-main" style="color:#991b1b" id="emTlMain">Загрузка свежих данных НБД СОС…</div>
-      <div class="tl-sub" id="emTlSub"><b>НБД СОС</b> — Национальный банк данных состояния окружающей среды · выгрузки за 2025-01 → 2026-05</div>
+  <!-- ГЛАВНЫЙ АЛЕРТ — динамический по режиму (Воздух / Вода / Факел) -->
+  <div class="nbd-alert nbd-alert-critical" id="nbdAlert">
+    <div class="alert-body">
+      <div class="alert-main" id="nbdAlertMain">Загрузка свежих данных НБД СОС…</div>
+      <div class="alert-detail" id="nbdAlertDetail"><b>НБД СОС</b> — Национальный банк данных состояния окружающей среды</div>
     </div>
-    <span class="tl-badge" style="background:#fee2e2;color:#991b1b">⚠️ Требует контроля</span>
+    <span class="alert-badge" id="nbdAlertBadge">⚠️ Требует контроля</span>
   </div>
 
   <!-- КАРТА НБД СОС -->
@@ -6779,22 +6799,41 @@ function _renderNbdList(elId, items, opts){
   }).join('');
 }
 
-function _updateNbdTrafficLight(d){
-  if(!d) return;
-  const tlMain = document.getElementById('emTlMain');
-  const tlSub  = document.getElementById('emTlSub');
-  if(!tlMain || !tlSub) return;
-  const air = d.air||{}, water = d.water||{}, fire = d.fire||{};
-  const es   = air.exceed_stats || {};
-  const airEx = es.exceed_count || 0;
-  const pctM  = es.pct_of_measured || 0;
-  const pctA  = es.pct_of_all || 0;
-  const ratioFilled = es.ratio_filled || 0;
-  const phOut  = water.ph?.out_of_range_n || 0;
-  const phSh   = water.ph?.out_of_range_pct || 0;
-  const phTot  = water.ph?.n || 0;
-  tlMain.innerHTML = `Зафиксировано <b>${airEx.toLocaleString('ru-RU')}</b> превышений ПДК по воздуху <span style="color:#dc2626">· ${pctM}%</span> от ${ratioFilled.toLocaleString('ru-RU')} измеренных <span style="color:#999">(${pctA}% от всех замеров)</span>`;
-  tlSub.innerHTML  = `<b>НБД СОС</b> · период <b>${air.period_from||'—'} → ${air.period_to||'—'}</b> · pH сточных вод вне нормы 6–9: <b>${phOut.toLocaleString('ru-RU')}</b> (${phSh}% от ${phTot.toLocaleString('ru-RU')} замеров) · факелы: ${(fire.rows||0).toLocaleString('ru-RU')} замеров`;
+// Главный алерт — меняется по режиму (Воздух / Вода / Факел)
+function _renderNbdAlert(d, mode){
+  const wrap = document.getElementById('nbdAlert');
+  const main = document.getElementById('nbdAlertMain');
+  const det  = document.getElementById('nbdAlertDetail');
+  const bdg  = document.getElementById('nbdAlertBadge');
+  if(!wrap || !main || !det || !bdg || !d) return;
+  const fmt = n => (n||0).toLocaleString('ru-RU');
+
+  if(mode === 'air'){
+    const es = d.air?.exceed_stats || {};
+    const pctM = es.pct_of_measured || 0;
+    // critical ≥50%, warning ≥25%, info <25%
+    const level = pctM >= 50 ? 'critical' : pctM >= 25 ? 'warning' : 'info';
+    const icon  = level === 'critical' ? '🔴' : level === 'warning' ? '🟠' : 'ℹ️';
+    wrap.className = 'nbd-alert nbd-alert-' + level;
+    main.innerHTML = `${icon} ${level==='critical'?'КРИТИЧНО':level==='warning'?'ВНИМАНИЕ':'Статус'}: <b>${Math.round(pctM)}%</b> измеренных замеров воздуха превышают ПДК`;
+    det.innerHTML  = `<b>${fmt(es.exceed_count)}</b> превышений из <b>${fmt(es.ratio_filled)}</b> замеров с замеренным коэффициентом ПДК. По всем ${fmt(es.total_rows)} замерам — <b>${es.pct_of_all||0}%</b>. Период данных: <b>${d.air?.period_from||'—'} → ${d.air?.period_to||'—'}</b>.`;
+    bdg.textContent = level === 'critical' ? 'Требует контроля' : level === 'warning' ? 'Внимание' : 'В норме';
+  }
+  else if(mode === 'water'){
+    const ph = d.water?.ph || {};
+    const pct = ph.out_of_range_pct || 0;
+    const level = pct >= 30 ? 'warning' : pct >= 15 ? 'warning' : 'info';
+    wrap.className = 'nbd-alert nbd-alert-' + level;
+    main.innerHTML = `🟠 ВНИМАНИЕ: <b>${Math.round(pct)}%</b> замеров сточных вод имеют pH вне нормы 6–9`;
+    det.innerHTML  = `<b>${fmt(ph.out_of_range_n)}</b> замеров вне диапазона из <b>${fmt(ph.n)}</b> корректных замеров pH. Средний pH: <b>${ph.avg||'—'}</b>. <span style="color:#999">Покрытие — сточные воды ${d.water?.orgs_n||0} промпредприятий в ${d.water?.regions_n||0} регионах.</span>`;
+    bdg.textContent = 'Внимание';
+  }
+  else if(mode === 'fire'){
+    wrap.className = 'nbd-alert nbd-alert-info';
+    main.innerHTML = `ℹ️ Факельные выбросы — узкий срез данных`;
+    det.innerHTML  = `Только <b>2 организации</b>: NCOC (Кашаган, Атырауская обл.) и GAS PROCESSING COMPANY (Актюбинская обл.). Всего <b>${fmt(d.fire?.rows)}</b> замеров за <b>${d.fire?.period_from||'—'} → ${d.fire?.period_to||'—'}</b>. Это не полная картина факельных выбросов по РК.`;
+    bdg.textContent = 'Информация';
+  }
 }
 
 // ── B2: дисклеймеры о покрытии данных ───────────────────────────────────────
@@ -6820,12 +6859,13 @@ function _renderNbdCoverageNote(mode, metadata){
 
 function renderNbd2025(){
   const d = window._NBD_2025; if(!d) return;
-  _updateNbdTrafficLight(d);
   const T = _nbd2025Tab;
+  // Главный алерт наверху — меняется по режиму
+  _renderNbdAlert(d, T);
   const k = d[T]; if(!k) return;
   const U = _NBD_UNIT[T];
 
-  // B2: плашка покрытия
+  // B2: плашка покрытия (под табами)
   _renderNbdCoverageNote(T, d.metadata);
   // B3: подпись единиц концентрации (только для воздуха)
   const subUnitNote = document.getElementById('nbd2025SubUnitNote');
