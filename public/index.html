@@ -197,6 +197,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .coverage-note{font-size:11px;padding:8px 12px;border-radius:8px;margin:8px 0 14px;line-height:1.4}
 .coverage-info{background:rgba(33,150,243,.08);color:#1565C0;border-left:3px solid #2196F3}
 .coverage-warning{background:rgba(251,140,0,.08);color:#E65100;border-left:3px solid #FB8C00}
+/* Корреляция — таблица «Индекс экологического давления» */
+.pressure-table{width:100%;border-collapse:collapse;font-size:11px}
+.pressure-table thead th{padding:8px 10px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);background:var(--surface2);position:sticky;top:0;z-index:1;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+.pressure-table thead th:last-child{text-align:left;width:230px}
+.pressure-table tbody td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.pressure-table tbody tr:hover{background:rgba(27,122,58,.04)}
+.pressure-table .num{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.pressure-table .reg-name{font-weight:600;color:var(--text)}
+.index-bar-wrap{display:flex;align-items:center;gap:8px;width:200px}
+.index-bar-track{flex:1;height:10px;background:#f0f0f0;border-radius:5px;overflow:hidden}
+.index-bar-fill{height:100%;border-radius:5px;transition:width .3s}
+.index-bar-val{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;min-width:30px;text-align:right}
+.insight-box{display:flex;gap:12px;padding:12px 14px;background:linear-gradient(135deg,rgba(27,122,58,.08),rgba(27,122,58,.03));border-left:3px solid #1B7A3A;border-radius:8px}
+.insight-icon{font-size:24px;line-height:1}
+.insight-text{font-size:12px;color:var(--text);line-height:1.55}
+.insight-text b{color:#1B7A3A}
+/* Sticky-зона НБД (переключатель + покрытие + фильтр-бар + чипы) — прилипает только на этой вкладке */
+.nbd-sticky-zone{position:sticky;top:84px;z-index:498;background:var(--surface);padding:8px 0;margin:-8px -2px 8px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.06);max-height:260px;overflow-y:auto}
+.nbd-sticky-zone::-webkit-scrollbar{width:5px}
+.nbd-sticky-zone::-webkit-scrollbar-thumb{background:#c4c4c4;border-radius:3px}
+@media (max-width:768px){.nbd-sticky-zone{top:80px;max-height:240px}}
 /* Фильтр-бар НБД */
 .nbd-fltbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
 .nbd-fltbar-lbl{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
@@ -487,6 +508,7 @@ input[type=file]{display:none}
   <div class="tab" onclick="switchTab('waste',this)" style="display:none"><span data-i18n="tab_waste">Отходы</span></div>
   <div class="tab" onclick="switchTab('hearings',this)"><span data-i18n="tab_hear">Социальное напряжение</span></div>
   <div class="tab" id="tabNews" onclick="switchTab('news',this)"><span data-i18n="tab_news">Новости</span> <span id="newsDot" style="display:none" class="tab-dot"></span></div>
+  <div class="tab" onclick="switchTab('correlation',this)"><span>🔗 Корреляция</span></div>
 </div>
 
 <!-- ── ГЛОБАЛЬНАЯ ПАНЕЛЬ ФИЛЬТРОВ ── -->
@@ -951,6 +973,8 @@ input[type=file]{display:none}
 
   <!-- ── СВЕЖИЕ ДАННЫЕ НБД СОС (2025-09 → 2026-05) ── -->
   <div class="card" id="nbd2025Card" style="padding:14px;margin-bottom:14px">
+    <!-- Sticky-зона: переключатель сред + плашка покрытия + фильтр-бар + чипы -->
+    <div class="nbd-sticky-zone" id="nbdStickyZone">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
       <div class="card-title" style="margin:0">🆕 Свежие данные НБД СОС <span style="font-size:10px;color:var(--text3);font-weight:400" id="nbd2025Period">— загрузка…</span></div>
       <div style="display:flex;gap:5px" id="nbd2025Tabs">
@@ -996,6 +1020,7 @@ input[type=file]{display:none}
     </div>
     <!-- Чипы активных фильтров -->
     <div id="nbdFltChips" class="nbd-flt-chips"></div>
+    </div><!-- /nbd-sticky-zone -->
 
     <!-- KPI -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" id="nbd2025Kpis">
@@ -1704,6 +1729,51 @@ input[type=file]{display:none}
   </div>
 </div>
 
+<!-- ── КОРРЕЛЯЦИЯ: ВЫБРОСЫ ↔ ЖАЛОБЫ ─────────────────────────────────────── -->
+<div id="panel-correlation" class="panel">
+  <!-- Заголовок -->
+  <div class="card" style="padding:14px;margin-bottom:12px">
+    <div class="card-title" style="margin:0 0 4px">🔗 Корреляция: промышленные выбросы ↔ жалобы граждан</div>
+    <div style="font-size:11px;color:var(--text3)">Период <b>2025–2026</b> · 18 регионов · источники: <b>НБД СОС</b> + <b>е-Обращения</b></div>
+  </div>
+
+  <!-- Опциональный фильтр по веществу -->
+  <div class="card" style="padding:10px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+    <span style="font-size:11px;font-weight:600;color:var(--text2)">🧪 Загрязнитель:</span>
+    <select id="corrSubstance" onchange="renderCorrelation()" style="font-size:11px;padding:5px 10px;border-radius:14px;border:1px solid var(--border2);background:var(--surface);min-width:200px">
+      <option value="">Все вещества</option>
+    </select>
+    <span style="margin-left:auto;font-size:10px;color:var(--text3)" id="corrPeriodInfo">—</span>
+  </div>
+
+  <!-- Двойная карта -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+    <div class="card" style="padding:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">🏭 ВЫБРОСЫ В АТМОСФЕРУ <span style="font-size:10px;color:var(--text3);font-weight:400" id="corrLeftLbl">(НБД СОС, замеров)</span></div>
+      <div id="corrMapEmissions" style="height:420px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border)"></div>
+    </div>
+    <div class="card" style="padding:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px">👥 ЭКО-ЖАЛОБЫ ГРАЖДАН <span style="font-size:10px;color:var(--text3);font-weight:400">(е-Обращения, шт.)</span></div>
+      <div id="corrMapComplaints" style="height:420px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border)"></div>
+    </div>
+  </div>
+  <div style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:14px;font-style:italic">💡 Наведи курсор на регион — он подсветится на обеих картах и на диаграмме рассеяния</div>
+
+  <!-- Scatter + insight -->
+  <div class="card" style="padding:14px;margin-bottom:12px">
+    <div class="card-title">📊 Диаграмма рассеяния</div>
+    <div id="corrScatterWrap" style="height:380px"><canvas id="corrScatter"></canvas></div>
+    <div id="corrInsight" style="margin-top:12px"></div>
+  </div>
+
+  <!-- Pressure index table -->
+  <div class="card" style="padding:14px;margin-bottom:12px">
+    <div class="card-title">📋 Индекс экологического давления по регионам</div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:8px">Композит: 30% выбросы + 40% превышения ПДК + 30% жалобы граждан (нормировано 0–100)</div>
+    <div id="corrPressureTable"></div>
+  </div>
+</div>
+
 </div><!-- /content -->
 
 <script>
@@ -1863,12 +1933,15 @@ function switchTab(id, el) {
   // На остальных вкладках у каждой свой набор фильтров — глобальную скрываем целиком.
   const gbar = document.getElementById('globalFbar');
   if (gbar) gbar.style.display = (id==='main') ? '' : 'none';
+  // На вкладке корреляции тоже скрываем глобальный fbar (свои данные)
+  if(id==='correlation' && gbar) gbar.style.display = 'none';
   const appealsOnly = document.getElementById('fbarAppealsOnly');
   if (appealsOnly) appealsOnly.style.display = (id==='emissions'||id==='kgs') ? 'none' : 'contents';
   if(id==='news' && !newsInit) initNews();
   if(id==='waste' && !_wasteInited) { _wasteInited=true; initWasteTab(); }
   if(id==='map' && !mapInit) initLeafletMap();
   if(id==='emissions') { setTimeout(initNbdMap, 100); if(window._NBD_2025) renderNbd2025(); }
+  if(id==='correlation') { setTimeout(()=>{ if(typeof initCorrelation==='function') initCorrelation(); }, 80); }
   if(id==='kgs') {
     if(_DATA_KGS && !_kgsCharts._rendered) renderKgsCharts(_DATA_KGS);
     setTimeout(initKgsMap, 100);
@@ -8437,6 +8510,293 @@ ${buildAICtx()}`;
 
 async function initNews(){newsInit=true;setStatus('loading','Проверка кеша...');const c=loadCache();if(c&&c.news&&c.news.length>0){allNews=c.news;applyFilter();renderImpacts(c.news);renderMainNewsFeed();markSrc(true);const age=Math.round((Date.now()-c.ts)/60000);setStatus('live','Из кеша ('+age+' мин.) · '+c.news.length+' новостей',c.ts);if(c.alerts&&c.alerts.length)showAlert(c.alerts[0].head||c.alerts[0].text);if(Date.now()-c.ts>30*60*1000)setTimeout(fetchNews,2000);}else{setStatus('live','Загружаю новости...');fetchNews();}fetchSocial();}
 
+// ── КОРРЕЛЯЦИЯ: выбросы НБД ↔ эко-обращения граждан ─────────────────────────
+let _corrInited = false;
+let _corrMapL = null, _corrMapR = null;
+let _corrGeoL = null, _corrGeoR = null;
+let _corrScatterChart = null;
+let _corrSyncing = false;
+
+// Маппинг кратких имён регионов из _AC.regions → полные имена НБД
+const CORR_AC_TO_NBD = {
+  'Абайская':'Абайская область', 'Акмолинская':'Акмолинская область',
+  'Актюбинская':'Актюбинская область', 'Алматинская обл.':'Алматинская область',
+  'Алматы':'Алматы', 'Атырауская':'Атырауская область',
+  'Астана':'Астана', 'ВКО':'Восточно-Казахстанская область',
+  'Жамбылская':'Жамбылская область', 'Жетысуская':'Жетысуская область',
+  'Карагандинская':'Карагандинская область', 'Костанайская':'Костанайская область',
+  'Кызылординская':'Кызылординская область', 'Мангистауская':'Мангистауская область',
+  'Павлодарская':'Павлодарская область', 'СКО':'Северо-Казахстанская область',
+  'Туркестанская':'Туркестанская область', 'Улытауская':'Улытауская область',
+  'ЗКО':'Западно-Казахстанская область', 'Шымкент':'Шымкент',
+};
+
+function _corrPearson(xs, ys){
+  const n=xs.length; if(n<3) return 0;
+  let sX=0,sY=0,sXY=0,sX2=0,sY2=0;
+  for(let i=0;i<n;i++){sX+=xs[i];sY+=ys[i];sXY+=xs[i]*ys[i];sX2+=xs[i]*xs[i];sY2+=ys[i]*ys[i];}
+  const num=n*sXY-sX*sY;
+  const den=Math.sqrt((n*sX2-sX*sX)*(n*sY2-sY*sY));
+  return den===0 ? 0 : num/den;
+}
+function _corrInterpretR(r){
+  const a=Math.abs(r);
+  if(a>=0.7) return 'сильная связь';
+  if(a>=0.4) return 'умеренная связь';
+  if(a>=0.2) return 'слабая связь';
+  return 'связь не выражена';
+}
+
+// Собираем данные по 18 регионам за 2025-2026
+function buildCorrelationData(substanceFilter){
+  if(!NBD_FACTS.length || !_AC) return [];
+  const S = NBD_SCHEMA;
+  const emByReg = {}, exByReg = {};
+  for(let i=0;i<NBD_FACTS.length;i++){
+    const r = NBD_FACTS[i];
+    if(r[S.env] !== 'air') continue;
+    if(substanceFilter && r[S.substance] !== substanceFilter) continue;
+    const reg = r[S.region]; if(!reg) continue;
+    emByReg[reg] = (emByReg[reg]||0) + r[S.measurements];
+    exByReg[reg] = (exByReg[reg]||0) + r[S.exceed];
+  }
+  // Эко-обращения 2025-26 (база _AC уже отфильтрована ECOLOGY_FILTER)
+  const acByReg = {};
+  const D = _AC.data, w = _AC.w, n = _AC.n;
+  const regs = _AC.regions;
+  for(let i=0;i<n;i++){
+    const o = i*w, ymd = D[o];
+    const yr = (ymd/10000)|0;
+    if(yr < 2025) continue;
+    const ri = D[o+1]; const acReg = regs[ri]; if(!acReg) continue;
+    const nbdReg = CORR_AC_TO_NBD[acReg] || acReg;
+    acByReg[nbdReg] = (acByReg[nbdReg]||0) + 1;
+  }
+  const allRegs = new Set([...Object.keys(emByReg), ...Object.keys(acByReg)]);
+  const rows = [];
+  allRegs.forEach(reg=>{
+    rows.push({
+      region: reg,
+      emissions:  emByReg[reg]||0,
+      exceed:     exByReg[reg]||0,
+      complaints: acByReg[reg]||0,
+    });
+  });
+  return rows;
+}
+
+function _corrColor(v, max, palette){
+  if(!v) return '#f5f5f5';
+  const t = v / Math.max(max,1);
+  if(t<0.10) return palette[0];
+  if(t<0.25) return palette[1];
+  if(t<0.50) return palette[2];
+  if(t<0.75) return palette[3];
+  return palette[4];
+}
+const CORR_PAL_RED  = ['#FFEBEE','#FFCDD2','#EF5350','#E53935','#B71C1C'];
+const CORR_PAL_BLUE = ['#E3F2FD','#90CAF9','#42A5F5','#1E88E5','#0D47A1'];
+
+async function initCorrelation(){
+  if(_corrInited) { renderCorrelation(); return; }
+  _corrInited = true;
+  // Заполняем select веществ из NBD_FACTS (только air)
+  if(NBD_FACTS.length){
+    const S = NBD_SCHEMA;
+    const subs = new Set();
+    NBD_FACTS.forEach(r=>{ if(r[S.env]==='air' && r[S.substance]) subs.add(r[S.substance]); });
+    const sel = document.getElementById('corrSubstance');
+    if(sel && sel.options.length<=1){
+      [...subs].sort().forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; sel.appendChild(o); });
+    }
+  }
+  // Карты
+  const geo = window._tzGeoData
+    ? Promise.resolve(window._tzGeoData)
+    : fetch('/border_regions.geojson').then(r=>r.json()).then(j=>{window._tzGeoData=j; return j;});
+  const g = await geo.catch(()=>null);
+  if(!g) return;
+
+  const tile = ()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.6});
+
+  _corrMapL = L.map('corrMapEmissions',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.5,67.5],4);
+  tile().addTo(_corrMapL);
+  _corrMapR = L.map('corrMapComplaints',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.5,67.5],4);
+  tile().addTo(_corrMapR);
+
+  // Sync zoom/pan
+  const sync = (from, to)=>{
+    from.on('move', ()=>{ if(_corrSyncing) return; _corrSyncing=true; to.setView(from.getCenter(), from.getZoom(), {animate:false}); _corrSyncing=false; });
+  };
+  sync(_corrMapL, _corrMapR); sync(_corrMapR, _corrMapL);
+
+  const buildLayer = (map, isEmissions)=>{
+    return L.geoJSON(g, {
+      style: ()=>({fillColor:'#f5f5f5', weight:1.2, color:'#1B7A3A', fillOpacity:0.25, opacity:0.7}),
+      onEachFeature: (f, layer)=>{
+        const name = f.properties?.name_ru || '';
+        layer._corrName = name;
+        layer.on('mouseover', ()=>_corrHighlight(name, true));
+        layer.on('mouseout',  ()=>_corrHighlight(name, false));
+      }
+    }).addTo(map);
+  };
+  _corrGeoL = buildLayer(_corrMapL, true);
+  _corrGeoR = buildLayer(_corrMapR, false);
+
+  setTimeout(()=>{ _corrMapL.invalidateSize(); _corrMapR.invalidateSize(); }, 200);
+  renderCorrelation();
+}
+
+function _corrHighlight(name, on){
+  [_corrGeoL, _corrGeoR].forEach(lyr=>{
+    if(!lyr) return;
+    lyr.eachLayer(l=>{
+      if(l._corrName === name){
+        if(on) l.setStyle({weight:3, color:'#000'});
+        else lyr.resetStyle(l);
+      }
+    });
+  });
+  // Re-style под текущие данные после mouseout
+  if(!on && window._corrData) _corrStyleLayers(window._corrData);
+  // подсветка точки в scatter
+  if(_corrScatterChart){
+    const ds = _corrScatterChart.data.datasets[0];
+    ds.data.forEach((p,i)=>{ p._hl = (on && p.region===name); });
+    ds.pointRadius = ds.data.map(p=>p._hl ? 14 : 7);
+    ds.pointBorderColor = ds.data.map(p=>p._hl ? '#000' : 'transparent');
+    ds.pointBorderWidth = ds.data.map(p=>p._hl ? 2 : 0);
+    _corrScatterChart.update('none');
+  }
+}
+
+function _corrStyleLayers(data){
+  if(!_corrGeoL || !_corrGeoR) return;
+  const lookup = {}; data.forEach(d=>{ lookup[d.region]=d; });
+  const maxEm = Math.max(...data.map(d=>d.emissions), 1);
+  const maxCo = Math.max(...data.map(d=>d.complaints), 1);
+  const styleSide = (lyr, key, pal, maxV)=>{
+    lyr.eachLayer(l=>{
+      const d = lookup[l._corrName] || {emissions:0,complaints:0,exceed:0};
+      const v = d[key];
+      l.setStyle({
+        fillColor: _corrColor(v, maxV, pal),
+        fillOpacity: v>0 ? 0.72 : 0.18,
+        weight: 1.2, color: '#1B7A3A',
+      });
+      l.unbindTooltip();
+      l.bindTooltip(
+        `<div style="font-weight:600">${l._corrName}</div>` +
+        `<div>Выбросов (НБД): ${(d.emissions||0).toLocaleString('ru-RU')}</div>` +
+        `<div>Превышений ПДК: <b style="color:#C62828">${(d.exceed||0).toLocaleString('ru-RU')}</b></div>` +
+        `<div>Эко-жалоб: <b>${(d.complaints||0).toLocaleString('ru-RU')}</b></div>`,
+        {sticky:true}
+      );
+    });
+  };
+  styleSide(_corrGeoL, 'emissions',  CORR_PAL_RED,  maxEm);
+  styleSide(_corrGeoR, 'complaints', CORR_PAL_BLUE, maxCo);
+}
+
+function renderCorrelation(){
+  if(!NBD_FACTS.length || !_AC){
+    document.getElementById('corrInsight').innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px">Загрузка данных НБД и обращений…</div>';
+    return;
+  }
+  const sub = document.getElementById('corrSubstance')?.value || '';
+  const data = buildCorrelationData(sub || null);
+  window._corrData = data;
+  document.getElementById('corrLeftLbl').textContent = sub ? `· вещество: ${sub}` : '(НБД СОС, замеров)';
+  document.getElementById('corrPeriodInfo').textContent = `${data.length} регионов в пересечении · обновлено ${new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}`;
+  _corrStyleLayers(data);
+  _corrRenderScatter(data);
+  _corrRenderPressure(data);
+  _corrRenderInsight(data);
+}
+
+function _corrRenderScatter(data){
+  const ctx = document.getElementById('corrScatter'); if(!ctx) return;
+  const points = data.map(d=>({x:d.emissions, y:d.complaints, region:d.region}));
+  const r = _corrPearson(data.map(d=>d.emissions), data.map(d=>d.complaints));
+  if(_corrScatterChart){ _corrScatterChart.destroy(); _corrScatterChart=null; }
+  _corrScatterChart = new Chart(ctx, {
+    type:'scatter',
+    data:{datasets:[{
+      label:'Регионы', data:points,
+      backgroundColor:'rgba(27,122,58,0.65)',
+      borderColor:'rgba(27,122,58,0.9)',
+      pointRadius:7, pointHoverRadius:12,
+    }]},
+    options:{responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        title:{display:true, text:`Коэффициент корреляции Пирсона: r = ${r.toFixed(2)} (${_corrInterpretR(r)})`,
+          font:{size:13, weight:'600'}, color:r>=0.7?'#C62828':r>=0.4?'#E65100':'#1B7A3A'},
+        tooltip:{callbacks:{label:ctx=>{const p=ctx.raw; return `${p.region}: ${p.x.toLocaleString('ru-RU')} замеров / ${p.y.toLocaleString('ru-RU')} жалоб`;}}},
+        datalabels:{display:true, align:'top', anchor:'end',
+          formatter:(v,c)=>{const p=c.dataset.data[c.dataIndex]; return p.region.length>16?p.region.slice(0,14)+'…':p.region;},
+          font:{size:9}, color:'#555'},
+      },
+      scales:{
+        x:{title:{display:true, text:'Объём выбросов (замеров НБД)', font:{size:10}}, ticks:{font:{size:9},color:'#9ca3af',
+            callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?Math.round(v/1e3)+'K':v}},
+        y:{title:{display:true, text:'Эко-жалоб граждан', font:{size:10}}, ticks:{font:{size:9},color:'#9ca3af'}},
+      },
+    }
+  });
+}
+
+function _corrRenderPressure(data){
+  const el = document.getElementById('corrPressureTable'); if(!el) return;
+  const maxEm = Math.max(...data.map(d=>d.emissions),1);
+  const maxEx = Math.max(...data.map(d=>d.exceed),1);
+  const maxCo = Math.max(...data.map(d=>d.complaints),1);
+  const rows = data.map(d=>{
+    const en = d.emissions/maxEm*100, xn = d.exceed/maxEx*100, cn = d.complaints/maxCo*100;
+    return {...d, index: +(en*0.3 + xn*0.4 + cn*0.3).toFixed(1)};
+  }).sort((a,b)=>b.index-a.index);
+  const idxColor = v => v>=70?'#E53935':v>=40?'#FB8C00':v>=20?'#FDD835':'#43A047';
+  el.innerHTML = `<div style="max-height:480px;overflow-y:auto">
+    <table class="pressure-table"><thead><tr>
+      <th>Регион</th>
+      <th class="num">Выбросов</th>
+      <th class="num">Превышений ПДК</th>
+      <th class="num">Эко-жалоб</th>
+      <th>Индекс давления</th>
+    </tr></thead><tbody>${rows.map(r=>`
+      <tr>
+        <td class="reg-name">${_esc(r.region)}</td>
+        <td class="num">${r.emissions.toLocaleString('ru-RU')}</td>
+        <td class="num" style="color:#C62828;font-weight:600">${r.exceed.toLocaleString('ru-RU')}</td>
+        <td class="num">${r.complaints.toLocaleString('ru-RU')}</td>
+        <td><div class="index-bar-wrap"><div class="index-bar-track"><div class="index-bar-fill" style="width:${r.index}%;background:${idxColor(r.index)}"></div></div><span class="index-bar-val" style="color:${idxColor(r.index)}">${r.index}</span></div></td>
+      </tr>`).join('')}</tbody></table></div>`;
+}
+
+function _corrRenderInsight(data){
+  const r = _corrPearson(data.map(d=>d.emissions), data.map(d=>d.complaints));
+  const top = [...data].sort((a,b)=>(b.emissions/1000+b.complaints)-(a.emissions/1000+a.complaints))[0];
+  const a = Math.abs(r);
+  let txt;
+  if(a >= 0.7){
+    txt = `Выявлена <b>сильная связь</b> между объёмом промышленных выбросов и количеством жалоб граждан (<b>r = ${r.toFixed(2)}</b>). Это подтверждает: там где предприятия загрязняют воздух — граждане активнее жалуются. Регионы с высокими выбросами требуют приоритетного внимания.`;
+  } else if(a >= 0.4){
+    txt = `Прослеживается <b>умеренная связь</b> (<b>r = ${r.toFixed(2)}</b>) между выбросами и жалобами. В ряде регионов жалобы коррелируют с выбросами, но есть исключения — стоит изучить регионы-аномалии.`;
+  } else if(a >= 0.2){
+    txt = `Связь между выбросами и жалобами <b>слабая</b> (<b>r = ${r.toFixed(2)}</b>). Возможные причины: жалобы вызваны другими факторами помимо воздуха, низкая осведомлённость населения, или неполнота мониторинга.`;
+  } else {
+    txt = `Прямая связь между выбросами и жалобами <b>не выражена</b> (<b>r = ${r.toFixed(2)}</b>). Возможные причины: жалобы вызваны не только промышленными выбросами, низкая осведомлённость, или сильные региональные различия в активности граждан.`;
+  }
+  document.getElementById('corrInsight').innerHTML = `
+    <div class="insight-box">
+      <div class="insight-icon">💡</div>
+      <div class="insight-text">
+        ${txt}
+        ${top ? `<div style="margin-top:8px">Наибольшее экологическое давление: <b>${_esc(top.region)}</b> — ${top.emissions.toLocaleString('ru-RU')} замеров выбросов и ${top.complaints.toLocaleString('ru-RU')} жалоб граждан.</div>` : ''}
+      </div>
+    </div>`;
+}
 
 </script>
 
