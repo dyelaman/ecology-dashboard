@@ -1580,7 +1580,7 @@ input[type=file]{display:none}
   </div>
   <div class="pbar" id="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
   <div class="src-row" id="srcRow">
-    <span class="sc">Tengrinews.kz</span><span class="sc">Kapital.kz</span><span class="sc">24.kz</span><span class="sc">Kursiv.kz</span><span class="sc">Primeminister.kz</span><span class="sc">Lsm.kz</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Kozachkov</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Tengrinews</span><span class="sc" style="background:#fce7f3;color:#9d174d;border-color:#fbcfe8">IG typical_zhezkazgan</span>
+    <span class="sc">Tengrinews.kz</span><span class="sc">Kapital.kz</span><span class="sc">24.kz</span><span class="sc">Kursiv.kz</span><span class="sc">Primeminister.kz</span><span class="sc">Lsm.kz</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Tengrinews</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Акорда</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Борт №1</span>
   </div>
   <!-- фильтры перенесены в глобальную панель -->
   <div class="card" style="margin-bottom:14px">
@@ -7097,14 +7097,17 @@ const CACHE_KEY='eco_news_v5', TTL=2*60*60*1000;
 const TAG_META={air:{l:'Воздух',c:'t-air'},waste:{l:'Отходы',c:'t-waste'},taza:{l:'Таза КЗ',c:'t-taza'},urban:{l:'Благоустройство',c:'t-urban'},incident:{l:'Инцидент',c:'t-incident'},policy:{l:'Политика',c:'t-policy'}};
 let allNews=[],newsInit=false,isLoading=false;
 const RSS_SOURCES=[
-  {name:'Tengrinews.kz',url:'https://tengrinews.kz/feed/'},
-  {name:'Kapital.kz',url:'https://kapital.kz/rss'},
-  {name:'24.kz',url:'https://24.kz/rss'},
-  {name:'Kursiv.kz',url:'https://kursiv.kz/feed'},
-  {name:'Kz.kursiv.media',url:'https://kz.kursiv.media/feed'},
-  {name:'Primeminister.kz',url:'https://primeminister.kz/rss'},
-  {name:'Lsm.kz',url:'https://lsm.kz/feed'},
-  {name:'IG @typical_zhezkazgan',url:'https://rsshub.app/instagram/user/typical_zhezkazgan',optional:true},
+  // Веб-СМИ (RSS)
+  {name:'Tengrinews.kz',    url:'https://tengrinews.kz/feed/',    type:'rss'},
+  {name:'Kapital.kz',       url:'https://kapital.kz/rss',         type:'rss'},
+  {name:'24.kz',            url:'https://24.kz/rss',              type:'rss'},
+  {name:'Kursiv.kz',        url:'https://kursiv.kz/feed',         type:'rss'},
+  {name:'Primeminister.kz', url:'https://primeminister.kz/rss',   type:'rss'},
+  {name:'Lsm.kz',           url:'https://lsm.kz/feed',            type:'rss'},
+  // Telegram (HTML preview через t.me/s/)
+  {name:'TG Tengrinews',    url:'https://t.me/s/tengrinews',      type:'telegram'},
+  {name:'TG Акорда',        url:'https://t.me/s/aqorda_resmi',    type:'telegram'},
+  {name:'TG Борт №1',       url:'https://t.me/s/bort_01',         type:'telegram'},
 ];
 const ECO_KEYWORDS=['эколог','выброс','загрязнен','отход','воздух','таза','taza','мэпр','природ','атмосфер','радиац','токсич','мусор','свалк','переработ','озон','климат','co2','парниковый','нефт','пэк','инцидент','чс'];
 const TAG_RULES=[
@@ -7154,7 +7157,39 @@ function renderImpacts(news){const hi=news.filter(n=>n.impact==='high'||n.impact
 function renderMainNewsFeed(){const el=document.getElementById('mainNewsFeed');if(!el)return;const items=allNews.slice(0,5);if(!items.length){el.innerHTML='<div class="empty">Загрузка новостей...</div>';return;}el.innerHTML=items.map(n=>`<div class="news-item"><div class="n-meta"><span class="n-date">${n.date||''}</span><span class="n-src">${n.src||''}</span>${(n.tags||[]).map(t=>TAG_META[t]?`<span class="tag ${TAG_META[t].c}">${TAG_META[t].l}</span>`:'').join('')}${n.region&&n.region!=='Казахстан'?`<span class="tag t-reg">${n.region}</span>`:''}</div><div class="n-head"><a href="${n.link||'#'}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${n.head||''}</a></div></div>`).join('');}
 function loadCache(){try{const d=JSON.parse(localStorage.getItem(CACHE_KEY));if(d&&d.ts&&Date.now()-d.ts<TTL)return d;}catch(e){}return null;}
 function saveCache(d){try{localStorage.setItem(CACHE_KEY,JSON.stringify({...d,ts:Date.now()}));}catch(e){}}
-function detectTags(text){const low=text.toLowerCase();const tags=[];for(const rule of TAG_RULES){if(rule.words.some(w=>low.includes(w)))tags.push(rule.tag);}return tags.length?tags:['policy'];}
+// Расширенный фильтр «Таза Казахстан» — ловит все вариации написания
+function isTazaRelated(text){
+  if(!text) return false;
+  const low = text.toLowerCase().replace(/[-–—]/g,' ').replace(/\s+/g,' ');
+  // Раздельные написания (рус/каз/латиница)
+  if(/таза\s*(казахстан|қазақстан|казакстан|кз)/i.test(low)) return true;
+  if(/taza\s*(kazakhstan|qazaqstan|qazakhstan|kz)/i.test(low)) return true;
+  // Слитные написания и хэштеги
+  if(low.includes('tazaqaz')) return true;
+  if(low.includes('тазақазақстан')) return true;
+  if(low.includes('тазақаз')) return true;
+  return false;
+}
+// Эко-релевантность для Telegram-постов / расширенного RSS
+const ECO_STRICT_KW = ['эколог','мэпр','выброс','загрязнен','отход','атмосфер',
+  'радиац','токсич','свалк','переработ','парников','нефт','уголь','тюлен',
+  'каспий','балхаш','арал','браконьер','вырубк','лес','почв','воздух',
+  'климат','озон','co2','смог','нму','казгидромет','благоустройств'];
+function isEcoRelevant(text){
+  if(!text) return false;
+  if(isTazaRelated(text)) return true;
+  const low = text.toLowerCase();
+  return ECO_STRICT_KW.some(kw=>low.includes(kw));
+}
+function detectTags(text){
+  const low=text.toLowerCase();
+  const tags=[];
+  if(isTazaRelated(text)) tags.push('taza');
+  for(const rule of TAG_RULES){
+    if(rule.words.some(w=>low.includes(w))) tags.push(rule.tag);
+  }
+  return tags.length ? [...new Set(tags)] : ['policy'];
+}
 function detectRegion(text){
   const low=text.toLowerCase();
   // Карагандa (U+0430) и Карагандe (U+0435) — разные гласные, проверяем общий корень через charCode
@@ -7165,10 +7200,85 @@ function detectRegion(text){
 }
 function detectImpact(text,tags){const low=text.toLowerCase();if(tags.includes('incident')||low.includes('авари')||low.includes('разлив')||low.includes('чс'))return 'high';if(tags.includes('air')||tags.includes('waste'))return 'med';return 'low';}
 function parseRssDate(dateStr){if(!dateStr)return new Date().toLocaleDateString('ru-RU');try{const d=new Date(dateStr);if(isNaN(d.getTime()))return new Date().toLocaleDateString('ru-RU');return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){return new Date().toLocaleDateString('ru-RU');}}
-function parseRssXml(xml,sourceName){const items=[];try{const parser=new DOMParser();const doc=parser.parseFromString(xml,'text/xml');const entries=doc.querySelectorAll('item');entries.forEach(item=>{const title=(item.querySelector('title')?.textContent||'').trim();const desc=(item.querySelector('description')?.textContent||'').replace(/<[^>]+>/g,'').trim();const link=(item.querySelector('link')?.textContent||'').trim();const pubDate=item.querySelector('pubDate')?.textContent||'';const fullText=(title+' '+desc).toLowerCase();const ECO_STRICT=['эколог','мэпр','выброс','загрязнен','отход','таза','taza','атмосфер','радиац','токсич','свалк','переработ','парников','нефт','уголь','тюлен','каспий','балхаш','арал','браконьер','вырубк','лес','почв'];
-const isEco=ECO_STRICT.some(kw=>fullText.includes(kw))||ECO_KEYWORDS.filter(kw=>fullText.includes(kw)).length>=2;
-if(!isEco)return;const tags=detectTags(title+' '+desc);const region=detectRegion(title+' '+desc);const impact=detectImpact(title+' '+desc,tags);items.push({date:parseRssDate(pubDate),src:sourceName,head:title,text:desc.substring(0,150)+(desc.length>150?'...':''),link,tags,region,impact,delta:null,isNew:true});});}catch(e){console.warn('RSS parse error:',sourceName,e);}return items;}
-async function fetchOneRss(source){try{const url='/api/proxy?rss='+encodeURIComponent(source.url);const r=await fetch(url,{signal:AbortSignal.timeout(10000)});if(!r.ok)throw new Error('HTTP '+r.status);const xml=await r.text();const items=parseRssXml(xml,source.name);console.log('OK '+source.name+': '+items.length);return items;}catch(e){console.warn('FAIL '+source.name+': '+e.message);return[];}}
+function parseRssXml(xml,sourceName){
+  const items=[];
+  try{
+    const parser=new DOMParser();
+    const doc=parser.parseFromString(xml,'text/xml');
+    const entries=doc.querySelectorAll('item');
+    entries.forEach(item=>{
+      const title=(item.querySelector('title')?.textContent||'').trim();
+      const desc=(item.querySelector('description')?.textContent||'').replace(/<[^>]+>/g,'').trim();
+      const link=(item.querySelector('link')?.textContent||'').trim();
+      const pubDate=item.querySelector('pubDate')?.textContent||'';
+      const fullText = title + ' ' + desc;
+      // Эко-релевантность: либо «Таза Казахстан» во всех вариантах, либо ECO_STRICT_KW,
+      // либо ≥2 общих эко-ключей
+      const lowFull = fullText.toLowerCase();
+      const isEco = isEcoRelevant(fullText)
+        || ECO_KEYWORDS.filter(kw=>lowFull.includes(kw)).length>=2;
+      if(!isEco) return;
+      const tags=detectTags(fullText);
+      const region=detectRegion(fullText);
+      const impact=detectImpact(fullText,tags);
+      items.push({date:parseRssDate(pubDate),src:sourceName,head:title,
+        text:desc.substring(0,150)+(desc.length>150?'...':''),
+        link,tags,region,impact,delta:null,isNew:true});
+    });
+  } catch(e){ console.warn('RSS parse error:',sourceName,e); }
+  return items;
+}
+// Парсер preview-страницы Telegram (t.me/s/<channel>) — берёт публичные посты
+function parseTelegramHTML(html, sourceName){
+  const items = [];
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const messages = doc.querySelectorAll('.tgme_widget_message_wrap');
+    messages.forEach(msg => {
+      const textEl = msg.querySelector('.tgme_widget_message_text');
+      const dateEl = msg.querySelector('.tgme_widget_message_date time');
+      const linkEl = msg.querySelector('.tgme_widget_message_date');
+      if(!textEl) return;
+      const fullText = textEl.textContent.trim();
+      if(!fullText) return;
+      // Фильтр по эко-релевантности (вкл. все варианты «Таза Казахстан»)
+      if(!isEcoRelevant(fullText)) return;
+      const pubDate = dateEl ? dateEl.getAttribute('datetime') : '';
+      const link = linkEl ? linkEl.getAttribute('href') : '';
+      const head = fullText.split(/[.!?\n]/)[0].slice(0, 110).trim();
+      const text = fullText.slice(0, 200) + (fullText.length > 200 ? '…' : '');
+      const tags = detectTags(fullText);
+      const region = detectRegion(fullText);
+      items.push({
+        date: parseRssDate(pubDate),
+        src: sourceName,
+        head: head || fullText.slice(0, 60),
+        text, link,
+        tags, region,
+        impact: detectImpact(fullText, tags),
+        delta: null, isNew: true,
+      });
+    });
+  } catch(e){ console.warn('Telegram parse error:', sourceName, e.message); }
+  return items;
+}
+async function fetchOneRss(source){
+  try{
+    const url = '/api/proxy?rss=' + encodeURIComponent(source.url);
+    const r = await fetch(url, {signal: AbortSignal.timeout(12000)});
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const body = await r.text();
+    const items = source.type === 'telegram'
+      ? parseTelegramHTML(body, source.name)
+      : parseRssXml(body, source.name);
+    console.log('OK ' + source.name + ': ' + items.length);
+    return items;
+  } catch(e){
+    console.warn('FAIL ' + source.name + ': ' + e.message);
+    return [];
+  }
+}
 async function fetchNews(){if(isLoading)return;isLoading=true;const btn=document.getElementById('btnR');btn.disabled=true;btn.textContent='Обновляется...';setStatus('loading','Загружаю RSS-ленты...');setProg(5);renderSkel();const allItems=[];const step=90/RSS_SOURCES.length;for(let i=0;i<RSS_SOURCES.length;i++){const src=RSS_SOURCES[i];setStatus('loading','Загружаю '+src.name+' ('+( i+1)+'/'+RSS_SOURCES.length+')');const items=await fetchOneRss(src);allItems.push(...items);setProg(5+Math.round(step*(i+1)));}allItems.sort((a,b)=>{const o={high:0,med:1,low:2};if(o[a.impact]!==o[b.impact])return o[a.impact]-o[b.impact];return 0;});const seen=new Set();const unique=allItems.filter(n=>{const key=n.head.substring(0,40).toLowerCase();if(seen.has(key))return false;seen.add(key);return true;});const alerts=unique.filter(n=>n.impact==='high');setProg(100);setTimeout(()=>setProg(0,false),500);if(unique.length===0){setStatus('err','Не удалось загрузить новости.');document.getElementById('newsList').innerHTML='<div class="empty">Нет данных. Нажмите «Обновить сейчас».</div>';document.getElementById('impactList').innerHTML='<div class="empty">Нет данных.</div>';}else{saveCache({news:unique,alerts});allNews=unique;applyFilter();renderImpacts(unique);renderMainNewsFeed();markSrc(true);setStatus('live','Загружено '+unique.length+' новостей из '+RSS_SOURCES.length+' источников',Date.now());if(alerts.length)showAlert(alerts[0].head);}isLoading=false;btn.disabled=false;btn.textContent='Обновить сейчас';}
 function triggerRefresh(){localStorage.removeItem(CACHE_KEY);fetchNews();fetchSocial();}
 
