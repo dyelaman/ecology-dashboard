@@ -40,7 +40,23 @@ ORGS  = f"{SRC}/ecology_organizations.csv"
 
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public", "data")
 OUT_DIR = os.path.normpath(OUT_DIR)
-OUT_PATH = os.path.join(OUT_DIR, "nbd_2025.json")
+OUT_PATH       = os.path.join(OUT_DIR, "nbd_2025.json")
+OUT_FACTS_PATH = os.path.join(OUT_DIR, "nbd_facts.json")
+
+# ── Глобальный аккумулятор фактов для кросс-фильтрации ──────────────────────
+# Ключ: (env, month, region, org, substance) → агрегаты.
+# Заполняется внутри aggregate() параллельно с обычными агрегатами.
+FACTS = defaultdict(lambda: {
+    "measurements": 0,
+    "ratio_filled": 0,   # air
+    "exceed":       0,   # air
+    "conc_sum":     0.0, # air
+    "conc_count":   0,   # air
+    "ph_count":     0,   # water
+    "ph_out":       0,   # water
+    "gas_sum":      0.0, # fire
+    "gas_count":    0,   # fire
+})
 
 # ── A4: реальный валидный период данных ─────────────────────────────────────
 DATE_MIN = "2025-01-01"
@@ -161,6 +177,7 @@ def aggregate(csv_path, label, kind):
                 air_total_rows += 1
                 emission = f(row.get("emission"))
                 ratio = f(row.get("air_excess_ratio"))
+                conc  = f(row.get("pollutant_concentration"))
                 val = emission if emission and emission > 0 else 0.0
                 is_exceed = 0
                 if ratio is not None:
@@ -168,18 +185,35 @@ def aggregate(csv_path, label, kind):
                     if ratio > 1.0:
                         is_exceed = 1
                         air_exceed_count += 1
+                # FACTS — компактная сборка для кросс-фильтрации
+                fk = FACTS[("air", ym, reg or "", org or "", sub or "")]
+                fk["measurements"] += 1
+                if ratio is not None:
+                    fk["ratio_filled"] += 1
+                    if ratio > 1.0: fk["exceed"] += 1
+                if conc is not None:
+                    fk["conc_sum"] += conc; fk["conc_count"] += 1
             elif kind == "fire":
-                val = f(row.get("volumetric_gas_consumption")) or 0.0
+                gas = f(row.get("volumetric_gas_consumption"))
+                val = gas or 0.0
                 is_exceed = 0
+                fk = FACTS[("fire", ym, reg or "", org or "", sub or "")]
+                fk["measurements"] += 1
+                if gas is not None:
+                    fk["gas_sum"] += gas; fk["gas_count"] += 1
             else:  # water
                 val = f(row.get("waste_water_flow")) or 0.0
                 ph = f(row.get("hydrogen_index"))
+                fk = FACTS[("water", ym, reg or "", org or "", sub or "")]
+                fk["measurements"] += 1
                 if ph is not None and 0 < ph < 14:
                     ph_n += 1; ph_sum += ph
                     out = 1 if (ph < 6 or ph > 9) else 0
                     ph_out_of_range += out
                     m = ph_monthly[ym]
                     m["sum"] += ph; m["n"] += 1; m["out"] += out
+                    fk["ph_count"] += 1
+                    if ph < 6 or ph > 9: fk["ph_out"] += 1
                 is_exceed = 0
 
             if sub:
@@ -345,10 +379,41 @@ def main():
     with open(OUT_PATH, "w", encoding="utf-8") as fh:
         json.dump(out, fh, ensure_ascii=False, separators=(",", ":"))
 
+    # ── Часть A: компактный массив фактов для кросс-фильтрации фронта ──────
+    schema = ["env","month","region","org","substance","measurements",
+              "ratio_filled","exceed","conc_sum","conc_count",
+              "ph_count","ph_out","gas_sum","gas_count"]
+    facts_array = []
+    for (env, month, region, org, substance), fk in FACTS.items():
+        facts_array.append([
+            env, month, region, org, substance,
+            fk["measurements"],
+            fk["ratio_filled"],
+            fk["exceed"],
+            round(fk["conc_sum"], 2),
+            fk["conc_count"],
+            fk["ph_count"],
+            fk["ph_out"],
+            round(fk["gas_sum"], 4),
+            fk["gas_count"],
+        ])
+    # стабильный порядок: env → period → measurements desc
+    facts_array.sort(key=lambda r: (r[0], r[1], -r[5]))
+    facts_out = {
+        "schema":    schema,
+        "facts":     facts_array,
+        "metadata":  metadata,
+        "generated": time.strftime("%Y-%m-%d %H:%M:%S"),
+    }
+    with open(OUT_FACTS_PATH, "w", encoding="utf-8") as fh:
+        json.dump(facts_out, fh, ensure_ascii=False, separators=(",", ":"))
+    sz_facts = os.path.getsize(OUT_FACTS_PATH) / 1024
+
     sz = os.path.getsize(OUT_PATH) / 1024
     el = time.time() - t0
     print("=" * 70)
     print(f"✓ Готово за {el/60:.1f} мин · {OUT_PATH} ({sz:,.0f} КБ)")
+    print(f"  nbd_facts.json: {len(facts_array):,} комбинаций · {sz_facts:,.0f} КБ")
     print(f"  AIR   : {air['rows']:>11,} строк · {air['period_from']} → {air['period_to']} · {air['regions_n']} рег. · {air['orgs_n']} орг.")
     print(f"  FIRE  : {fire['rows']:>11,} строк · {fire['period_from']} → {fire['period_to']} · {fire['regions_n']} рег. · {fire['orgs_n']} орг.")
     print(f"  WATER : {water['rows']:>11,} строк · {water['period_from']} → {water['period_to']} · {water['regions_n']} рег. · {water['orgs_n']} орг.")

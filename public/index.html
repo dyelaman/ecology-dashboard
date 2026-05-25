@@ -197,6 +197,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .coverage-note{font-size:11px;padding:8px 12px;border-radius:8px;margin:8px 0 14px;line-height:1.4}
 .coverage-info{background:rgba(33,150,243,.08);color:#1565C0;border-left:3px solid #2196F3}
 .coverage-warning{background:rgba(251,140,0,.08);color:#E65100;border-left:3px solid #FB8C00}
+/* Фильтр-бар НБД */
+.nbd-fltbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px}
+.nbd-fltbar-lbl{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+.nbd-fltbar-sub{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-left:4px}
+.nbd-fltbar select{font-size:11px;padding:4px 8px;border-radius:14px;border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;font-weight:500;max-width:180px}
+.nbd-fltbar select option:disabled{color:#bbb}
+.nbd-fltbar input[type=month]{font-size:11px;padding:3px 8px;border-radius:14px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:130px}
+.nbd-fltbar-check{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);font-weight:500;cursor:pointer;margin-left:6px}
+.nbd-fltbar-check input{accent-color:#dc2626}
+.nbd-fltbar-reset{margin-left:auto;font-size:10px;padding:5px 11px;border-radius:14px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer}
+.nbd-fltbar-reset:hover{color:#dc2626;border-color:#dc2626}
+.nbd-flt-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;min-height:24px}
+/* Кликабельные списки в режиме кросс-фильтра */
+.nbd-list-row{display:grid;grid-template-columns:200px 1fr 110px;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .12s}
+.nbd-list-row:hover{background:rgba(27,122,58,.05)}
+.nbd-list-row.active{background:rgba(27,122,58,.12);font-weight:600}
+.nbd-list-name{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nbd-list-bar-wrap{height:10px;background:#f0f0f0;border-radius:5px;overflow:hidden}
+.nbd-list-bar{height:100%;border-radius:5px}
+.nbd-list-value{text-align:right;font-size:11px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums}
+@media (max-width:768px){
+  .nbd-list-row{grid-template-columns:110px 1fr 80px;gap:6px}
+  .nbd-list-name{font-size:10px}
+}
 /* Главный алерт НБД — крупная плашка наверху вкладки, динамическая по режиму */
 .nbd-alert{display:flex;align-items:flex-start;gap:14px;padding:14px 18px;border-radius:10px;margin-bottom:16px;transition:all .2s}
 .nbd-alert .alert-body{flex:1;min-width:0}
@@ -938,6 +962,40 @@ input[type=file]{display:none}
 
     <!-- Дисклеймер о покрытии — меняется в зависимости от режима -->
     <div id="nbd2025CoverageNote" class="coverage-note coverage-info" style="display:none"></div>
+
+    <!-- ── ФИЛЬТР-БАР НБД (живая кросс-фильтрация) ── -->
+    <div class="nbd-fltbar">
+      <span class="nbd-fltbar-lbl">📅 Период</span>
+      <span class="nbd-fltbar-sub">Год</span>
+      <select id="nbdFltYear" onchange="_onNbdYearChange()"><option value="">Все</option></select>
+      <span class="nbd-fltbar-sub">Месяц</span>
+      <select id="nbdFltMonth" onchange="_onNbdMonthChange()">
+        <option value="">Все</option>
+        <option value="01">Янв</option><option value="02">Фев</option><option value="03">Мар</option>
+        <option value="04">Апр</option><option value="05">Май</option><option value="06">Июн</option>
+        <option value="07">Июл</option><option value="08">Авг</option><option value="09">Сен</option>
+        <option value="10">Окт</option><option value="11">Ноя</option><option value="12">Дек</option>
+      </select>
+      <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
+      <span class="nbd-fltbar-sub">Диапазон</span>
+      <input type="month" id="nbdFltDateFrom" min="2025-01" max="2026-12" onchange="_onNbdRangeChange()">
+      <span style="color:var(--text3);font-size:11px">—</span>
+      <input type="month" id="nbdFltDateTo" min="2025-01" max="2026-12" onchange="_onNbdRangeChange()">
+      <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
+      <span class="nbd-fltbar-sub">Регион</span>
+      <select id="nbdFltRegion" onchange="_onNbdSelectChange('region',this.value)"><option value="">Все</option></select>
+      <span class="nbd-fltbar-sub">Вещество</span>
+      <select id="nbdFltSubstance" onchange="_onNbdSelectChange('substance',this.value)"><option value="">Все</option></select>
+      <span class="nbd-fltbar-sub">Организация</span>
+      <select id="nbdFltOrg" onchange="_onNbdSelectChange('org',this.value)"><option value="">Все</option></select>
+      <label id="nbdOnlyExceedWrap" class="nbd-fltbar-check">
+        <input type="checkbox" id="nbdOnlyExceed" onchange="_onNbdOnlyExceed(this.checked)">
+        Только превышения
+      </label>
+      <button class="nbd-fltbar-reset" onclick="_nbdResetAll()">× Сбросить</button>
+    </div>
+    <!-- Чипы активных фильтров -->
+    <div id="nbdFltChips" class="nbd-flt-chips"></div>
 
     <!-- KPI -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" id="nbd2025Kpis">
@@ -2443,11 +2501,13 @@ function renderMainCharts() {
       }
     }
     fetch('/data/chunks/manifest.json').then(r=>r.json()).then(m=>{_CHUNK_MANIFEST=m;}).catch(()=>{});
-    // Свежие агрегаты НБД СОС 2025-09 → 2026-05 (фоновая загрузка)
+    // Свежие агрегаты НБД СОС 2025-2026 (фоновая загрузка)
     fetch('/data/nbd_2025.json').then(r=>r.json()).then(j=>{
       window._NBD_2025 = j;
       if(typeof renderNbd2025 === 'function') renderNbd2025();
     }).catch(e=>console.warn('nbd_2025 load failed:', e.message));
+    // Компактный массив фактов для кросс-фильтрации НБД
+    if(typeof _loadNbdFacts === 'function') _loadNbdFacts();
     // Per-request датасет Таза Казахстан — для клиентской кросс-фильтрации
     fetch('/data/taza_compact.json').then(r=>r.json()).then(tc=>{
       _TAZA=tc; populateTazaFilters();
@@ -6749,10 +6809,106 @@ function updateChoropleth(){
 let _nbd2025Tab = 'air';
 let _nbd2025MonthlyChart = null;
 
+// ── Кросс-фильтрация на компактном массиве фактов ───────────────────────────
+let NBD_FACTS = [];
+let NBD_SCHEMA = {};   // {env:0, month:1, region:2, org:3, substance:4, …}
+const nbdFilters = {
+  env:        'air',
+  yearMonth:  null,   // 'YYYY' | 'YYYY-MM' | null
+  dateFrom:   null,   // 'YYYY-MM'
+  dateTo:     null,
+  region:     null,
+  substance:  null,
+  org:        null,
+  onlyExceed: false,
+};
+function _nbdResetFilters(keepEnv){
+  nbdFilters.yearMonth = null; nbdFilters.dateFrom = null; nbdFilters.dateTo = null;
+  nbdFilters.region = null; nbdFilters.substance = null; nbdFilters.org = null;
+  nbdFilters.onlyExceed = false;
+  if(!keepEnv) nbdFilters.env = 'air';
+}
+
 function setNbd2025Tab(t){
   _nbd2025Tab = t;
+  nbdFilters.env = t;
+  // фильтры по веществу/организации могут быть несовместимы с новой средой — снимаем при отсутствии
+  if(NBD_FACTS.length){
+    const S = NBD_SCHEMA;
+    const factsInEnv = NBD_FACTS.filter(r=>r[S.env]===t);
+    const availSub = new Set(factsInEnv.map(r=>r[S.substance]));
+    const availOrg = new Set(factsInEnv.map(r=>r[S.org]));
+    if(nbdFilters.substance && !availSub.has(nbdFilters.substance)) nbdFilters.substance = null;
+    if(nbdFilters.org && !availOrg.has(nbdFilters.org)) nbdFilters.org = null;
+  }
   document.querySelectorAll('.nbd2025-tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===t));
   renderNbd2025();
+}
+
+async function _loadNbdFacts(){
+  if(NBD_FACTS.length) return;
+  try{
+    const r = await fetch('/data/nbd_facts.json');
+    const d = await r.json();
+    d.schema.forEach((n,i)=>{ NBD_SCHEMA[n]=i; });
+    NBD_FACTS = d.facts || [];
+    _initNbdFilterUi();
+    renderNbd2025();
+  } catch(e){ console.warn('nbd_facts load failed:', e.message); }
+}
+
+function getFilteredNbdFacts(){
+  if(!NBD_FACTS.length) return [];
+  const S = NBD_SCHEMA, F = nbdFilters;
+  const out = [];
+  for(let i=0;i<NBD_FACTS.length;i++){
+    const r = NBD_FACTS[i];
+    if(r[S.env] !== F.env) continue;
+    const month = r[S.month];
+    if(F.yearMonth){
+      if(F.yearMonth.length === 4){ if(!month.startsWith(F.yearMonth)) continue; }
+      else if(month !== F.yearMonth) continue;
+    }
+    if(F.dateFrom && month < F.dateFrom) continue;
+    if(F.dateTo   && month > F.dateTo) continue;
+    if(F.region    && r[S.region]    !== F.region)    continue;
+    if(F.substance && r[S.substance] !== F.substance) continue;
+    if(F.org       && r[S.org]       !== F.org)       continue;
+    if(F.onlyExceed && (r[S.exceed]||0) === 0) continue;
+    out.push(r);
+  }
+  return out;
+}
+
+function _nbdAggregate(facts){
+  const S = NBD_SCHEMA;
+  let m=0, ex=0, rf=0, ph_c=0, ph_o=0, gas_s=0, gas_c=0, conc_s=0, conc_c=0;
+  const byRegion={}, bySubstance={}, byOrg={}, byMonth={}, byMonthEx={};
+  for(let i=0;i<facts.length;i++){
+    const r = facts[i];
+    const mc=r[S.measurements]||0, exc=r[S.exceed]||0, rfl=r[S.ratio_filled]||0;
+    m += mc; ex += exc; rf += rfl;
+    ph_c += r[S.ph_count]||0; ph_o += r[S.ph_out]||0;
+    gas_s += r[S.gas_sum]||0; gas_c += r[S.gas_count]||0;
+    conc_s += r[S.conc_sum]||0; conc_c += r[S.conc_count]||0;
+    const reg=r[S.region], sub=r[S.substance], org=r[S.org], mn=r[S.month];
+    byRegion[reg]     = (byRegion[reg]||0)     + mc;
+    bySubstance[sub]  = (bySubstance[sub]||0)  + mc;
+    byOrg[org]        = (byOrg[org]||0)        + mc;
+    byMonth[mn]       = (byMonth[mn]||0)       + mc;
+    byMonthEx[mn]     = (byMonthEx[mn]||0)     + exc;
+  }
+  return {
+    totalMeas: m, totalExceed: ex, ratioFilled: rf,
+    pct_of_measured: rf ? +(ex/rf*100).toFixed(2) : 0,
+    pct_of_all:      m  ? +(ex/m*100).toFixed(2)  : 0,
+    ratio_coverage_pct: m ? +(rf/m*100).toFixed(2) : 0,
+    ph_count: ph_c, ph_out: ph_o,
+    ph_pct: ph_c ? +(ph_o/ph_c*100).toFixed(2) : 0,
+    gas_sum: gas_s, gas_count: gas_c,
+    conc_sum: conc_s, conc_count: conc_c,
+    byRegion, bySubstance, byOrg, byMonth, byMonthEx,
+  };
 }
 
 const _NBD_UNIT = {
@@ -6857,121 +7013,370 @@ function _renderNbdCoverageNote(mode, metadata){
   el.style.display = '';
 }
 
+// ── Главная функция: пересчитывает ВСЕ блоки модуля из отфильтрованного среза
 function renderNbd2025(){
-  const d = window._NBD_2025; if(!d) return;
+  const d = window._NBD_2025;
   const T = _nbd2025Tab;
-  // Главный алерт наверху — меняется по режиму
-  _renderNbdAlert(d, T);
-  const k = d[T]; if(!k) return;
   const U = _NBD_UNIT[T];
 
-  // B2: плашка покрытия (под табами)
-  _renderNbdCoverageNote(T, d.metadata);
-  // B3: подпись единиц концентрации (только для воздуха)
+  // Если facts ещё не загружены — fallback на старые агрегаты (первая загрузка)
+  if(!NBD_FACTS.length){
+    if(d) _renderNbdAlert(d, T);
+    _renderNbdCoverageNote(T, d?.metadata);
+    return;
+  }
+
+  // 1. Фильтрация + агрегация
+  const facts = getFilteredNbdFacts();
+  const A = _nbdAggregate(facts);
+
+  // 2. Hero alert — теперь использует данные ВЫБОРКИ (а не глобальные)
+  _renderNbdAlertFromFiltered(T, A, d);
+  // 3. Плашка покрытия (статичная по среде)
+  _renderNbdCoverageNote(T, d?.metadata);
+  // 4. Подпись единиц
   const subUnitNote = document.getElementById('nbd2025SubUnitNote');
   if(subUnitNote) subUnitNote.textContent = (T==='air') ? '· усл. ед.* (требует уточнения)' : '';
 
-  // KPI: замеры / организации / регионы
-  const meta = d.metadata?.[T] || {};
-  const total_meas = (k.top_substances||[]).reduce((s,x)=>s+(x.measurements||0),0);
-  document.getElementById('nbd2025KpiMeas').textContent = _fmtNum(total_meas);
+  // 5. KPI
+  document.getElementById('nbd2025KpiMeas').textContent = _fmtNum(A.totalMeas);
   document.getElementById('nbd2025KpiMeasSub').textContent = U.what;
-  document.getElementById('nbd2025KpiOrgs').textContent = (meta.orgs ?? (k.top_orgs||[]).length).toLocaleString('ru-RU');
+  document.getElementById('nbd2025KpiOrgs').textContent = Object.keys(A.byOrg).length.toLocaleString('ru-RU');
   document.getElementById('nbd2025KpiOrgsSub').textContent = 'с замерами';
-  document.getElementById('nbd2025KpiRegs').textContent = (meta.regions ?? (k.top_regions||[]).length).toLocaleString('ru-RU');
+  document.getElementById('nbd2025KpiRegs').textContent = Object.keys(A.byRegion).length.toLocaleString('ru-RU');
 
-  // KPI «Превышения ПДК» — два процента + сноска (A3 / B1)
   const exEl  = document.getElementById('nbd2025KpiEx');
   const exSub = document.getElementById('nbd2025KpiExSub');
   const exSub2= document.getElementById('nbd2025KpiExSub2');
   const exLbl = document.getElementById('nbd2025KpiExLbl');
   const exNote= document.getElementById('nbd2025KpiExNote');
-  if(T==='air' && k.exceed_stats){
-    const es = k.exceed_stats;
+  if(T==='air'){
     exLbl.textContent = 'Превышения ПДК';
-    exEl.textContent  = _fmtNum(es.exceed_count);
+    exEl.textContent  = _fmtNum(A.totalExceed);
     exEl.style.color  = '#dc2626';
-    exSub.textContent  = `${es.pct_of_measured}% от измеренных`;
-    exSub2.textContent = `${es.pct_of_all}% от всех замеров`;
-    exNote.textContent = `ℹ️ Коэф. ПДК заполнен у ${es.ratio_coverage_pct}% замеров`;
+    exSub.textContent  = `${A.pct_of_measured}% от измеренных`;
+    exSub2.textContent = `${A.pct_of_all}% от всех замеров`;
+    exNote.textContent = `ℹ️ Коэф. ПДК заполнен у ${A.ratio_coverage_pct}% замеров`;
+    // Air-only exceed block: ТОП по орг и по веществу — но из выборки!
     document.getElementById('nbd2025ExceedBlock').style.display = '';
-    _renderNbdList('nbd2025ExOrgs', (k.exceed.by_org||[]).slice(0,15),       {barKey:'exceed', col:'#dc2626', nameMax:42, showTotal:false});
-    _renderNbdList('nbd2025ExSubs', (k.exceed.by_substance||[]).slice(0,15), {barKey:'exceed', col:'#dc2626', nameMax:40, showTotal:false});
-  } else if(T==='water' && k.ph){
+    _renderNbdExceedSub(facts);
+    _renderNbdExceedOrg(facts);
+  } else if(T==='water'){
     exLbl.textContent = 'pH вне нормы (6–9)';
-    exEl.textContent  = _fmtNum(k.ph.out_of_range_n);
+    exEl.textContent  = _fmtNum(A.ph_out);
     exEl.style.color  = '#dc2626';
-    exSub.textContent  = `${k.ph.out_of_range_pct}% от ${k.ph.n.toLocaleString('ru-RU')} замеров pH`;
-    exSub2.textContent = `средний pH: ${k.ph.avg}`;
-    exNote.textContent = '';
-    document.getElementById('nbd2025ExceedBlock').style.display = 'none';
-    const wph = document.getElementById('nbd2025WaterPh');
-    document.getElementById('nbd2025WaterPhBlock').style.display = '';
-    wph.innerHTML = `Средний pH сточных вод: <b>${k.ph.avg}</b><br>` +
-      `Замеров с pH вне нормы 6–9: <b style="color:#dc2626">${k.ph.out_of_range_n.toLocaleString('ru-RU')}</b> (${k.ph.out_of_range_pct}%)<br>` +
-      `Всего корректных замеров pH: <b>${k.ph.n.toLocaleString('ru-RU')}</b>`;
-  } else {
-    exLbl.textContent = 'Превышения';
-    exEl.textContent  = '—';
-    exEl.style.color  = 'var(--text3)';
-    exSub.textContent  = 'нет нормативов в выгрузке';
+    exSub.textContent  = `${A.ph_pct}% от ${A.ph_count.toLocaleString('ru-RU')} замеров pH`;
     exSub2.textContent = '';
     exNote.textContent = '';
     document.getElementById('nbd2025ExceedBlock').style.display = 'none';
-  }
-  if(T!=='water'){ document.getElementById('nbd2025WaterPhBlock').style.display = 'none'; }
-
-  // Период
-  document.getElementById('nbd2025Period').textContent = `· ${k.period_from} → ${k.period_to} · ${k.rows.toLocaleString('ru-RU')} строк`;
-
-  // Топ-веществ + топ-орг
-  _renderNbdList('nbd2025SubList', (k.top_substances||[]).slice(0,10),
-    {barKey:'measurements', col:U.col, nameMax:46, showTotal: T==='air'});
-  _renderNbdList('nbd2025OrgList', (k.top_orgs||[]).slice(0,20),
-    {barKey:'measurements', col:U.col, nameMax:46, showTotal: T==='air'});
-
-  // По регионам
-  _renderNbdList('nbd2025RegionList', (k.top_regions||[]).slice(0,20),
-    {barKey:'measurements', col:U.col, nameMax:32, showTotal:false});
-
-  // Месячный тренд
-  const ctx = document.getElementById('nbd2025MonthlyChart');
-  if(ctx && k.monthly){
-    if(_nbd2025MonthlyChart){ _nbd2025MonthlyChart.destroy(); _nbd2025MonthlyChart=null; }
-    const labels = k.monthly.map(m=>m.ym);
-    const meas = k.monthly.map(m=>m.measurements||0);
-    const ex = (T==='air') ? k.monthly.map(m=>m.exceed||0) : null;
-    const datasets = [{
-      label:'Замеры', data:meas, borderColor:U.col, backgroundColor:U.col+'22',
-      borderWidth:2, tension:0.25, fill:true, yAxisID:'y',
-    }];
-    if(ex){
-      datasets.push({label:'Превышения', data:ex, borderColor:'#dc2626', backgroundColor:'transparent',
-        borderWidth:2, borderDash:[4,3], tension:0.25, yAxisID:'y',});
+    const wphBlock = document.getElementById('nbd2025WaterPhBlock');
+    const wph = document.getElementById('nbd2025WaterPh');
+    if(wphBlock && wph){
+      wphBlock.style.display = '';
+      wph.innerHTML = `Замеров pH в выборке: <b>${A.ph_count.toLocaleString('ru-RU')}</b><br>` +
+        `Вне нормы 6–9: <b style="color:#dc2626">${A.ph_out.toLocaleString('ru-RU')}</b> (${A.ph_pct}%)`;
     }
-    _nbd2025MonthlyChart = new Chart(ctx, {
-      type:'line',
-      data:{labels, datasets},
-      options:{responsive:true, maintainAspectRatio:false,
-        interaction:{intersect:false,mode:'index'},
-        plugins:{legend:{display:datasets.length>1, labels:{font:{size:10}, color:'#6b7280'}}},
-        scales:{
-          y:{beginAtZero:true, ticks:{font:{size:9}, color:'#9ca3af',
-              callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?Math.round(v/1e3)+'K':v}},
-          x:{ticks:{font:{size:9}, color:'#9ca3af', maxRotation:0, autoSkip:true, maxTicksLimit:12}},
-        }
-      }
-    });
+  } else { // fire
+    exLbl.textContent = 'Замеров факела';
+    exEl.textContent  = _fmtNum(A.totalMeas);
+    exEl.style.color  = '#ea580c';
+    exSub.textContent  = `${Object.keys(A.byOrg).length} организаций`;
+    exSub2.textContent = '';
+    exNote.textContent = 'ℹ️ Нет норматива в выгрузке';
+    document.getElementById('nbd2025ExceedBlock').style.display = 'none';
+  }
+  if(T!=='water'){ const wphBlock=document.getElementById('nbd2025WaterPhBlock'); if(wphBlock) wphBlock.style.display='none'; }
+
+  // 6. Период (из metadata)
+  const meta = d?.metadata?.[T]||{};
+  document.getElementById('nbd2025Period').textContent = `· ${meta.period||'—'} · ${A.totalMeas.toLocaleString('ru-RU')} зам. в выборке`;
+
+  // 7. Полные кликабельные списки (вещества / орг / регионы)
+  _renderNbdClickList('nbd2025SubList', A.bySubstance, {filterKey:'substance', col:U.col, nameMax:46});
+  _renderNbdClickList('nbd2025OrgList', A.byOrg,       {filterKey:'org',       col:U.col, nameMax:46});
+  _renderNbdClickList('nbd2025RegionList', A.byRegion, {filterKey:'region',    col:U.col, nameMax:32});
+
+  // 8. Месячный тренд
+  _renderNbdMonthlyChart(A, T);
+
+  // 9. Карта НБД с хороплетом по выборке
+  if(typeof _renderNbdChoropleth==='function') _renderNbdChoropleth(A, facts);
+
+  // 10. Каскадные опции в фильтр-баре
+  _updateNbdFilterOptions(facts);
+
+  // 11. Чипы активных фильтров
+  _renderNbdChips();
+
+  // 12. Чекбокс «только превышения» — видимость
+  const oeWrap = document.getElementById('nbdOnlyExceedWrap');
+  if(oeWrap) oeWrap.style.display = (T==='air') ? '' : 'none';
+}
+
+// Hero alert на основе ОТФИЛЬТРОВАННОЙ выборки
+function _renderNbdAlertFromFiltered(T, A, d){
+  const wrap = document.getElementById('nbdAlert');
+  const main = document.getElementById('nbdAlertMain');
+  const det  = document.getElementById('nbdAlertDetail');
+  const bdg  = document.getElementById('nbdAlertBadge');
+  if(!wrap||!main||!det||!bdg) return;
+  const fmt = n=>(n||0).toLocaleString('ru-RU');
+  const meta = d?.metadata?.[T]||{};
+  const noData = A.totalMeas === 0;
+  if(noData){
+    wrap.className = 'nbd-alert nbd-alert-info';
+    main.textContent = 'ℹ️ Нет данных по выбранным фильтрам';
+    det.textContent  = 'Сбросьте фильтры или измените период';
+    bdg.textContent  = 'Пусто';
+    return;
+  }
+  if(T==='air'){
+    const level = A.pct_of_measured>=50?'critical':A.pct_of_measured>=25?'warning':'info';
+    const icon  = level==='critical'?'🔴':level==='warning'?'🟠':'ℹ️';
+    wrap.className = 'nbd-alert nbd-alert-'+level;
+    main.innerHTML = `${icon} ${level==='critical'?'КРИТИЧНО':level==='warning'?'ВНИМАНИЕ':'Статус'}: <b>${Math.round(A.pct_of_measured)}%</b> измеренных замеров воздуха превышают ПДК`;
+    det.innerHTML  = `<b>${fmt(A.totalExceed)}</b> превышений из <b>${fmt(A.ratioFilled)}</b> замеров с коэф. ПДК. По всем ${fmt(A.totalMeas)} замерам — <b>${A.pct_of_all}%</b>. Период данных: <b>${meta.period||'—'}</b>.`;
+    bdg.textContent = level==='critical'?'Требует контроля':level==='warning'?'Внимание':'В норме';
+  } else if(T==='water'){
+    const level = A.ph_pct>=30?'warning':A.ph_pct>=15?'warning':'info';
+    wrap.className = 'nbd-alert nbd-alert-'+level;
+    main.innerHTML = `🟠 ВНИМАНИЕ: <b>${Math.round(A.ph_pct)}%</b> замеров pH вне нормы 6–9`;
+    det.innerHTML  = `<b>${fmt(A.ph_out)}</b> из <b>${fmt(A.ph_count)}</b> корректных замеров pH. Всего замеров в выборке: <b>${fmt(A.totalMeas)}</b>.`;
+    bdg.textContent = 'Внимание';
+  } else {
+    wrap.className = 'nbd-alert nbd-alert-info';
+    main.innerHTML = `ℹ️ Факельные выбросы — узкий срез данных`;
+    det.innerHTML  = `<b>${fmt(A.totalMeas)}</b> замеров в выборке. ${Object.keys(A.byOrg).length} организаций, ${Object.keys(A.byRegion).length} регионов.`;
+    bdg.textContent = 'Информация';
   }
 }
 
+// Кликабельный полный список со скроллом
+function _renderNbdClickList(elId, data, opts){
+  const el = document.getElementById(elId); if(!el) return;
+  const sorted = Object.entries(data).sort((a,b)=>b[1]-a[1]);
+  if(!sorted.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет данных по фильтрам</div>'; return; }
+  const max = sorted[0][1] || 1;
+  const cur = nbdFilters[opts.filterKey] || null;
+  el.innerHTML = sorted.map(([name, val])=>{
+    const w = Math.max(1, (val/max)*100);
+    const nm = _esc(name||'—');
+    const active = cur===name ? ' active' : '';
+    const trunc = nm.length>opts.nameMax ? nm.slice(0,opts.nameMax)+'…' : nm;
+    return `<div class="nbd-list-row${active}" data-name="${nm.replace(/"/g,'&quot;')}" onclick="_onNbdListClick('${opts.filterKey}', this)">
+      <span class="nbd-list-name" title="${nm}">${trunc}</span>
+      <div class="nbd-list-bar-wrap"><div class="nbd-list-bar" style="width:${w}%;background:${opts.col}"></div></div>
+      <span class="nbd-list-value">${val.toLocaleString('ru-RU')}</span>
+    </div>`;
+  }).join('');
+}
+function _onNbdListClick(filterKey, row){
+  const name = row.dataset.name;
+  nbdFilters[filterKey] = (nbdFilters[filterKey]===name) ? null : name;
+  // Синхронизация с select в фильтр-баре
+  const selId = 'nbdFlt' + filterKey.charAt(0).toUpperCase() + filterKey.slice(1);
+  const sel = document.getElementById(selId);
+  if(sel) sel.value = nbdFilters[filterKey] || '';
+  renderNbd2025();
+}
+
+// Exceed-блок (топ-15 по превышениям в выборке)
+function _renderNbdExceedSub(facts){
+  const S = NBD_SCHEMA;
+  const m = {}; facts.forEach(r=>{ const k=r[S.substance]; if(!k) return; const o=m[k]||{exceed:0,measurements:0,ratio_filled:0}; o.exceed+=r[S.exceed]; o.measurements+=r[S.measurements]; o.ratio_filled+=r[S.ratio_filled]; m[k]=o; });
+  const list = Object.entries(m).filter(([_,v])=>v.exceed>0).sort((a,b)=>b[1].exceed-a[1].exceed).slice(0,15);
+  const el = document.getElementById('nbd2025ExSubs'); if(!el) return;
+  if(!list.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет превышений в выборке</div>'; return; }
+  const max = list[0][1].exceed;
+  el.innerHTML = list.map(([nm,v])=>{
+    const w = Math.max(1, v.exceed/max*100);
+    return `<div class="sat-row" title="${_esc(nm)}"><span class="sat-name">${_esc(nm).slice(0,40)}</span><div class="sat-bar"><div class="sat-bar-fill" style="width:${w}%;background:#dc2626"></div></div><span class="sat-val" style="text-align:right;min-width:120px">${v.exceed.toLocaleString('ru-RU')} прев. / ${v.measurements.toLocaleString('ru-RU')} зам.</span></div>`;
+  }).join('');
+}
+function _renderNbdExceedOrg(facts){
+  const S = NBD_SCHEMA;
+  const m = {}; facts.forEach(r=>{ const k=r[S.org]; if(!k) return; const o=m[k]||{exceed:0,measurements:0}; o.exceed+=r[S.exceed]; o.measurements+=r[S.measurements]; m[k]=o; });
+  const list = Object.entries(m).filter(([_,v])=>v.exceed>0).sort((a,b)=>b[1].exceed-a[1].exceed).slice(0,15);
+  const el = document.getElementById('nbd2025ExOrgs'); if(!el) return;
+  if(!list.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет превышений в выборке</div>'; return; }
+  const max = list[0][1].exceed;
+  el.innerHTML = list.map(([nm,v])=>{
+    const w = Math.max(1, v.exceed/max*100);
+    return `<div class="sat-row" title="${_esc(nm)}"><span class="sat-name">${_esc(nm).slice(0,42)}</span><div class="sat-bar"><div class="sat-bar-fill" style="width:${w}%;background:#dc2626"></div></div><span class="sat-val" style="text-align:right;min-width:120px">${v.exceed.toLocaleString('ru-RU')} прев. / ${v.measurements.toLocaleString('ru-RU')} зам.</span></div>`;
+  }).join('');
+}
+
+function _renderNbdMonthlyChart(A, T){
+  const ctx = document.getElementById('nbd2025MonthlyChart'); if(!ctx) return;
+  if(_nbd2025MonthlyChart){ _nbd2025MonthlyChart.destroy(); _nbd2025MonthlyChart=null; }
+  const labels = Object.keys(A.byMonth).sort();
+  const meas = labels.map(m=>A.byMonth[m]||0);
+  const ex   = (T==='air') ? labels.map(m=>A.byMonthEx[m]||0) : null;
+  const U = _NBD_UNIT[T];
+  const datasets = [{label:'Замеры', data:meas, borderColor:U.col, backgroundColor:U.col+'22', borderWidth:2, tension:0.25, fill:true, yAxisID:'y'}];
+  if(ex) datasets.push({label:'Превышения', data:ex, borderColor:'#dc2626', backgroundColor:'transparent', borderWidth:2, borderDash:[4,3], tension:0.25, yAxisID:'y'});
+  _nbd2025MonthlyChart = new Chart(ctx, {
+    type:'line', data:{labels, datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      interaction:{intersect:false,mode:'index'},
+      plugins:{legend:{display:datasets.length>1, labels:{font:{size:10},color:'#6b7280'}}},
+      scales:{
+        y:{beginAtZero:true, ticks:{font:{size:9},color:'#9ca3af',
+          callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?Math.round(v/1e3)+'K':v}},
+        x:{ticks:{font:{size:9},color:'#9ca3af',maxRotation:0,autoSkip:true,maxTicksLimit:12}},
+      }
+    }
+  });
+}
+
+// Каскад: дизейблить опции которых нет в текущей выборке
+function _updateNbdFilterOptions(facts){
+  const S = NBD_SCHEMA;
+  const avReg = new Set(facts.map(r=>r[S.region]));
+  const avSub = new Set(facts.map(r=>r[S.substance]));
+  const avOrg = new Set(facts.map(r=>r[S.org]));
+  ['nbdFltRegion', 'nbdFltSubstance', 'nbdFltOrg'].forEach((id,i)=>{
+    const sel = document.getElementById(id); if(!sel) return;
+    const avail = [avReg, avSub, avOrg][i];
+    [...sel.options].forEach(o=>{
+      if(!o.value){ o.disabled=false; return; }
+      o.disabled = !avail.has(o.value);
+    });
+  });
+}
+
+function _renderNbdChips(){
+  const el = document.getElementById('nbdFltChips'); if(!el) return;
+  const chips = [];
+  const envLabel = {air:'Воздух',water:'Вода',fire:'Факел'}[nbdFilters.env];
+  chips.push({label:`Среда: ${envLabel}`, fixed:true});
+  if(nbdFilters.yearMonth) chips.push({label:'Период: '+nbdFilters.yearMonth, key:'time'});
+  if(nbdFilters.dateFrom && nbdFilters.dateTo) chips.push({label:`${nbdFilters.dateFrom} — ${nbdFilters.dateTo}`, key:'time'});
+  if(nbdFilters.region) chips.push({label:'Регион: '+nbdFilters.region, key:'region'});
+  if(nbdFilters.substance) chips.push({label:'Вещество: '+nbdFilters.substance, key:'substance'});
+  if(nbdFilters.org) chips.push({label:'Орг: '+(nbdFilters.org.length>40?nbdFilters.org.slice(0,40)+'…':nbdFilters.org), key:'org'});
+  if(nbdFilters.onlyExceed) chips.push({label:'Только превышения', key:'onlyExceed'});
+  el.innerHTML = chips.map(c=>{
+    const close = c.fixed ? '' : `<span class="fchip-x" onclick="_nbdClearFilter('${c.key}')">✕</span>`;
+    const bg = c.fixed ? 'background:rgba(27,122,58,.18);color:#1B7A3A' : '';
+    return `<span class="fchip" style="${bg}">${_esc(c.label)}${close}</span>`;
+  }).join('');
+}
+function _nbdClearFilter(key){
+  if(key==='time'){ nbdFilters.yearMonth=null; nbdFilters.dateFrom=null; nbdFilters.dateTo=null;
+    ['nbdFltYear','nbdFltMonth','nbdFltDateFrom','nbdFltDateTo'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';}); }
+  else if(key==='onlyExceed'){ nbdFilters.onlyExceed=false; const c=document.getElementById('nbdOnlyExceed'); if(c) c.checked=false; }
+  else { nbdFilters[key]=null; const sel=document.getElementById('nbdFlt'+key.charAt(0).toUpperCase()+key.slice(1)); if(sel) sel.value=''; }
+  renderNbd2025();
+}
+function _nbdResetAll(){
+  _nbdResetFilters(true);
+  ['nbdFltYear','nbdFltMonth','nbdFltDateFrom','nbdFltDateTo','nbdFltRegion','nbdFltSubstance','nbdFltOrg'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  const c=document.getElementById('nbdOnlyExceed'); if(c) c.checked=false;
+  renderNbd2025();
+}
+
+// Инициализация фильтр-бара (заполняем select'ы возможными значениями)
+function _initNbdFilterUi(){
+  if(!NBD_FACTS.length) return;
+  const S = NBD_SCHEMA;
+  const regs = new Set(), subs = new Set(), orgs = new Set(), years = new Set();
+  NBD_FACTS.forEach(r=>{ regs.add(r[S.region]); subs.add(r[S.substance]); orgs.add(r[S.org]); years.add(r[S.month].slice(0,4)); });
+  const fill = (id, arr)=>{ const sel=document.getElementById(id); if(!sel||sel.options.length>1) return;
+    [...arr].filter(Boolean).sort().forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); }); };
+  fill('nbdFltRegion', regs); fill('nbdFltSubstance', subs); fill('nbdFltOrg', orgs);
+  fill('nbdFltYear', years);
+}
+
+// ── Хэндлеры фильтр-бара ────────────────────────────────────────────────────
+function _onNbdYearChange(){
+  const y=document.getElementById('nbdFltYear').value;
+  const m=document.getElementById('nbdFltMonth').value;
+  nbdFilters.yearMonth = y ? (m ? `${y}-${m}` : y) : null;
+  // Диапазон → сбросить
+  nbdFilters.dateFrom = null; nbdFilters.dateTo = null;
+  document.getElementById('nbdFltDateFrom').value = '';
+  document.getElementById('nbdFltDateTo').value = '';
+  renderNbd2025();
+}
+function _onNbdMonthChange(){ _onNbdYearChange(); }
+function _onNbdRangeChange(){
+  const df=document.getElementById('nbdFltDateFrom').value;
+  const dt=document.getElementById('nbdFltDateTo').value;
+  if(df) nbdFilters.dateFrom = df; else nbdFilters.dateFrom = null;
+  if(dt) nbdFilters.dateTo   = dt; else nbdFilters.dateTo   = null;
+  if(df || dt){
+    nbdFilters.yearMonth = null;
+    document.getElementById('nbdFltYear').value = '';
+    document.getElementById('nbdFltMonth').value = '';
+  }
+  renderNbd2025();
+}
+function _onNbdSelectChange(key, val){ nbdFilters[key] = val || null; renderNbd2025(); }
+function _onNbdOnlyExceed(checked){ nbdFilters.onlyExceed = !!checked; renderNbd2025(); }
+
 // ── КАРТА НБД СОС ────────────────────────────────────────────────────────────
+// Хороплет на реальных границах регионов + слой ПЭК объектов. Заливка реагирует
+// на nbdFilters через _renderNbdChoropleth(A, facts).
+let _nbdChoroLayer = null;
+
+const NBD_CHORO_PALETTES = {
+  air:   ['#FFEBEE','#FFCDD2','#EF5350','#E53935','#B71C1C'],
+  water: ['#E3F2FD','#90CAF9','#42A5F5','#1E88E5','#0D47A1'],
+  fire:  ['#FFF3E0','#FFCC80','#FB8C00','#F57C00','#E65100'],
+};
+function _nbdChoroColor(count, max, env){
+  if(!count) return '#f5f5f5';
+  const t = count / Math.max(max, 1);
+  const p = NBD_CHORO_PALETTES[env] || NBD_CHORO_PALETTES.air;
+  if(t < 0.10) return p[0];
+  if(t < 0.25) return p[1];
+  if(t < 0.50) return p[2];
+  if(t < 0.75) return p[3];
+  return p[4];
+}
+// На случай рассинхрона с GeoJSON-именами регионов (Python уже нормализует)
+const NBD_GEO_NORM = {
+  'восточно-казхастанская область': 'Восточно-Казахстанская область',
+};
+function _matchRegionToGeo(s){
+  if(!s) return null;
+  const k = s.trim().toLowerCase();
+  return NBD_GEO_NORM[k] || s.trim();
+}
+
 function initNbdMap(){
   if(mapNbdInst||!document.getElementById('mapNbd')) return;
-  mapNbdInst=L.map('mapNbd',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.0,66.0],4);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.45}).addTo(mapNbdInst);
+  mapNbdInst=L.map('mapNbd',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.5, 67.5], 5);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.6}).addTo(mapNbdInst);
   L.control.attribution({prefix:'🇰🇿 НБД СОС'}).addTo(mapNbdInst);
-  // ПЭК объекты — единственный слой на карте НБД СОС
+
+  // Слой границ регионов (на самом нижнем уровне, под маркерами ПЭК)
+  // Переиспользуем кэшированный GeoJSON если он уже загружен Тазой
+  const loadGeo = window._tzGeoData
+    ? Promise.resolve(window._tzGeoData)
+    : fetch('/border_regions.geojson').then(r=>r.json()).then(j=>{ window._tzGeoData = j; return j; });
+  loadGeo.then(geo=>{
+    _nbdChoroLayer = L.geoJSON(geo, {
+      style: ()=>({fillColor:'#f5f5f5', weight:1.2, color:'#1B7A3A', fillOpacity:0.25, opacity:0.7}),
+      onEachFeature: (f, layer)=>{
+        const name = f.properties?.name_ru || '';
+        layer._nbdRegName = name;
+        layer.on('mouseover', e=>{ e.target.setStyle({weight:2.5, color:'#0d4d24', fillOpacity:0.7}); e.target.bringToFront(); });
+        layer.on('mouseout',  e=>{ if(_nbdChoroLayer) _nbdChoroLayer.resetStyle(e.target); _restyleNbdChoro(); });
+        layer.on('click', ()=>{
+          nbdFilters.region = (nbdFilters.region === name) ? null : name;
+          const sel = document.getElementById('nbdFltRegion'); if(sel) sel.value = nbdFilters.region || '';
+          renderNbd2025();
+          if(nbdFilters.region) mapNbdInst.fitBounds(layer.getBounds(), {padding:[40,40]});
+        });
+      }
+    }).addTo(mapNbdInst);
+    // Первичная заливка если данные уже есть
+    if(NBD_FACTS.length) _renderNbdChoropleth(null, null);
+  }).catch(e=>console.warn('NBD geojson load failed:', e.message));
+
+  // ПЭК объекты — слой поверх хороплета
   nbdPekLayer=L.layerGroup().addTo(mapNbdInst);
   fetch('/data/pek_objects.json').then(r=>r.json()).then(data=>{
     _PEK_OBJECTS=data.objects||[];
@@ -6982,6 +7387,51 @@ function initNbdMap(){
 
   setTimeout(()=>mapNbdInst.invalidateSize(),400);
 }
+
+function _renderNbdChoropleth(A, facts){
+  if(!_nbdChoroLayer || !mapNbdInst) return;
+  // если A не передано — пересчитаем из текущих фильтров
+  if(!A){ const ff = getFilteredNbdFacts(); A = _nbdAggregate(ff); facts = ff; }
+  const byRegion = A.byRegion;
+  const max = Math.max(...Object.values(byRegion), 1);
+  const env = nbdFilters.env;
+  const S = NBD_SCHEMA;
+  _nbdChoroLayer.eachLayer(layer=>{
+    const geo = layer._nbdRegName || layer.feature?.properties?.name_ru || '';
+    let count = byRegion[geo] || 0;
+    if(!count){
+      for(const k in byRegion){ if(_matchRegionToGeo(k)===geo){ count = byRegion[k]; break; } }
+    }
+    const selected = nbdFilters.region === geo;
+    layer.setStyle({
+      fillColor: _nbdChoroColor(count, max, env),
+      fillOpacity: count > 0 ? 0.7 : 0.15,
+      weight: selected ? 3 : 1.2,
+      color: selected ? '#0d4d24' : '#1B7A3A',
+    });
+    // тултип с цифрами выборки
+    const regFacts = facts.filter(r => (r[S.region]===geo) || (_matchRegionToGeo(r[S.region])===geo));
+    const exceed = regFacts.reduce((s,r)=>s+(r[S.exceed]||0), 0);
+    const orgs   = new Set(regFacts.map(r=>r[S.org])).size;
+    const envLbl = env==='air' ? 'замеров воздуха' : env==='water' ? 'замеров воды' : 'замеров факела';
+    layer.unbindTooltip();
+    layer.bindTooltip(
+      `<div style="font-weight:600">${geo}</div>` +
+      `<div>${count.toLocaleString('ru-RU')} ${envLbl}</div>` +
+      (env==='air' && exceed>0 ? `<div style="color:#C62828">Превышений: ${exceed.toLocaleString('ru-RU')}</div>` : '') +
+      `<div>Организаций: ${orgs}</div>` +
+      `<hr style="margin:5px 0;opacity:.3">` +
+      `<div style="font-size:10px;color:#666">Клик — фильтр по региону</div>`,
+      {sticky:true}
+    );
+  });
+}
+function _restyleNbdChoro(){
+  // Без пересборки тултипов — только цвет/обводка по текущим данным.
+  if(!_nbdChoroLayer || !NBD_FACTS.length) return;
+  _renderNbdChoropleth(null, null);
+}
+
 function toggleNbdLayer(type,on){
   if(type==='pek') nbdPekLayer && (on?mapNbdInst.addLayer(nbdPekLayer):mapNbdInst.removeLayer(nbdPekLayer));
 }
