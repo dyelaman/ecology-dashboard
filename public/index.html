@@ -508,7 +508,7 @@ input[type=file]{display:none}
   <div class="tab" onclick="switchTab('waste',this)" style="display:none"><span data-i18n="tab_waste">Отходы</span></div>
   <div class="tab" onclick="switchTab('hearings',this)"><span data-i18n="tab_hear">Социальное напряжение</span></div>
   <div class="tab" id="tabNews" onclick="switchTab('news',this)"><span data-i18n="tab_news">Новости</span> <span id="newsDot" style="display:none" class="tab-dot"></span></div>
-  <div class="tab" onclick="switchTab('correlation',this)"><span>🔗 Корреляция</span></div>
+  <div class="tab" onclick="switchTab('correlation',this)" style="display:none"><span>🔗 Корреляция</span></div>
 </div>
 
 <!-- ── ГЛОБАЛЬНАЯ ПАНЕЛЬ ФИЛЬТРОВ ── -->
@@ -1993,7 +1993,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const tab = _readState().tab;
   if(!tab || tab==='main') { _restoreScrollForTab('main'); return; }
   const btn = [...document.querySelectorAll('.tab')].find(b=>b.getAttribute('onclick')?.includes(`'${tab}'`));
-  if(btn) btn.click(); // запускает switchTab — он же восстановит скролл
+  // Если таб скрыт (display:none) — игнорируем и остаёмся на main
+  if(btn && getComputedStyle(btn).display !== 'none') btn.click();
+  else _restoreScrollForTab('main');
 });
 
 function switchSubTab(group, panelId, el) {
