@@ -197,6 +197,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .coverage-note{font-size:11px;padding:8px 12px;border-radius:8px;margin:8px 0 14px;line-height:1.4}
 .coverage-info{background:rgba(33,150,243,.08);color:#1565C0;border-left:3px solid #2196F3}
 .coverage-warning{background:rgba(251,140,0,.08);color:#E65100;border-left:3px solid #FB8C00}
+/* Социальное напряжение — индекс недовольства */
+.soc-scale-wrap{margin-top:6px}
+.soc-scale{display:flex;height:14px;border-radius:7px;overflow:hidden;position:relative;box-shadow:inset 0 1px 2px rgba(0,0,0,.1)}
+.soc-scale-seg{flex:1;height:100%}
+.soc-scale-cursor{position:absolute;top:-3px;width:3px;height:20px;background:#000;border-radius:2px;box-shadow:0 0 0 2px rgba(255,255,255,.95),0 2px 6px rgba(0,0,0,.3);transition:left .35s ease-out}
+.soc-scale-ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:4px;font-variant-numeric:tabular-nums}
+.soc-comp-row{display:grid;grid-template-columns:230px 90px 1fr 90px;align-items:center;gap:10px;padding:4px 0;font-size:11px;border-bottom:1px dashed var(--border)}
+.soc-comp-row:last-child{border-bottom:none}
+.soc-comp-name{color:var(--text2);font-weight:500}
+.soc-comp-w{font-size:10px;color:var(--text3);font-style:italic}
+.soc-comp-bar{height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden}
+.soc-comp-bar-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#FB8C00,#E53935)}
+.soc-comp-val{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text)}
+.soc-row{display:grid;grid-template-columns:170px 1fr 60px;align-items:center;gap:10px;padding:7px 8px;border-radius:6px;cursor:pointer;transition:background .12s}
+.soc-row:hover{background:rgba(27,122,58,.05)}
+.soc-row.active{background:rgba(27,122,58,.12);font-weight:600}
+.soc-row .soc-name{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.soc-row .soc-bar-wrap{height:11px;background:#f0f0f0;border-radius:5px;overflow:hidden}
+.soc-row .soc-bar{height:100%;border-radius:5px}
+.soc-row .soc-meta{font-size:9px;color:var(--text3);line-height:1.2}
+.soc-row .soc-idx{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;font-size:13px}
+.soc-anom{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:6px;background:rgba(220,38,38,.05);border-left:3px solid #dc2626;margin-bottom:6px;font-size:11px;line-height:1.4}
+.soc-anom-icon{font-size:14px;line-height:1}
+.soc-anom.soc-anom-warn{background:rgba(251,140,0,.05);border-left-color:#FB8C00}
+.soc-anom.soc-anom-crit{background:rgba(33,33,33,.08);border-left-color:#212121}
 /* Корреляция — таблица «Индекс экологического давления» */
 .pressure-table{width:100%;border-collapse:collapse;font-size:11px}
 .pressure-table thead th{padding:8px 10px;text-align:left;font-weight:600;color:var(--text2);border-bottom:1px solid var(--border);background:var(--surface2);position:sticky;top:0;z-index:1;font-size:10px;text-transform:uppercase;letter-spacing:.4px}
@@ -1091,125 +1116,124 @@ input[type=file]{display:none}
 <div id="panel-waste" class="panel" style="display:none"></div>
 
 <!-- СОЦИАЛЬНОЕ НАПРЯЖЕНИЕ -->
+<!-- СОЦИАЛЬНОЕ НАПРЯЖЕНИЕ — индекс недовольства бездействием -->
 <div id="panel-hearings" class="panel">
 
-  <!-- СВЕТОФОР -->
-  <div class="tl" id="tensionTL" style="background:#fef3c7;border-color:#fde68a">
-    <div class="tl-dot" id="tensionDot" style="background:#d97706"></div>
-    <div style="flex:1">
-      <div class="tl-main" id="tensionTitle" style="color:#92400e">Индекс напряжённости: — / 10</div>
-      <div class="tl-sub" id="tensionSub">Загрузка данных...</div>
+  <!-- Hero alert -->
+  <div class="nbd-alert nbd-alert-warning" id="socAlert" style="margin-bottom:12px">
+    <div class="alert-body">
+      <div class="alert-main" id="socAlertMain">Загрузка данных…</div>
+      <div class="alert-detail" id="socAlertDetail">База — экологические обращения за 2021–2026 · источник е-Обращения</div>
     </div>
-    <span class="tl-badge" id="tensionBadge" style="background:#fef3c7;color:#92400e">⚠️ Умеренное</span>
+    <span class="alert-badge" id="socAlertBadge">Внимание</span>
   </div>
 
-  <!-- KPI -->
-  <div class="kpi-grid" style="margin-bottom:14px">
-    <div class="kpi">
-      <div class="kpi-lbl">Жалобы граждан</div>
-      <div class="kpi-val" id="tKpiCompl" style="color:#dc2626">—</div>
-      <div class="kpi-d" id="tKpiComplPct" style="color:#dc2626">— % от обращений</div>
+  <!-- Sticky filter bar -->
+  <div class="nbd-sticky-zone" id="socStickyZone">
+    <div class="nbd-fltbar">
+      <span class="nbd-fltbar-lbl">📅 Период</span>
+      <span class="nbd-fltbar-sub">Год</span>
+      <select id="socFltYear" onchange="_onSocYear()"><option value="">Все</option></select>
+      <span class="nbd-fltbar-sub">Месяц</span>
+      <select id="socFltMonth" onchange="_onSocMonth()">
+        <option value="">Все</option>
+        <option value="01">Янв</option><option value="02">Фев</option><option value="03">Мар</option>
+        <option value="04">Апр</option><option value="05">Май</option><option value="06">Июн</option>
+        <option value="07">Июл</option><option value="08">Авг</option><option value="09">Сен</option>
+        <option value="10">Окт</option><option value="11">Ноя</option><option value="12">Дек</option>
+      </select>
+      <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
+      <span class="nbd-fltbar-sub">Диапазон</span>
+      <input type="month" id="socFltDateFrom" min="2021-01" max="2026-12" onchange="_onSocRange()">
+      <span style="color:var(--text3);font-size:11px">—</span>
+      <input type="month" id="socFltDateTo" min="2021-01" max="2026-12" onchange="_onSocRange()">
+      <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
+      <span class="nbd-fltbar-sub">Регион</span>
+      <select id="socFltRegion" onchange="_onSocChange('region',this.value)"><option value="">Все</option></select>
+      <span class="nbd-fltbar-sub">Уровень</span>
+      <select id="socFltLevel" onchange="_onSocChange('level',this.value)">
+        <option value="">Все</option>
+        <option value="ok">🟢 Спокойно (0–2)</option>
+        <option value="watch">🟡 Внимание (2–4)</option>
+        <option value="moderate">🟠 Умеренное (4–6)</option>
+        <option value="high">🔴 Высокое (6–8)</option>
+        <option value="critical">⚫ Критическое (8–10)</option>
+      </select>
+      <span class="nbd-fltbar-sub">Источник</span>
+      <select id="socFltSource" onchange="_onSocChange('source',this.value)">
+        <option value="">Все</option>
+        <option value="eobr">еОбр</option>
+        <option value="taza">Таза Казахстан</option>
+      </select>
+      <button class="nbd-fltbar-reset" onclick="_socResetAll()">× Сбросить</button>
     </div>
-    <div class="kpi">
-      <div class="kpi-lbl">Просрочено</div>
-      <div class="kpi-val" id="tKpiLate" style="color:#dc2626">—</div>
-      <div class="kpi-d" id="tKpiLatePct">— % от очереди</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-lbl">Повторные обращения</div>
-      <div class="kpi-val" id="tKpiDup" style="color:#d97706">—</div>
-      <div class="kpi-d" id="tKpiDupPct">проблема не решена с 1-го раза</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-lbl">Перенаправлено</div>
-      <div class="kpi-val" id="tKpiFwd" style="color:#7c3aed">—</div>
-      <div class="kpi-d" id="tKpiFwdPct">— % уходит в другой орган</div>
-    </div>
+    <div id="socFltChips" class="nbd-flt-chips"></div>
   </div>
 
-  <!-- РЯД 1: регионы + тренд по годам -->
-  <div class="r2" style="margin-bottom:14px">
-    <div class="card">
-      <div class="card-title">Топ регионов по индексу напряжённости</div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:8px">= просрочка × 3 + % в работе × 0.5 (реальные данные eObr)</div>
-      <div id="tensionBars" style="padding:4px 0"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Динамика обращений по годам</div>
-      <div class="cw" style="height:260px"><canvas id="c11"></canvas></div>
-    </div>
-  </div>
-
-  <!-- РЯД 2: темы + структура типов -->
-  <div class="r2" style="margin-bottom:14px">
-    <div class="card">
-      <div class="card-title">Топ тем обращений граждан</div>
-      <div class="cw" style="height:260px"><canvas id="cTensionTypes"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Структура типов обращений</div>
-      <div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;height:260px">
-        <div class="cw"><canvas id="c10"></canvas></div>
-        <div id="tensionTypeLegend" style="font-size:11px;display:flex;flex-direction:column;gap:6px;min-width:160px"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- iKOMEK -->
-  <div class="block-title">iKomek — звонки граждан <span style="font-size:10px;color:var(--text3);font-weight:400">· с 01.04.2019 · реальные данные</span></div>
-
-  <div class="stat-row" style="margin-bottom:14px">
-    <div class="stat-box"><div class="lbl">Всего звонков</div><div class="val" id="ikTotal">16 103</div></div>
-    <div class="stat-box"><div class="lbl">Закрыто</div><div class="val" style="color:#16a34a" id="ikClosed">99.4%</div></div>
-    <div class="stat-box"><div class="lbl">В работе</div><div class="val" style="color:#d97706" id="ikWork">47</div></div>
-    <div class="stat-box"><div class="lbl">Главная тема</div><div class="val" style="font-size:13px">Экология и природные ресурсы</div></div>
-    <div class="stat-box">
-      <div class="lbl">Регионов охвачено</div>
-      <div class="val" id="ikRegCount">13</div>
-    </div>
-  </div>
-
-  <div class="r2" style="margin-bottom:14px">
-    <div class="card">
-      <div class="card-title">Звонки по регионам
-        <span style="font-size:10px;color:#d97706;font-weight:400;margin-left:6px">⚠ ВКО — 77.6% всех обращений</span>
-      </div>
-      <div id="ikRegBars" style="padding:4px 0"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Тренд iKomek по годам</div>
-      <div class="cw" style="height:260px"><canvas id="cIkYear"></canvas></div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-bottom:14px;background:#fffbeb;border-color:#fde68a">
-    <div style="display:flex;align-items:flex-start;gap:10px">
-      <span style="font-size:18px">⚠️</span>
+  <!-- ИНДЕКС НЕДОВОЛЬСТВА — главный блок -->
+  <div class="card" style="padding:16px 18px;margin-bottom:14px" id="socIndexCard">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
       <div>
-        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px">Аномалия: ВКО — 12 488 звонков (77.6% от общего числа)</div>
-        <div style="font-size:11px;color:#78350f;line-height:1.6">
-          Восточно-Казахстанская область формирует подавляющее большинство обращений в iKomek по теме «Экология и природные ресурсы».
-          Остальные 12 регионов суммарно дают лишь 3 615 звонков.
-          Это может свидетельствовать о высокой экологической активности населения ВКО,
-          специфике работы местного ЦОН или о концентрации промышленных объектов в регионе.
-        </div>
+        <div class="card-title" style="margin:0;font-size:13px">📊 Индекс недовольства бездействием</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">Композит из 5 объективных показателей · шкала 0–10</div>
       </div>
+      <div style="text-align:right">
+        <div id="socIndexVal" style="font-size:36px;font-weight:800;line-height:1">—</div>
+        <div id="socIndexLevel" style="font-size:12px;font-weight:600;margin-top:2px">—</div>
+      </div>
+    </div>
+    <!-- Шкала-указатель -->
+    <div class="soc-scale-wrap">
+      <div class="soc-scale">
+        <div class="soc-scale-seg" style="background:#43A047"></div>
+        <div class="soc-scale-seg" style="background:#FDD835"></div>
+        <div class="soc-scale-seg" style="background:#FB8C00"></div>
+        <div class="soc-scale-seg" style="background:#E53935"></div>
+        <div class="soc-scale-seg" style="background:#212121"></div>
+        <div class="soc-scale-cursor" id="socScaleCursor" style="left:0%"></div>
+      </div>
+      <div class="soc-scale-ticks">
+        <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span>
+      </div>
+    </div>
+    <!-- Разбивка по компонентам -->
+    <div style="margin-top:14px">
+      <div style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Из чего складывается:</div>
+      <div id="socIndexComponents"></div>
     </div>
   </div>
 
-  <div class="r2">
-    <div class="card">
-      <div class="card-title">Тематика звонков — ВКО <span style="font-size:10px;color:#d97706;font-weight:400">(12 488 звонков · 77.6%)</span></div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:6px">iKomek · Восточно-Казахстанская область · детализация по характеру обращений</div>
-      <div id="ikVkoBars" style="padding:4px 0"></div>
+  <!-- 4 KPI -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+    <div class="kpi"><div class="kpi-lbl">Просрочено</div><div class="kpi-val" style="color:#dc2626" id="socKpiOverdue">—</div><div class="kpi-d up" id="socKpiOverduePct">— % от обр.</div></div>
+    <div class="kpi"><div class="kpi-lbl">Повторные обращения</div><div class="kpi-val" style="color:#d97706" id="socKpiRepeat">—</div><div class="kpi-d" id="socKpiRepeatPct">— не решены с 1-го раза</div></div>
+    <div class="kpi"><div class="kpi-lbl">Перенаправлено</div><div class="kpi-val" style="color:#7c3aed" id="socKpiForward">—</div><div class="kpi-d" id="socKpiForwardPct">— футбол ответственности</div></div>
+    <div class="kpi"><div class="kpi-lbl">Жалобы на бездействие</div><div class="kpi-val" style="color:#dc2626" id="socKpiInaction">—</div><div class="kpi-d" id="socKpiInactionPct">— % жалоб</div></div>
+  </div>
+
+  <!-- Рейтинг регионов + Худшие органы -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+    <div class="card" style="padding:12px">
+      <div class="card-title">🌍 Рейтинг регионов по индексу недовольства</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Сортировка по убыванию · клик по строке — фильтр по региону</div>
+      <div id="socRegionsList" class="region-list-scroll" style="max-height:450px"></div>
     </div>
-    <div class="card">
-      <div class="card-title">Тематика звонков — остальные регионы <span style="font-size:10px;color:var(--text3);font-weight:400">(3 615 звонков)</span></div>
-      <div id="ikCharBars" style="padding:4px 0"></div>
+    <div class="card" style="padding:12px">
+      <div class="card-title">🏛️ Госорганы с наибольшими просрочками</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Минимум 50 обращений · сортировка по доле просрочек</div>
+      <div id="socOrgsList" class="region-list-scroll" style="max-height:450px"></div>
     </div>
   </div>
+
+  <!-- Аномалии + Инсайт -->
+  <div class="card" style="padding:14px;margin-bottom:14px">
+    <div class="card-title">🚨 Выявленные аномалии</div>
+    <div id="socAnomalies" style="margin-top:6px"></div>
+  </div>
+  <div id="socInsight"></div>
 
 </div>
+
 
 <!-- ОБРАЩЕНИЯ (перенесены на главную) -->
 <div id="panel-appeals" class="panel" style="display:none!important">
@@ -1942,6 +1966,7 @@ function switchTab(id, el) {
   if(id==='map' && !mapInit) initLeafletMap();
   if(id==='emissions') { setTimeout(initNbdMap, 100); if(window._NBD_2025) renderNbd2025(); }
   if(id==='correlation') { setTimeout(()=>{ if(typeof initCorrelation==='function') initCorrelation(); }, 80); }
+  if(id==='hearings') { setTimeout(()=>{ if(typeof _socInit==='function') _socInit(); }, 80); }
   if(id==='kgs') {
     if(_DATA_KGS && !_kgsCharts._rendered) renderKgsCharts(_DATA_KGS);
     setTimeout(initKgsMap, 100);
@@ -2592,6 +2617,9 @@ function renderMainCharts() {
     fetch('/data/appeals_compact.json').then(r=>r.json()).then(ac=>{
       _AC=ac;
       if(engineFilterActive()) applyTimeEngine();
+      // Если открыта вкладка Соц. напряжение — инициализировать сейчас
+      if(document.getElementById('panel-hearings')?.classList.contains('active')
+         && typeof _socInit==='function') _socInit();
     }).catch(e=>console.warn('appeals_compact load failed:',e.message));
     // Заполняем фильтр «День» (1–31)
     (function(){
@@ -8511,6 +8539,389 @@ ${buildAICtx()}`;
 }
 
 async function initNews(){newsInit=true;setStatus('loading','Проверка кеша...');const c=loadCache();if(c&&c.news&&c.news.length>0){allNews=c.news;applyFilter();renderImpacts(c.news);renderMainNewsFeed();markSrc(true);const age=Math.round((Date.now()-c.ts)/60000);setStatus('live','Из кеша ('+age+' мин.) · '+c.news.length+' новостей',c.ts);if(c.alerts&&c.alerts.length)showAlert(c.alerts[0].head||c.alerts[0].text);if(Date.now()-c.ts>30*60*1000)setTimeout(fetchNews,2000);}else{setStatus('live','Загружаю новости...');fetchNews();}fetchSocial();}
+
+// ── СОЦИАЛЬНОЕ НАПРЯЖЕНИЕ: индекс недовольства бездействием ─────────────────
+const socFilters = { yearMonth:null, dateFrom:null, dateTo:null, region:null, level:null, source:null };
+const SOC_INACTION_RX = /бездейств|не\s*реагир|нарушени.+срок|игнор|волокит/i;
+let _SOC_INACTION_ISSUES = null;  // Set<index> в _AC.issues
+let _SOC_INACTION_SUBS   = null;
+let _socInited = false;
+
+// Маппинг сокращённых имён регионов еОбр → полные имена НБД (переиспользуем CORR_AC_TO_NBD)
+function _socRegionLabel(s){ return s; /* в _AC.regions уже короткие имена */ }
+
+function _socFlagsHas(flags, bit){ return (flags & bit) !== 0; }
+
+function _socBuildInactionSets(){
+  if(!_AC || _SOC_INACTION_ISSUES) return;
+  _SOC_INACTION_ISSUES = new Set();
+  _SOC_INACTION_SUBS = new Set();
+  (_AC.issues||[]).forEach((s,i)=>{ if(s && SOC_INACTION_RX.test(s)) _SOC_INACTION_ISSUES.add(i); });
+  (_AC.subs||[]).forEach((s,i)=>{ if(s && SOC_INACTION_RX.test(s)) _SOC_INACTION_SUBS.add(i); });
+}
+
+// Применяет фильтры вкладки к _AC и возвращает массив [rowOffsets] (для скорости)
+function getFilteredSocialAppeals(){
+  if(!_AC) return [];
+  const w = _AC.w, D = _AC.data, n = _AC.n;
+  const F = socFilters;
+  // период
+  let dfInt=0, dtInt=99999999;
+  if(F.yearMonth){
+    if(F.yearMonth.length===4){ dfInt=+(F.yearMonth+'0101'); dtInt=+(F.yearMonth+'1231'); }
+    else { const y=F.yearMonth.slice(0,4), m=F.yearMonth.slice(5,7); dfInt=+(y+m+'01'); dtInt=+(y+m+'31'); }
+  }
+  if(F.dateFrom){ const y=F.dateFrom.slice(0,4), m=F.dateFrom.slice(5,7); dfInt=Math.max(dfInt,+(y+m+'01')); }
+  if(F.dateTo){ const y=F.dateTo.slice(0,4), m=F.dateTo.slice(5,7); dtInt=Math.min(dtInt,+(y+m+'31')); }
+  const regI = (F.region && _AC.regions.indexOf(F.region)>=0) ? _AC.regions.indexOf(F.region) : -1;
+  _socBuildInactionSets();
+  const idx = [];
+  for(let i=0;i<n;i++){
+    const o = i*w, ymd = D[o];
+    if(ymd<dfInt || ymd>dtInt) continue;
+    if(regI>=0 && D[o+1]!==regI) continue;
+    idx.push(o);
+  }
+  return idx;
+}
+
+// Расчёт индекса недовольства из массива offsets в _AC.data
+function _socCalcIndex(offsets){
+  if(!_AC || !offsets.length) return {index:0, components:{}, total:0};
+  const D = _AC.data;
+  const w = _AC.w;
+  let total = 0, overdue = 0, repeat = 0, forwarded = 0, inaction = 0, stuck = 0;
+  for(let i=0;i<offsets.length;i++){
+    const o = offsets[i];
+    total++;
+    const st = D[o+4], fl = D[o+8], iss = D[o+5], sub = D[o+6];
+    if(st===2 || st===3) overdue++;
+    if(st===2) stuck++;
+    if(_socFlagsHas(fl,1)) repeat++;
+    if(_socFlagsHas(fl,2) || _socFlagsHas(fl,4)) forwarded++;
+    if((_SOC_INACTION_ISSUES && _SOC_INACTION_ISSUES.has(iss)) ||
+       (_SOC_INACTION_SUBS && _SOC_INACTION_SUBS.has(sub))) inaction++;
+  }
+  const pct = (x)=> total ? (x/total*100) : 0;
+  const components = {
+    overdue:   {pct: pct(overdue),   count: overdue,   weight: 3.0},
+    repeat:    {pct: pct(repeat),    count: repeat,    weight: 2.5},
+    forwarded: {pct: pct(forwarded), count: forwarded, weight: 1.5},
+    inaction:  {pct: pct(inaction),  count: inaction,  weight: 2.0},
+    stuck:     {pct: pct(stuck),     count: stuck,     weight: 1.0},
+  };
+  // Взвешенный композит (вес * %). Делитель калибруем так, чтобы реальный максимум давал ~10
+  const raw = components.overdue.pct*3.0 + components.repeat.pct*2.5
+            + components.forwarded.pct*1.5 + components.inaction.pct*2.0
+            + components.stuck.pct*1.0;
+  const index = Math.min(10, raw / 30);
+  return {index, components, total};
+}
+
+function _socIndexLevel(idx){
+  if(idx >= 8) return {label:'⚫ Критическое', color:'#212121', key:'critical'};
+  if(idx >= 6) return {label:'🔴 Высокое',     color:'#E53935', key:'high'};
+  if(idx >= 4) return {label:'🟠 Умеренное',   color:'#FB8C00', key:'moderate'};
+  if(idx >= 2) return {label:'🟡 Внимание',    color:'#FDD835', key:'watch'};
+  return {label:'🟢 Спокойно', color:'#43A047', key:'ok'};
+}
+
+function _socRenderIndex(idx, components){
+  const lvl = _socIndexLevel(idx);
+  const valEl = document.getElementById('socIndexVal');
+  const lvlEl = document.getElementById('socIndexLevel');
+  const cur   = document.getElementById('socScaleCursor');
+  if(valEl){ valEl.textContent = idx.toFixed(1); valEl.style.color = lvl.color; }
+  if(lvlEl){ lvlEl.textContent = lvl.label; lvlEl.style.color = lvl.color; }
+  if(cur)  cur.style.left = `calc(${(idx/10)*100}% - 1.5px)`;
+  // Компоненты
+  const order = [
+    ['overdue',   'Просрочки',                'красные'],
+    ['repeat',    'Повторные обращения',      ''],
+    ['forwarded', 'Перенаправлено',           ''],
+    ['inaction',  'Жалобы на бездействие',    ''],
+    ['stuck',     'Зависшие просрочки',       ''],
+  ];
+  const max = Math.max(...Object.values(components).map(c=>c.pct), 1);
+  const html = order.map(([k, name])=>{
+    const c = components[k]||{pct:0,count:0,weight:0};
+    const w = Math.max(2, c.pct/max*100);
+    return `<div class="soc-comp-row">
+      <span class="soc-comp-name">${name}</span>
+      <span class="soc-comp-w">вес ${c.weight.toFixed(1)}</span>
+      <div class="soc-comp-bar"><div class="soc-comp-bar-fill" style="width:${w}%"></div></div>
+      <span class="soc-comp-val">${c.pct.toFixed(1)}% · ${c.count.toLocaleString('ru-RU')}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('socIndexComponents').innerHTML = html;
+}
+
+function _socRenderKPI(components, total){
+  const fmt = n => (n||0).toLocaleString('ru-RU');
+  const pct = c => `${(c?.pct||0).toFixed(1)}% от обращений`;
+  document.getElementById('socKpiOverdue').textContent  = fmt(components.overdue?.count);
+  document.getElementById('socKpiOverduePct').textContent = pct(components.overdue);
+  document.getElementById('socKpiRepeat').textContent   = fmt(components.repeat?.count);
+  document.getElementById('socKpiRepeatPct').textContent = `${(components.repeat?.pct||0).toFixed(1)}% не решены с 1-го раза`;
+  document.getElementById('socKpiForward').textContent  = fmt(components.forwarded?.count);
+  document.getElementById('socKpiForwardPct').textContent = `${(components.forwarded?.pct||0).toFixed(1)}% — футбол ответственности`;
+  document.getElementById('socKpiInaction').textContent = fmt(components.inaction?.count);
+  document.getElementById('socKpiInactionPct').textContent = `${(components.inaction?.pct||0).toFixed(1)}% жалоб на бездействие`;
+}
+
+// Рейтинг регионов по индексу
+function _socRenderRegions(offsets){
+  const el = document.getElementById('socRegionsList'); if(!el) return;
+  const D = _AC.data, w = _AC.w, regions = _AC.regions;
+  // Группируем offsets по region index
+  const buckets = new Map();
+  for(let i=0;i<offsets.length;i++){
+    const o = offsets[i], ri = D[o+1];
+    let b = buckets.get(ri); if(!b){ b=[]; buckets.set(ri,b); }
+    b.push(o);
+  }
+  const rows = [];
+  buckets.forEach((bs, ri)=>{
+    const {index, components, total} = _socCalcIndex(bs);
+    rows.push({region: regions[ri]||'—', index, total, components});
+  });
+  rows.sort((a,b)=>b.index-a.index);
+  if(!rows.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет данных по фильтрам</div>'; return; }
+  const cur = socFilters.region;
+  el.innerHTML = rows.map(r=>{
+    const lvl = _socIndexLevel(r.index);
+    const w = (r.index/10)*100;
+    const active = cur===r.region ? ' active' : '';
+    return `<div class="soc-row${active}" onclick="_socToggleRegion('${r.region.replace(/'/g,"\\'")}')">
+      <div><div class="soc-name" title="${_esc(r.region)}">${_esc(r.region)}</div>
+        <div class="soc-meta">${r.total.toLocaleString('ru-RU')} обр. · просроч. ${r.components.overdue.pct.toFixed(0)}% · повтор. ${r.components.repeat.pct.toFixed(0)}%</div></div>
+      <div class="soc-bar-wrap"><div class="soc-bar" style="width:${w}%;background:${lvl.color}"></div></div>
+      <div class="soc-idx" style="color:${lvl.color}">${r.index.toFixed(1)}</div>
+    </div>`;
+  }).join('');
+}
+function _socToggleRegion(name){
+  socFilters.region = (socFilters.region===name) ? null : name;
+  const sel = document.getElementById('socFltRegion'); if(sel) sel.value = socFilters.region || '';
+  rerenderSocial();
+}
+
+// Худшие госорганы по % просрочек (минимум 50 обращений)
+function _socRenderOrgs(offsets){
+  const el = document.getElementById('socOrgsList'); if(!el) return;
+  const D = _AC.data, w = _AC.w, orgs = _AC.orgs;
+  const acc = new Map();
+  for(let i=0;i<offsets.length;i++){
+    const o = offsets[i], oi = D[o+7], st = D[o+4], fl = D[o+8];
+    let a = acc.get(oi); if(!a){ a={total:0, overdue:0, repeat:0}; acc.set(oi,a); }
+    a.total++;
+    if(st===2||st===3) a.overdue++;
+    if(_socFlagsHas(fl,1)) a.repeat++;
+  }
+  const rows = [];
+  acc.forEach((a, oi)=>{
+    if(a.total<50) return;
+    rows.push({org: orgs[oi]||'—', total:a.total, overdue:a.overdue,
+      pct:a.overdue/a.total*100, repeatPct:a.repeat/a.total*100});
+  });
+  rows.sort((a,b)=>b.pct-a.pct);
+  const top = rows.slice(0, 30);
+  if(!top.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет органов с ≥50 обращениями в выборке</div>'; return; }
+  const maxPct = top[0].pct || 1;
+  el.innerHTML = top.map(r=>{
+    const col = r.pct>=50?'#212121':r.pct>=30?'#E53935':r.pct>=15?'#FB8C00':'#FDD835';
+    const w = Math.max(3, r.pct/maxPct*100);
+    const orgShort = r.org.length>56 ? r.org.slice(0,54)+'…' : r.org;
+    return `<div class="soc-row" title="${_esc(r.org)}">
+      <div><div class="soc-name">${_esc(orgShort)}</div>
+        <div class="soc-meta">${r.total.toLocaleString('ru-RU')} обр. · ${r.overdue.toLocaleString('ru-RU')} просроч. · повтор. ${r.repeatPct.toFixed(0)}%</div></div>
+      <div class="soc-bar-wrap"><div class="soc-bar" style="width:${w}%;background:${col}"></div></div>
+      <div class="soc-idx" style="color:${col}">${r.pct.toFixed(0)}%</div>
+    </div>`;
+  }).join('');
+}
+
+// Автодетект аномалий
+function _socRenderAnomalies(offsets, globalAvgOverdue){
+  const el = document.getElementById('socAnomalies'); if(!el) return;
+  const D = _AC.data, w = _AC.w;
+  const regions = _AC.regions, orgs = _AC.orgs;
+  // По регионам
+  const regAcc = new Map();
+  for(let i=0;i<offsets.length;i++){
+    const o = offsets[i], ri = D[o+1], st = D[o+4];
+    let a = regAcc.get(ri); if(!a){ a={total:0, overdue:0}; regAcc.set(ri,a); }
+    a.total++;
+    if(st===2||st===3) a.overdue++;
+  }
+  // По органам
+  const orgAcc = new Map();
+  for(let i=0;i<offsets.length;i++){
+    const o = offsets[i], oi = D[o+7], st = D[o+4];
+    let a = orgAcc.get(oi); if(!a){ a={total:0, overdue:0}; orgAcc.set(oi,a); }
+    a.total++;
+    if(st===2||st===3) a.overdue++;
+  }
+  const anoms = [];
+  regAcc.forEach((a, ri)=>{
+    if(a.total < 50) return;
+    const pct = a.overdue/a.total*100;
+    if(pct > globalAvgOverdue * 1.8 && pct >= 5){
+      anoms.push({
+        sev: pct>=20?'crit':pct>=10?'high':'warn',
+        text: `<b>${regions[ri]||'—'}</b>: ${pct.toFixed(0)}% просрочек — это в ${(pct/Math.max(globalAvgOverdue,0.01)).toFixed(1)}× выше среднего по выборке (${globalAvgOverdue.toFixed(1)}%)`
+      });
+    }
+  });
+  orgAcc.forEach((a, oi)=>{
+    if(a.total < 100) return;
+    const pct = a.overdue/a.total*100;
+    if(pct >= 50){
+      const org = orgs[oi]||'—';
+      anoms.push({
+        sev: 'crit',
+        text: `<b>${org.length>70?org.slice(0,68)+'…':org}</b>: ${pct.toFixed(0)}% обращений просрочены — критический уровень (${a.total.toLocaleString('ru-RU')} обр.)`
+      });
+    }
+  });
+  if(!anoms.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:6px">Аномалий не обнаружено</div>'; return; }
+  anoms.sort((a,b)=>({crit:0,high:1,warn:2}[a.sev]-({crit:0,high:1,warn:2}[b.sev])));
+  el.innerHTML = anoms.slice(0,10).map(a=>{
+    const cls = a.sev==='crit'?'soc-anom-crit':a.sev==='warn'?'soc-anom-warn':'';
+    const icon = a.sev==='crit'?'⚫':a.sev==='high'?'🔴':'🟠';
+    return `<div class="soc-anom ${cls}"><span class="soc-anom-icon">${icon}</span><div>${a.text}</div></div>`;
+  }).join('');
+}
+
+function _socRenderInsight(offsets, components, idx){
+  const lvl = _socIndexLevel(idx);
+  const D=_AC.data, w=_AC.w, regions=_AC.regions, orgs=_AC.orgs;
+  // Топ-регион по индексу
+  const regAcc = new Map();
+  for(let i=0;i<offsets.length;i++){
+    const o = offsets[i], ri = D[o+1];
+    let b = regAcc.get(ri); if(!b){ b=[]; regAcc.set(ri,b); }
+    b.push(o);
+  }
+  let worstReg=null, worstRegIdx=0, worstRegTotal=0, worstRegComp=null;
+  regAcc.forEach((bs,ri)=>{
+    if(bs.length<30) return;
+    const {index, components, total} = _socCalcIndex(bs);
+    if(index > worstRegIdx){ worstRegIdx=index; worstReg=regions[ri]; worstRegTotal=total; worstRegComp=components; }
+  });
+  // Худший орган
+  const orgAcc = new Map();
+  for(let i=0;i<offsets.length;i++){
+    const o = offsets[i], oi = D[o+7], st = D[o+4];
+    let a = orgAcc.get(oi); if(!a){ a={total:0, overdue:0}; orgAcc.set(oi,a); }
+    a.total++; if(st===2||st===3) a.overdue++;
+  }
+  let worstOrg=null, worstOrgPct=0, worstOrgTotal=0;
+  orgAcc.forEach((a, oi)=>{
+    if(a.total<50) return;
+    const p = a.overdue/a.total*100;
+    if(p > worstOrgPct){ worstOrgPct=p; worstOrg=orgs[oi]; worstOrgTotal=a.total; }
+  });
+  const insightEl = document.getElementById('socInsight'); if(!insightEl) return;
+  const fmt = n=>(n||0).toLocaleString('ru-RU');
+  insightEl.innerHTML = `<div class="card" style="padding:14px"><div class="insight-box">
+    <div class="insight-icon">💡</div>
+    <div class="insight-text">
+      Общий индекс недовольства — <b style="color:${lvl.color}">${idx.toFixed(1)}/10 (${lvl.label})</b>.
+      ${worstReg ? `Наибольшее недовольство — <b>${_esc(worstReg)}</b> (индекс ${worstRegIdx.toFixed(1)}, ${fmt(worstRegTotal)} обр., просрочек ${worstRegComp.overdue.pct.toFixed(0)}% · повторов ${worstRegComp.repeat.pct.toFixed(0)}%).` : ''}
+      ${worstOrg ? `<div style="margin-top:8px">Главный источник просрочек — <b>${_esc(worstOrg.length>80?worstOrg.slice(0,78)+'…':worstOrg)}</b>: <b style="color:#dc2626">${worstOrgPct.toFixed(0)}%</b> обращений просрочены (${fmt(worstOrgTotal)} обр.).</div>` : ''}
+    </div>
+  </div></div>`;
+}
+
+function _socRenderAlert(idx, total){
+  const lvl = _socIndexLevel(idx);
+  const wrap = document.getElementById('socAlert');
+  const m = document.getElementById('socAlertMain');
+  const d = document.getElementById('socAlertDetail');
+  const b = document.getElementById('socAlertBadge');
+  if(!wrap||!m||!d||!b) return;
+  const cls = idx>=6 ? 'critical' : idx>=4 ? 'warning' : 'info';
+  wrap.className = 'nbd-alert nbd-alert-'+cls;
+  m.innerHTML = `${lvl.label.split(' ')[0]} Индекс недовольства бездействием: <b>${idx.toFixed(1)}/10</b> (${lvl.label.split(' ').slice(1).join(' ')})`;
+  d.innerHTML = `<b>${total.toLocaleString('ru-RU')}</b> обращений в выборке. Композит из 5 объективных показателей: просрочки, повторы, перенаправления, жалобы на бездействие, зависшие просрочки.`;
+  b.textContent = idx>=6?'Требует контроля':idx>=4?'Внимание':'В норме';
+}
+
+function _socRenderChips(){
+  const el = document.getElementById('socFltChips'); if(!el) return;
+  const chips = [];
+  if(socFilters.yearMonth) chips.push({label:'Период: '+socFilters.yearMonth, key:'time'});
+  if(socFilters.dateFrom && socFilters.dateTo) chips.push({label:`${socFilters.dateFrom} — ${socFilters.dateTo}`, key:'time'});
+  if(socFilters.region) chips.push({label:'Регион: '+socFilters.region, key:'region'});
+  if(socFilters.level) chips.push({label:'Уровень: '+document.querySelector(`#socFltLevel option[value="${socFilters.level}"]`)?.textContent, key:'level'});
+  if(socFilters.source) chips.push({label:'Источник: '+socFilters.source, key:'source'});
+  el.innerHTML = chips.map(c=>`<span class="fchip">${_esc(c.label)}<span class="fchip-x" onclick="_socClearChip('${c.key}')">✕</span></span>`).join('');
+}
+function _socClearChip(key){
+  if(key==='time'){ socFilters.yearMonth=null; socFilters.dateFrom=null; socFilters.dateTo=null;
+    ['socFltYear','socFltMonth','socFltDateFrom','socFltDateTo'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';}); }
+  else { socFilters[key]=null; const sel=document.getElementById('socFlt'+key.charAt(0).toUpperCase()+key.slice(1)); if(sel) sel.value=''; }
+  rerenderSocial();
+}
+
+function _socResetAll(){
+  Object.keys(socFilters).forEach(k=>socFilters[k]=null);
+  ['socFltYear','socFltMonth','socFltDateFrom','socFltDateTo','socFltRegion','socFltLevel','socFltSource'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+  rerenderSocial();
+}
+
+function _onSocYear(){
+  const y=document.getElementById('socFltYear').value, m=document.getElementById('socFltMonth').value;
+  socFilters.yearMonth = y ? (m?`${y}-${m}`:y) : null;
+  socFilters.dateFrom=null; socFilters.dateTo=null;
+  document.getElementById('socFltDateFrom').value=''; document.getElementById('socFltDateTo').value='';
+  rerenderSocial();
+}
+function _onSocMonth(){ _onSocYear(); }
+function _onSocRange(){
+  const df=document.getElementById('socFltDateFrom').value, dt=document.getElementById('socFltDateTo').value;
+  socFilters.dateFrom = df||null; socFilters.dateTo = dt||null;
+  if(df||dt){ socFilters.yearMonth=null; document.getElementById('socFltYear').value=''; document.getElementById('socFltMonth').value=''; }
+  rerenderSocial();
+}
+function _onSocChange(key, val){ socFilters[key]=val||null; rerenderSocial(); }
+
+function _socInit(){
+  if(_socInited) { rerenderSocial(); return; }
+  if(!_AC) return; // дождёмся загрузки
+  _socInited = true;
+  _socBuildInactionSets();
+  // Год — собираем из данных
+  const D=_AC.data, w=_AC.w, n=_AC.n;
+  const years = new Set();
+  for(let i=0;i<n;i++) years.add(((D[i*w]/10000)|0));
+  const ySel = document.getElementById('socFltYear');
+  if(ySel && ySel.options.length<=1){
+    [...years].sort((a,b)=>b-a).forEach(y=>{const o=document.createElement('option'); o.value=String(y); o.textContent=String(y); ySel.appendChild(o);});
+  }
+  // Регионы
+  const rSel = document.getElementById('socFltRegion');
+  if(rSel && rSel.options.length<=1){
+    [..._AC.regions].sort().forEach(r=>{const o=document.createElement('option'); o.value=r; o.textContent=r; rSel.appendChild(o);});
+  }
+  rerenderSocial();
+}
+
+function rerenderSocial(){
+  if(!_AC){ return; }
+  // Применить фильтр уровня — пересчитываем общую выборку, потом отфильтровываем регионы по уровню через _socCalcIndex
+  const offsets = getFilteredSocialAppeals();
+  const {index, components, total} = _socCalcIndex(offsets);
+  _socRenderAlert(index, total);
+  _socRenderIndex(index, components);
+  _socRenderKPI(components, total);
+  _socRenderRegions(offsets);
+  _socRenderOrgs(offsets);
+  _socRenderAnomalies(offsets, components.overdue?.pct||0);
+  _socRenderInsight(offsets, components, index);
+  _socRenderChips();
+}
 
 // ── КОРРЕЛЯЦИЯ: выбросы НБД ↔ эко-обращения граждан ─────────────────────────
 let _corrInited = false;
