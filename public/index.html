@@ -14,6 +14,9 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/ru.js"></script>
 <style>
 :root{--bg:#f5f5f5;--surface:#fff;--surface2:#f9fafb;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.18);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--blue:#0891B2;--green:#16A34A;--red:#DC2626;--amber:#D97706;--radius:8px;--radius-lg:12px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -222,6 +225,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .soc-anom-icon{font-size:14px;line-height:1}
 .soc-anom.soc-anom-warn{background:rgba(251,140,0,.05);border-left-color:#FB8C00}
 .soc-anom.soc-anom-crit{background:rgba(33,33,33,.08);border-left-color:#212121}
+/* Переключатель гранулярности динамики */
+.dyn-gran{font-size:10px;padding:4px 10px;border-radius:12px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-weight:500;transition:all .12s}
+.dyn-gran:hover{border-color:#1B7A3A;color:#1B7A3A}
+.dyn-gran.active{background:#1B7A3A;color:#fff;border-color:#1B7A3A}
+.dyn-toggle{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer;padding:3px 8px;border-radius:10px;border:1px solid var(--border2);background:var(--surface)}
+.dyn-toggle input{accent-color:#1B7A3A}
 /* Госорганы — расширенная карточка с бейджем министерства */
 .soc-org-mode{font-size:10px;padding:4px 10px;border-radius:12px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;font-weight:500;transition:all .12s}
 .soc-org-mode:hover{border-color:#1B7A3A;color:#1B7A3A}
@@ -720,16 +729,22 @@ input[type=file]{display:none}
     <div id="mapMain" style="height:420px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border)"></div>
   </div>
 
-  <!-- ДИНАМИКА ПО ВРЕМЕНИ -->
-  <div class="r2" style="margin-bottom:14px">
-    <div class="card" style="flex:2">
-      <div class="card-title">Динамика по месяцам <span id="cMonthlySubtitle" style="font-size:10px;font-weight:400;color:var(--text3)"></span></div>
-      <div class="cw" style="height:210px"><canvas id="cMonthly"></canvas></div>
+  <!-- ДИНАМИКА (объединённый интерактивный чарт: Год/Месяц/День) -->
+  <div class="card" style="margin-bottom:14px;padding:12px 14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px">
+      <div class="card-title" style="margin:0">📈 Динамика обращений <span id="cDynSubtitle" style="font-size:10px;font-weight:400;color:var(--text3)"></span></div>
+      <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:10px;color:var(--text3);font-weight:600">Группировка:</span>
+        <button class="dyn-gran active" data-gran="year"  onclick="setAppealsDynGran('year')">Год</button>
+        <button class="dyn-gran"        data-gran="month" onclick="setAppealsDynGran('month')">Месяц</button>
+        <button class="dyn-gran"        data-gran="day"   onclick="setAppealsDynGran('day')">День</button>
+        <span style="margin-left:8px;display:inline-flex;gap:5px">
+          <label class="dyn-toggle"><input type="checkbox" id="cDynShowTotal" checked onchange="renderAppealsDyn()">Обращения</label>
+          <label class="dyn-toggle"><input type="checkbox" id="cDynShowOverdue" onchange="renderAppealsDyn()">Просрочено</label>
+        </span>
+      </div>
     </div>
-    <div class="card" style="flex:1">
-      <div class="card-title">Динамика по годам <span id="cYearDynSubtitle" style="font-size:10px;font-weight:400;color:var(--text3)"></span></div>
-      <div class="cw" style="height:210px"><canvas id="cYearDyn"></canvas></div>
-    </div>
+    <div class="cw" style="height:280px"><canvas id="cDyn"></canvas></div>
   </div>
 
   <!-- скрытые canvas для JS-совместимости (mini-charts НБД СОС) -->
@@ -742,9 +757,8 @@ input[type=file]{display:none}
 
   <!-- ПОДВКЛАДКИ panel-main -->
   <div class="subtabs" style="margin-bottom:14px;margin-top:4px">
-    <button class="subtab active" onclick="switchMainSubTab('eobr',this)">еОбр</button>
+    <button class="subtab active" onclick="switchMainSubTab('eobr',this)">📋 Е-Өтініш</button>
     <button class="subtab" onclick="switchMainSubTab('ikomek',this)">📞 iKomek</button>
-    <button class="subtab" onclick="switchMainSubTab('speed',this)">Скорость закрытия</button>
     <button class="subtab" onclick="switchMainSubTab('profile',this)">Профиль заявителя <span style="color:#d97706">⚠</span></button>
   </div>
 
@@ -752,7 +766,7 @@ input[type=file]{display:none}
   <div id="subpanel-eobr">
 
   <!-- ══ АНАЛИТИКА ПО ОБРАЩЕНИЯМ eObr ══ -->
-  <div class="block-title" id="blkAnalytics">Аналитика обращений <span style="font-size:10px;color:var(--text3);font-weight:400">· eObr · 352 641 обращений с 01.07.2021</span></div>
+  <div class="block-title" id="blkAnalytics">Аналитика обращений <span style="font-size:10px;color:var(--text3);font-weight:400">· источник: <b>Е-Өтініш</b> (e-otinish.kz) · 352 641 обращений с 01.07.2021</span></div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
     <div class="card" style="padding:12px">
       <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.2px;margin-bottom:6px">ТИП ОБРАЩЕНИЯ</div>
@@ -852,39 +866,6 @@ input[type=file]{display:none}
 
   </div><!-- /subpanel-eobr -->
 
-  <!-- subpanel: Скорость закрытия -->
-  <div id="subpanel-speed" style="display:none">
-
-  <div class="block-title">Скорость закрытия обращений <span style="font-size:10px;color:var(--text3);font-weight:400">· eObr · 345 304 закрытых обращений</span></div>
-
-  <div class="stat-row" style="margin-bottom:14px">
-    <div class="stat-box"><div class="lbl">Медиана закрытия</div><div class="val" id="csMedian">13</div><div style="font-size:10px;color:var(--text3)">дней</div></div>
-    <div class="stat-box"><div class="lbl">Закрыто вовремя</div><div class="val" style="color:#16a34a" id="csOnTime">98.7%</div><div style="font-size:10px;color:var(--text3)">из 345 304</div></div>
-    <div class="stat-box"><div class="lbl">Быстрейший регион</div><div class="val" style="color:#16a34a;font-size:14px" id="csFastest">Костанайская</div><div style="font-size:10px;color:#16a34a" id="csFastestVal">7 дн.</div></div>
-    <div class="stat-box"><div class="lbl">Медленнейший регион</div><div class="val" style="color:#d97706;font-size:14px" id="csSlowest">ЗКО</div><div style="font-size:10px;color:#d97706" id="csSlowestVal">16 дн.</div></div>
-  </div>
-
-  <div class="r2" style="margin-bottom:14px">
-    <div class="card">
-      <div class="card-title">Медиана закрытия по регионам (дней) <span style="font-size:9px;color:var(--text3);font-weight:400">от быстрых к медленным</span></div>
-      <div id="csRegBars" style="padding:4px 0"></div>
-    </div>
-    <div class="r2" style="flex-direction:column;gap:12px">
-      <div class="card">
-        <div class="card-title">Распределение по срокам закрытия</div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="cw" style="height:160px;flex:1"><canvas id="csBuckets"></canvas></div>
-          <div id="csBucketsLeg" style="font-size:11px;display:flex;flex-direction:column;gap:4px;min-width:100px"></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Медиана по годам (дней)</div>
-        <div class="cw" style="height:130px"><canvas id="csYearChart"></canvas></div>
-      </div>
-    </div>
-  </div>
-
-  </div><!-- /subpanel-speed -->
 
   <!-- subpanel: Профиль заявителя -->
   <div id="subpanel-profile" class="synthetic-zone" style="display:none">
@@ -1841,6 +1822,81 @@ if (typeof ChartDataLabels !== 'undefined') {
   if (Chart.defaults && Chart.defaults.set) Chart.defaults.set('plugins.datalabels', { display: false });
 }
 
+// flatpickr — русская локаль, формат d.m.Y. Применяем ко всем date-inputs.
+function _initFlatpickr(){
+  if(typeof flatpickr === 'undefined') return;
+  if(window.flatpickr && window.flatpickr.l10ns && window.flatpickr.l10ns.ru){
+    flatpickr.localize(flatpickr.l10ns.ru);
+  }
+  const targets = document.querySelectorAll('input[type="date"]');
+  targets.forEach(inp=>{
+    if(inp._fp) return; // уже инициализирован
+    const min = inp.getAttribute('min') || undefined;
+    const max = inp.getAttribute('max') || undefined;
+    // Берём существующий onchange handler, чтобы не сломать кросс-фильтрацию
+    const onChangeAttr = inp.getAttribute('onchange') || '';
+    const fp = flatpickr(inp, {
+      locale: 'ru',
+      dateFormat: 'Y-m-d',     // value остаётся ISO для совместимости с движками
+      altInput: true,
+      altFormat: 'd.m.Y',       // визуально пользователь видит русский формат
+      allowInput: true,
+      minDate: min, maxDate: max,
+      onChange: ()=>{
+        if(onChangeAttr){
+          try { (new Function(onChangeAttr)).call(inp); } catch(e){}
+        }
+      },
+    });
+    inp._fp = fp;
+  });
+}
+document.addEventListener('DOMContentLoaded', ()=>setTimeout(_initFlatpickr, 50));
+
+// Helper: включить числовые подписи на ключевых чартах panel-main.
+// Запускается из любого места после рендера; идемпотентен.
+const MAIN_CHART_IDS = ['c3','cAppSub','cAppSubCat','cAppType','cAppChar','c12','cRegLate'];
+function _enableMainDatalabels(){
+  if(typeof Chart === 'undefined' || typeof ChartDataLabels === 'undefined') return;
+  MAIN_CHART_IDS.forEach(id=>{
+    const el = document.getElementById(id); if(!el) return;
+    const ch = Chart.getChart(el); if(!ch) return;
+    // Идемпотентность: не патчим повторно, если уже сделано
+    if(ch._dlsApplied) return;
+    const t = ch.config.type;
+    const fmtAbs = v => (v==null||isNaN(v)) ? '' : v.toLocaleString('ru-RU');
+    if(t === 'bar'){
+      ch.options.plugins = ch.options.plugins || {};
+      ch.options.plugins.datalabels = {
+        anchor:'end', align:'end', clamp:true,
+        formatter: v => v>0 ? fmtAbs(v) : '',
+        font:{size:10, weight:'600'}, color:'#374151',
+        padding:{left:4,right:4},
+      };
+    } else if(t==='pie' || t==='doughnut'){
+      // ChartDataLabels на doughnut при некоторых данных вызывает рекурсию
+      // в position-calc — оставляем по умолчанию (выключено), числа видны в hover.
+      return;
+    } else if(t==='line'){
+      // Линии редко выигрывают от подписей на каждой точке;
+      // включаем только при ≤12 точек.
+      ch.options.plugins = ch.options.plugins || {};
+      ch.options.plugins.datalabels = {
+        display: ctx => (ctx.dataset.data||[]).length <= 12,
+        align:'top', anchor:'end',
+        formatter: fmtAbs,
+        font:{size:9, weight:'600'}, color:ch.data.datasets[0]?.borderColor || '#1B7A3A',
+      };
+    }
+    ch._dlsApplied = true;
+    ch.update('none');
+  });
+}
+// Запускать после рендера/фильтров вручную (нет setInterval — он триггерил
+// бесконечный pluginHook update → update). Хуки в _rechartOnFilter и init.
+let _dlsHookT=null;
+function _scheduleMainDL(){ clearTimeout(_dlsHookT); _dlsHookT = setTimeout(_enableMainDatalabels, 250); }
+
 // ── REGIONAL MODE ──
 const REGION_PARAM_MAP={
   'aktobe':'\u0410\u043a\u0442\u044e\u0431\u0438\u043d\u0441\u043a\u0430\u044f',      // Актюбинская
@@ -2277,7 +2333,7 @@ let _ikomekMainInited = false;
 function switchMainSubTab(id, btn) {
   document.querySelectorAll('#panel-main .subtabs .subtab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  const panels = {eobr:'subpanel-eobr', ikomek:'subpanel-ikomek', speed:'subpanel-speed', profile:'subpanel-profile'};
+  const panels = {eobr:'subpanel-eobr', ikomek:'subpanel-ikomek', profile:'subpanel-profile'};
   Object.entries(panels).forEach(([k,elId])=>{
     const el=document.getElementById(elId);
     if(el) el.style.display = (k===id) ? '' : 'none';
@@ -2367,178 +2423,141 @@ function renderIkomekMainTab(){
   }
 }
 
-function renderTimeDynamics(filterYear){
-  if(!_DATA) return;
-  const a = _DATA.summary.appeals;
-  if(!a.monthly || !a.monthly.length) return;
+function renderTimeDynamics(filterYear){ renderAppealsDyn(); }
 
-  // Регион из глобального фильтра
+let _appealsDynGran = 'month';   // 'year' | 'month' | 'day'
+let _appealsDynChart = null;
+function setAppealsDynGran(g){
+  _appealsDynGran = g;
+  document.querySelectorAll('.dyn-gran').forEach(b=>b.classList.toggle('active', b.dataset.gran===g));
+  renderAppealsDyn();
+}
+
+function renderAppealsDyn(){
+  const ctxEl = document.getElementById('cDyn'); if(!ctxEl) return;
+  if(_appealsDynChart){ _appealsDynChart.destroy(); _appealsDynChart=null; }
+  const sub = document.getElementById('cDynSubtitle');
   const regSel = document.getElementById('gReg')?.value || 'all';
   const regActive = regSel !== 'all';
-
-  const _crosshairPlugin = {
-    id:'_crosshair',
-    afterDraw(chart){
-      if(!chart.tooltip._active || !chart.tooltip._active.length) return;
-      const ctx2 = chart.ctx;
-      const x = chart.tooltip._active[0].element.x;
-      const top = chart.scales.y.top;
-      const bot = chart.scales.y.bottom;
-      ctx2.save();
-      ctx2.beginPath();
-      ctx2.moveTo(x, top); ctx2.lineTo(x, bot);
-      ctx2.lineWidth=1; ctx2.strokeStyle='rgba(156,163,175,0.5)';
-      ctx2.setLineDash([4,4]); ctx2.stroke();
-      ctx2.restore();
-    }
-  };
-
-  const _tooltipStyle = {
-    backgroundColor:'#fff',
-    borderColor:'rgba(0,0,0,0.10)',
-    borderWidth:1,
-    titleColor:'#111827',
-    bodyColor:'#374151',
-    titleFont:{size:12,weight:'600'},
-    bodyFont:{size:11},
-    padding:10,
-    cornerRadius:6,
-  };
-
-  // ── Месячный тренд — ВЕСЬ ПЕРИОД ─────────────────────────────────────────
-  const mCtx = document.getElementById('cMonthly'); if(!mCtx) return;
-  const MO_RU = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-  const monthlySrc = (regActive && a.monthly_by_region?.[regSel]) ? a.monthly_by_region[regSel] : a.monthly;
-  const allMonths = [...monthlySrc].sort((x,y)=>x.ym.localeCompare(y.ym));
-  const mSub = document.getElementById('cMonthlySubtitle');
-  if(mSub) mSub.textContent = regActive ? '· '+regSel : '';
-  const mLabels = allMonths.map(m=>`${MO_RU[m.mo-1]} ${String(m.year).slice(2)}`);
-  const mTotals = allMonths.map(m=>m.total);
-  const mLate   = allMonths.map(m=>m.late||0);
-
-  const existingM = Chart.getChart(mCtx);
-  if(existingM) existingM.destroy();
-  _cMonthlyChart = null;
-
-  _cMonthlyChart = new Chart(mCtx, {
-    type:'line',
-    plugins:[_crosshairPlugin],
-    data:{
-      labels: mLabels,
-      datasets:[
-        {
-          label:'Обращений', data:mTotals,
-          borderColor:'#059669', backgroundColor:'transparent',
-          borderWidth:2, fill:false, tension:0.3,
-          pointRadius:allMonths.length>30?2:4,
-          pointBackgroundColor:'#fff', pointBorderColor:'#059669', pointBorderWidth:2,
-          pointHoverRadius:6, pointHoverBackgroundColor:'#059669',
-        },
-        {
-          label:'Просрочено', data:mLate,
-          borderColor:'#6366f1', backgroundColor:'transparent',
-          borderWidth:2, fill:false, tension:0.3,
-          pointRadius:allMonths.length>30?2:4,
-          pointBackgroundColor:'#fff', pointBorderColor:'#6366f1', pointBorderWidth:2,
-          pointHoverRadius:6, pointHoverBackgroundColor:'#6366f1',
-        },
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      interaction:{ mode:'index', intersect:false },
-      plugins:{
-        legend:{display:true, position:'bottom', labels:{font:{size:10}, color:'#6b7280', boxWidth:8, padding:14, usePointStyle:true, pointStyleWidth:8}},
-        tooltip:{
-          ..._tooltipStyle,
-          callbacks:{
-            title:([t])=>mLabels[t.dataIndex]?.toUpperCase()||'',
-            label:c=>`${c.dataset.label}: ${c.raw.toLocaleString('ru-RU')}`,
-          }
-        },
-      },
-      scales:{
-        x:{
-          grid:{display:false},
-          ticks:{font:{size:9}, color:'#9ca3af', maxRotation:0, maxTicksLimit:16},
-        },
-        y:{
-          grid:{color:'rgba(0,0,0,0.05)'},
-          ticks:{font:{size:9},color:'#9ca3af',callback:v=>v>=1000?(v/1000).toFixed(0)+'к':v},
-        },
-      },
-    }
-  });
-
-  // ── По годам ─────────────────────────────────────────────────────────────
-  const yCtx = document.getElementById('cYearDyn'); if(!yCtx) return;
-  const ycSrc = _YEAR_CROSS || {};
-  const years = Object.keys(ycSrc).sort();
-  const _yVal = y => {
-    const yc = ycSrc[y];
-    if(!yc) return {total:0,late:0};
-    if(regActive) return yc.by_region?.[regSel] || {total:0,late:0};
-    return yc;
-  };
-  const totalYArr = years.map(y=>(_yVal(y).total||0));
-  const lateYArr  = years.map(y=>(_yVal(y).late||0));
-
-  const existingY = Chart.getChart(yCtx);
-  if(existingY) existingY.destroy();
-  _cYearDynChart = null;
-
-  _cYearDynChart = new Chart(yCtx,{
-    type:'line',
-    plugins:[_crosshairPlugin],
-    data:{
-      labels: years,
-      datasets:[
-        {
-          label:'Обращений', data:totalYArr,
-          borderColor:'#059669', backgroundColor:'transparent',
-          borderWidth:2.5, fill:false, tension:0.3,
-          pointRadius:6, pointBackgroundColor:'#fff',
-          pointBorderColor:'#059669', pointBorderWidth:2.5,
-          pointHoverRadius:8, pointHoverBackgroundColor:'#059669',
-        },
-        {
-          label:'Просрочено', data:lateYArr,
-          borderColor:'#6366f1', backgroundColor:'transparent',
-          borderWidth:2.5, fill:false, tension:0.3,
-          pointRadius:6, pointBackgroundColor:'#fff',
-          pointBorderColor:'#6366f1', pointBorderWidth:2.5,
-          pointHoverRadius:8, pointHoverBackgroundColor:'#6366f1',
-        },
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      interaction:{ mode:'index', intersect:false },
-      onClick:(e,els,chart)=>{
-        if(!els.length) return;
-        const yr=years[els[0].index];
-        const sel=document.getElementById('gYear');
-        if(sel){ sel.value=yr; onGlobalFilter(); }
-      },
-      plugins:{
-        legend:{display:true, position:'bottom', labels:{font:{size:10}, color:'#6b7280', boxWidth:8, padding:14, usePointStyle:true, pointStyleWidth:8}},
-        tooltip:{
-          ..._tooltipStyle,
-          callbacks:{
-            title:([t])=>years[t.dataIndex]||'',
-            label:c=>`${c.dataset.label}: ${c.raw.toLocaleString('ru-RU')}`,
-          }
-        },
-      },
-      scales:{
-        x:{grid:{display:false}, ticks:{font:{size:11}, color:'#9ca3af'}},
-        y:{grid:{color:'rgba(0,0,0,0.05)'}, ticks:{font:{size:9},color:'#9ca3af',callback:v=>v>=1000?(v/1000).toFixed(0)+'к':v}},
-      }
-    }
-  });
-
-  const sub = document.getElementById('cYearDynSubtitle');
   if(sub) sub.textContent = regActive ? '· '+regSel : '';
+
+  // Источник данных. Год — из _YEAR_CROSS; месяц — из summary.appeals.monthly[_by_region];
+  // день — из _AC (если загружен).
+  const MO_RU = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+  let labels=[], totals=[], lates=[];
+
+  if(_appealsDynGran === 'year'){
+    const yc = _YEAR_CROSS || {};
+    const years = Object.keys(yc).sort();
+    years.forEach(y=>{
+      const v = yc[y]; if(!v) return;
+      labels.push(y);
+      if(regActive){
+        const r = v.by_region?.[regSel] || {};
+        totals.push(r.total||0);
+        lates.push(r.late||0);
+      } else {
+        totals.push(v.total||0);
+        lates.push(v.late||0);
+      }
+    });
+  }
+  else if(_appealsDynGran === 'month'){
+    if(!_DATA) return;
+    const a = _DATA.summary.appeals;
+    const src = (regActive && a.monthly_by_region?.[regSel]) ? a.monthly_by_region[regSel] : (a.monthly||[]);
+    const sorted = [...src].sort((x,y)=>x.ym.localeCompare(y.ym));
+    sorted.forEach(m=>{
+      labels.push(`${MO_RU[m.mo-1]} ${String(m.year).slice(2)}`);
+      totals.push(m.total||0);
+      lates.push(m.late||0);
+    });
+  }
+  else if(_appealsDynGran === 'day'){
+    if(!_AC){
+      ctxEl.parentElement.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:11px">Загрузка детальных данных для суточной разбивки…</div>';
+      return;
+    }
+    // Группируем _AC по дням
+    const w=_AC.w, D=_AC.data, n=_AC.n;
+    const regI = (regActive && _AC.regions.indexOf(regSel)>=0) ? _AC.regions.indexOf(regSel) : -1;
+    const byDay = new Map();
+    for(let i=0;i<n;i++){
+      const o=i*w, ymd=D[o];
+      if(regI>=0 && D[o+1]!==regI) continue;
+      let b = byDay.get(ymd);
+      if(!b){ b={t:0,l:0}; byDay.set(ymd,b); }
+      b.t++;
+      const st = D[o+4];
+      if(st===2||st===3) b.l++;
+    }
+    const keys = [...byDay.keys()].sort();
+    keys.forEach(ymd=>{
+      const y=(ymd/10000)|0, mo=((ymd/100)|0)%100, d=ymd%100;
+      labels.push(`${String(d).padStart(2,'0')}.${String(mo).padStart(2,'0')}.${String(y).slice(2)}`);
+      const b = byDay.get(ymd);
+      totals.push(b.t); lates.push(b.l);
+    });
+  }
+
+  const showTotal   = document.getElementById('cDynShowTotal')?.checked !== false;
+  const showOverdue = document.getElementById('cDynShowOverdue')?.checked === true;
+
+  const datasets = [];
+  if(showTotal){
+    datasets.push({
+      label:'Обращения', data:totals,
+      borderColor:'#1B7A3A', backgroundColor:'rgba(27,122,58,0.12)',
+      fill:true, tension:0.3, borderWidth:2,
+      pointRadius:totals.length>40?2:4, pointBackgroundColor:'#fff', pointBorderColor:'#1B7A3A', pointBorderWidth:2,
+      pointHoverRadius:6, pointHoverBackgroundColor:'#1B7A3A',
+      datalabels:{
+        display: ctx=>totals.length<=24 && ctx.dataset.data[ctx.dataIndex]>0,
+        align:'top', anchor:'end',
+        formatter:v=>v.toLocaleString('ru-RU'),
+        font:{size:9, weight:'600'}, color:'#1B7A3A',
+      }
+    });
+  }
+  if(showOverdue){
+    datasets.push({
+      label:'Просрочено', data:lates,
+      borderColor:'#E53935', backgroundColor:'transparent',
+      borderWidth:2, borderDash:[5,4], fill:false, tension:0.3,
+      pointRadius:lates.length>40?2:4, pointBackgroundColor:'#fff', pointBorderColor:'#E53935', pointBorderWidth:2,
+      pointHoverRadius:6, pointHoverBackgroundColor:'#E53935',
+      datalabels:{
+        display: ctx=>lates.length<=24 && ctx.dataset.data[ctx.dataIndex]>0,
+        align:'bottom', anchor:'start',
+        formatter:v=>v.toLocaleString('ru-RU'),
+        font:{size:9, weight:'600'}, color:'#E53935',
+      }
+    });
+  }
+
+  _appealsDynChart = new Chart(ctxEl, {
+    type:'line',
+    data:{labels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{mode:'index', intersect:false},
+      plugins:{
+        legend:{display:datasets.length>1, position:'bottom', labels:{font:{size:10},color:'#6b7280',boxWidth:8,padding:12,usePointStyle:true,pointStyleWidth:8}},
+        tooltip:{
+          backgroundColor:'#fff', borderColor:'rgba(0,0,0,0.10)', borderWidth:1,
+          titleColor:'#111827', bodyColor:'#374151',
+          titleFont:{size:12,weight:'600'}, bodyFont:{size:11},
+          padding:10, cornerRadius:6,
+          callbacks:{label:c=>`${c.dataset.label}: ${c.raw.toLocaleString('ru-RU')}`}
+        },
+      },
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{size:9},color:'#9ca3af',maxRotation:_appealsDynGran==='day'?45:0,maxTicksLimit:_appealsDynGran==='year'?12:_appealsDynGran==='month'?18:30}},
+        y:{beginAtZero:true, grid:{color:'rgba(0,0,0,0.05)'},
+          ticks:{font:{size:9},color:'#9ca3af',callback:v=>v>=1000?(v/1000).toFixed(0)+'к':v}},
+      },
+    }
+  });
 }
 
 function renderMainCharts() {
@@ -2613,6 +2632,7 @@ function renderMainCharts() {
     if(summary.appeals.by_year_cross) _YEAR_CROSS = summary.appeals.by_year_cross;
     renderMainCharts();
     renderTimeDynamics();
+    if(typeof _scheduleMainDL==='function') _scheduleMainDL();
     // renderClosingSpeed / renderApplicantDemo вызываются лениво при открытии подвкладки
     if (preview.length) {
       window._APP_REAL = preview;
@@ -5083,6 +5103,15 @@ function _rechartOnFilter(){
   const cat=document.getElementById('gCatF')?.value||'all';
   const iss=document.getElementById('gIssueF')?.value||'all';
   const sub=document.getElementById('gSubF')?.value||'all';
+
+  // iKomek-блок реагирует на смену региона (если данные уже отрендерены)
+  if(_ikomekMainInited && typeof renderIkomekMainTab==='function'){
+    try { renderIkomekMainTab(); } catch(e){}
+  }
+  // Динамика (объединённый чарт) — пересчёт под фильтр
+  if(typeof renderAppealsDyn==='function') renderAppealsDyn();
+  // datalabels на главных чартах (после рендера charts)
+  if(typeof _scheduleMainDL==='function') _scheduleMainDL();
 
   _renderC3();
   _renderCAppSub();
