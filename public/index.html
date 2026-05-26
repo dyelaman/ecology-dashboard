@@ -22,7 +22,8 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
 .hdr{background:var(--surface);border-bottom:3px solid var(--green);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;position:sticky;top:0;z-index:500}
-.hdr-title{font-size:13px;font-weight:700;line-height:1.3}.hdr-sub{font-size:10px;color:var(--text2);margin-top:2px}
+.hdr-title{font-size:13px;font-weight:700;line-height:1.3}.hdr-sub{font-size:10px;color:var(--text2);margin-top:2px;line-height:1.4}
+@media (max-width:768px){.hdr-sub{font-size:9px}}
 .lang-sw{display:flex;gap:2px;background:var(--surface2);border-radius:20px;padding:2px;border:0.5px solid var(--border)}
 .lang-btn{font-size:10px;padding:3px 9px;border-radius:18px;border:none;background:transparent;color:var(--text2);cursor:pointer;font-weight:600;transition:all .15s}
 .lang-btn.act{background:var(--green);color:#fff}
@@ -572,7 +573,7 @@ input[type=file]{display:none}
     <img src="/taza-logo.png" alt="Таза Қазақстан" style="height:56px;width:auto;flex-shrink:0;object-fit:contain">
     <div>
       <div class="hdr-title" data-i18n="title">Единая Национальная система мониторинга экологии и благоустройства</div>
-      <div class="hdr-sub" data-i18n="sub">Smart Data Ukimet · НБД окружающей среды · Е-обращения · TazaQazBot</div>
+      <div class="hdr-sub" data-i18n="sub">Smart Data Ukimet · Е-Өтініш · iKomek · Таза Қазақстан · НБД СОС · Қазақстан Ғарыш Сапары</div>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
@@ -2023,7 +2024,7 @@ const I18N = {
   ru: {
     // Шапка
     'title':'Единая Национальная система мониторинга экологии и благоустройства',
-    'sub':'Smart Data Ukimet · НБД окружающей среды · Е-Өтініш · TazaQazBot',
+    'sub':'Smart Data Ukimet · Е-Өтініш · iKomek · Таза Қазақстан · НБД СОС · Қазақстан Ғарыш Сапары',
     'badge':'Прототип',
     // Табы
     'tab_main':'Обращения граждан', 'tab_taza':'Таза Казахстан',
@@ -2128,7 +2129,7 @@ const I18N = {
   kz: {
     // Шапка
     'title':'Экология мен абаттандыруды бақылаудың бірыңғай ұлттық жүйесі',
-    'sub':'Smart Data Ukimet · Қоршаған орта ҰДБ · Е-Өтініш · TazaQazBot',
+    'sub':'Smart Data Ukimet · Е-Өтініш · iKomek · Таза Қазақстан · ҚОЖ ҰДБ · Қазақстан Ғарыш Сапары',
     'badge':'Прототип',
     // Табы
     'tab_main':'Азаматтардың өтініштері', 'tab_taza':'Таза Қазақстан',
