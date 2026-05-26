@@ -286,7 +286,34 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .nbd-fltbar-sub{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-left:4px}
 .nbd-fltbar select{font-size:11px;padding:4px 8px;border-radius:14px;border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;font-weight:500;max-width:180px}
 .nbd-fltbar select option:disabled{color:#bbb}
-.nbd-fltbar input[type=month]{font-size:11px;padding:3px 8px;border-radius:14px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:130px}
+.nbd-fltbar input[type=month]{font-size:11px;padding:4px 10px;border-radius:14px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:140px;height:26px;outline:none;font-family:inherit;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+.nbd-fltbar input[type=month]:hover{border-color:#1B7A3A}
+.nbd-fltbar input[type=month]:focus{border-color:#1B7A3A;box-shadow:0 0 0 3px rgba(27,122,58,.12)}
+.nbd-fltbar input[type=month]::-webkit-calendar-picker-indicator,
+.nbd-fltbar input[type=date]::-webkit-calendar-picker-indicator,
+.taza-filters input[type=date]::-webkit-calendar-picker-indicator,
+.fbar input[type=date]::-webkit-calendar-picker-indicator{cursor:pointer;opacity:.55;transition:opacity .15s}
+.nbd-fltbar input[type=month]::-webkit-calendar-picker-indicator:hover,
+.nbd-fltbar input[type=date]::-webkit-calendar-picker-indicator:hover,
+.taza-filters input[type=date]::-webkit-calendar-picker-indicator:hover,
+.fbar input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
+/* Унифицированный pill-стиль date-инпутов на ВСЕХ вкладках */
+.fbar input[type=date],
+.taza-filters input[type=date]{font-size:11px;padding:4px 12px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:140px;height:28px;outline:none;font-family:inherit;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+.fbar input[type=date]:hover,
+.taza-filters input[type=date]:hover{border-color:#1B7A3A}
+.fbar input[type=date]:focus,
+.taza-filters input[type=date]:focus{border-color:#1B7A3A;box-shadow:0 0 0 3px rgba(27,122,58,.12)}
+/* flatpickr alt-input наследует тот же стиль */
+.fbar input.flatpickr-alt-input,
+.taza-filters input.flatpickr-alt-input,
+.nbd-fltbar input.flatpickr-alt-input{font-size:11px;padding:4px 12px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:140px;height:28px;outline:none;font-family:inherit;-webkit-appearance:none;appearance:none}
+.fbar input.flatpickr-alt-input:hover,
+.taza-filters input.flatpickr-alt-input:hover,
+.nbd-fltbar input.flatpickr-alt-input:hover{border-color:#1B7A3A}
+.fbar input.flatpickr-alt-input:focus,
+.taza-filters input.flatpickr-alt-input:focus,
+.nbd-fltbar input.flatpickr-alt-input:focus{border-color:#1B7A3A;box-shadow:0 0 0 3px rgba(27,122,58,.12)}
 .nbd-fltbar-check{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);font-weight:500;cursor:pointer;margin-left:6px}
 .nbd-fltbar-check input{accent-color:#dc2626}
 .nbd-fltbar-reset{margin-left:auto;font-size:10px;padding:5px 11px;border-radius:14px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer}
@@ -564,9 +591,10 @@ input[type=file]{display:none}
 </div>
 <div class="tabs">
   <div class="tab active" onclick="switchTab('main',this)"><span data-i18n="tab_main">Обращения граждан</span></div>
-  <div class="tab" onclick="switchTab('taza',this)"><span>Таза Казахстан</span></div>
-  <div class="tab" onclick="switchTab('emissions',this)"><span>Мониторинг НБД СОС <span class="tip" data-tip="НБД СОС — Национальный банк данных состояния окружающей среды">?</span></span></div>
-  <div class="tab" onclick="switchTab('kgs',this)"><span>КГС <span class="tip" data-tip="КГС — «Казахстан Гарыш Сапары», спутниковый мониторинг территории">?</span></span></div>
+
+  <div class="tab" onclick="switchTab('taza',this)"><span data-i18n="tab_taza">Таза Казахстан</span></div>
+  <div class="tab" onclick="switchTab('emissions',this)"><span data-i18n="tab_em">Мониторинг НБД СОС</span> <span class="tip" data-tip="НБД СОС — Национальный банк данных состояния окружающей среды">?</span></div>
+  <div class="tab" onclick="switchTab('kgs',this)"><span data-i18n="tab_kgs">КГС</span> <span class="tip" data-tip="КГС — «Казахстан Гарыш Сапары», спутниковый мониторинг территории">?</span></div>
   <div class="tab" onclick="switchTab('waste',this)" style="display:none"><span data-i18n="tab_waste">Отходы</span></div>
   <div class="tab" onclick="switchTab('hearings',this)"><span data-i18n="tab_hear">Социальное напряжение</span></div>
   <div class="tab" id="tabNews" onclick="switchTab('news',this)"><span data-i18n="tab_news">Новости</span> <span id="newsDot" style="display:none" class="tab-dot"></span></div>
@@ -608,9 +636,9 @@ input[type=file]{display:none}
   </select>
   <div class="fbar-sep"></div>
   <span class="fbar-label">Диапазон</span>
-  <input type="date" id="gDateFrom" min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" style="font-size:11px;padding:4px 8px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none;width:130px" placeholder="С">
+  <input type="date" id="gDateFrom" min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" placeholder="С">
   <span style="color:var(--text3);font-size:11px">—</span>
-  <input type="date" id="gDateTo"   min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" style="font-size:11px;padding:4px 8px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);outline:none;width:130px" placeholder="По">
+  <input type="date" id="gDateTo"   min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" placeholder="По">
   <div class="fbar-sep"></div>
   <span class="fbar-label">Регион</span>
   <select id="gReg" onchange="cascadeIssueFilter();onGlobalFilter()">
@@ -766,7 +794,7 @@ input[type=file]{display:none}
   <div id="subpanel-eobr">
 
   <!-- ══ АНАЛИТИКА ПО ОБРАЩЕНИЯМ eObr ══ -->
-  <div class="block-title" id="blkAnalytics">Аналитика обращений <span style="font-size:10px;color:var(--text3);font-weight:400">· источник: <b>Е-Өтініш</b> (e-otinish.kz) · 352 641 обращений с 01.07.2021</span></div>
+  <div class="block-title" id="blkAnalytics"><span data-i18n="appeals.block.analytics">Аналитика обращений</span> <span style="font-size:10px;color:var(--text3);font-weight:400">· источник: <b>Е-Өтініш</b> (e-otinish.kz) · 352 641 обращений с 01.07.2021</span></div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px">
     <div class="card" style="padding:12px">
       <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.2px;margin-bottom:6px">ТИП ОБРАЩЕНИЯ</div>
@@ -819,7 +847,7 @@ input[type=file]{display:none}
   <div class="card" id="blkTable">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">
       <div>
-        <div class="card-title" style="margin:0">Общая информация по обращениям</div>
+        <div class="card-title" style="margin:0" data-i18n="appeals.block.preview">Общая информация по обращениям</div>
         <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">
           <span style="font-size:10px;color:var(--text3);font-style:italic">Репрезентативная выборка: 1 944 из 352 641 обращений</span>
           <span id="prvChunkBadge" style="display:none;font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:rgba(8,145,178,0.12);color:#0891B2;border:1px solid rgba(8,145,178,0.3)"></span>
@@ -980,11 +1008,11 @@ input[type=file]{display:none}
 <div id="panel-emissions" class="panel">
     <div class="nbd-sticky-zone" id="nbdStickyZone">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-      <div class="card-title" style="margin:0">🆕 Свежие данные НБД СОС <span style="font-size:10px;color:var(--text3);font-weight:400" id="nbd2025Period">— загрузка…</span></div>
+      <div class="card-title" style="margin:0"><span data-i18n="nbd.fresh">🆕 Свежие данные НБД СОС</span> <span style="font-size:10px;color:var(--text3);font-weight:400" id="nbd2025Period">— загрузка…</span></div>
       <div style="display:flex;gap:5px" id="nbd2025Tabs">
-        <button class="nbd2025-tab active" data-tab="air"   onclick="setNbd2025Tab('air')">💨 Воздух</button>
-        <button class="nbd2025-tab"        data-tab="water" onclick="setNbd2025Tab('water')">💧 Вода</button>
-        <button class="nbd2025-tab"        data-tab="fire"  onclick="setNbd2025Tab('fire')">🔥 Факел</button>
+        <button class="nbd2025-tab active" data-tab="air"   onclick="setNbd2025Tab('air')">💨 <span data-i18n="nbd.env.air">Воздух</span></button>
+        <button class="nbd2025-tab"        data-tab="water" onclick="setNbd2025Tab('water')">💧 <span data-i18n="nbd.env.water">Вода</span></button>
+        <button class="nbd2025-tab"        data-tab="fire"  onclick="setNbd2025Tab('fire')">🔥 <span data-i18n="nbd.env.fire">Факел</span></button>
       </div>
     </div>
 
@@ -1017,8 +1045,7 @@ input[type=file]{display:none}
       <span class="nbd-fltbar-sub">Организация</span>
       <select id="nbdFltOrg" onchange="_onNbdSelectChange('org',this.value)"><option value="">Все</option></select>
       <label id="nbdOnlyExceedWrap" class="nbd-fltbar-check">
-        <input type="checkbox" id="nbdOnlyExceed" onchange="_onNbdOnlyExceed(this.checked)">
-        Только превышения
+        <input type="checkbox" id="nbdOnlyExceed" onchange="_onNbdOnlyExceed(this.checked)"><span data-i18n="nbd.filter.onlyExceed">Только превышения</span>
       </label>
       <button class="nbd-fltbar-reset" onclick="_nbdResetAll()">× Сбросить</button>
     </div>
@@ -1033,13 +1060,13 @@ input[type=file]{display:none}
       <div class="alert-main" id="nbdAlertMain">Загрузка свежих данных НБД СОС…</div>
       <div class="alert-detail" id="nbdAlertDetail"><b>НБД СОС</b> — Национальный банк данных состояния окружающей среды</div>
     </div>
-    <span class="alert-badge" id="nbdAlertBadge">⚠️ Требует контроля</span>
+    <span class="alert-badge" id="nbdAlertBadge"><span data-i18n="common.requiresControl">⚠️ Требует контроля</span></span>
   </div>
 
   <!-- КАРТА НБД СОС -->
   <div class="card" style="padding:10px;margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.3px">Карта объектов НБД СОС</div>
+      <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.3px" data-i18n="nbd.block.map">Карта объектов НБД СОС</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
           <input type="checkbox" id="nbdLyrPek" checked style="width:11px;height:11px;accent-color:#ef4444" onchange="toggleNbdLayer('pek',this.checked)">
@@ -1056,8 +1083,8 @@ input[type=file]{display:none}
 
     <!-- KPI -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px" id="nbd2025Kpis">
-      <div class="kpi"><div class="kpi-lbl">Замеров</div><div class="kpi-val" id="nbd2025KpiMeas">—</div><div class="kpi-d" id="nbd2025KpiMeasSub">—</div></div>
-      <div class="kpi"><div class="kpi-lbl">Организаций</div><div class="kpi-val" id="nbd2025KpiOrgs">—</div><div class="kpi-d" id="nbd2025KpiOrgsSub">с замерами</div></div>
+      <div class="kpi"><div class="kpi-lbl" data-i18n="nbd.kpi.measurements">Замеров</div><div class="kpi-val" id="nbd2025KpiMeas">—</div><div class="kpi-d" id="nbd2025KpiMeasSub">—</div></div>
+      <div class="kpi"><div class="kpi-lbl" data-i18n="nbd.kpi.orgs">Организаций</div><div class="kpi-val" id="nbd2025KpiOrgs">—</div><div class="kpi-d" id="nbd2025KpiOrgsSub">с замерами</div></div>
       <div class="kpi" id="nbd2025KpiExceedTile">
         <div class="kpi-lbl" id="nbd2025KpiExLbl">Превышения ПДК</div>
         <div class="kpi-val" style="color:#dc2626" id="nbd2025KpiEx">—</div>
@@ -1065,17 +1092,17 @@ input[type=file]{display:none}
         <div class="kpi-d   exceed-secondary"  id="nbd2025KpiExSub2"></div>
         <div class="kpi-note"                  id="nbd2025KpiExNote" title="Коэффициент превышения ПДК заполнен не у всех замеров"></div>
       </div>
-      <div class="kpi"><div class="kpi-lbl">Регионов</div><div class="kpi-val" id="nbd2025KpiRegs">—</div><div class="kpi-d" id="nbd2025KpiRegsSub">охвачено</div></div>
+      <div class="kpi"><div class="kpi-lbl" data-i18n="nbd.kpi.regions">Регионов</div><div class="kpi-val" id="nbd2025KpiRegs">—</div><div class="kpi-d" id="nbd2025KpiRegsSub">охвачено</div></div>
     </div>
 
     <!-- Top substances + Top orgs -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div class="card" style="padding:12px">
-        <div class="card-title">Загрязняющие вещества <span id="nbd2025SubUnitNote" style="font-size:9px;color:var(--text3);font-weight:400" title="единица измерения требует уточнения у источника"></span></div>
+        <div class="card-title"><span data-i18n="nbd.block.substances">Загрязняющие вещества</span> <span id="nbd2025SubUnitNote" style="font-size:9px;color:var(--text3);font-weight:400" title="единица измерения требует уточнения у источника"></span></div>
         <div id="nbd2025SubList" class="region-list-scroll" style="max-height:300px;padding-right:6px"></div>
       </div>
       <div class="card" style="padding:12px">
-        <div class="card-title">Организации-эмиттеры</div>
+        <div class="card-title" data-i18n="nbd.block.orgs">Организации-эмиттеры</div>
         <div id="nbd2025OrgList" class="region-list-scroll" style="max-height:300px;padding-right:6px"></div>
       </div>
     </div>
@@ -1083,11 +1110,11 @@ input[type=file]{display:none}
     <!-- Monthly trend + Region list -->
     <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:14px">
       <div class="card" style="padding:12px">
-        <div class="card-title">Месячный тренд</div>
+        <div class="card-title" data-i18n="nbd.block.trend">Месячный тренд</div>
         <div class="rc-host" style="height:240px"><canvas id="nbd2025MonthlyChart"></canvas></div>
       </div>
       <div class="card" style="padding:12px">
-        <div class="card-title">По регионам</div>
+        <div class="card-title" data-i18n="nbd.block.byRegion">По регионам</div>
         <div id="nbd2025RegionList" class="region-list-scroll" style="max-height:240px;padding-right:6px"></div>
       </div>
     </div>
@@ -1097,11 +1124,11 @@ input[type=file]{display:none}
       <div class="card-title" style="margin:8px 0">⚠️ Превышения нормативов (air_excess_ratio &gt; 1)</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="card" style="padding:12px">
-          <div class="card-title">Организации по превышениям</div>
+          <div class="card-title" data-i18n="nbd.block.exceedOrgs">Организации по превышениям</div>
           <div id="nbd2025ExOrgs" class="region-list-scroll" style="max-height:240px;padding-right:6px"></div>
         </div>
         <div class="card" style="padding:12px">
-          <div class="card-title">Вещества по превышениям</div>
+          <div class="card-title" data-i18n="nbd.block.exceedSubs">Вещества по превышениям</div>
           <div id="nbd2025ExSubs" class="region-list-scroll" style="max-height:240px;padding-right:6px"></div>
         </div>
       </div>
@@ -1181,8 +1208,8 @@ input[type=file]{display:none}
   <div class="card" style="padding:16px 18px;margin-bottom:14px" id="socIndexCard">
     <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
       <div>
-        <div class="card-title" style="margin:0;font-size:13px">📊 Индекс недовольства бездействием</div>
-        <div style="font-size:10px;color:var(--text3);margin-top:2px">Композит из 5 объективных показателей · шкала 0–10</div>
+        <div class="card-title" style="margin:0;font-size:13px" data-i18n="social.index.title">📊 Индекс недовольства бездействием</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px" data-i18n="social.index.sub">Композит из 5 объективных показателей · шкала 0–10</div>
       </div>
       <div style="text-align:right">
         <div id="socIndexVal" style="font-size:36px;font-weight:800;line-height:1">—</div>
@@ -1212,25 +1239,25 @@ input[type=file]{display:none}
 
   <!-- 4 KPI -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
-    <div class="kpi"><div class="kpi-lbl">Просрочено</div><div class="kpi-val" style="color:#dc2626" id="socKpiOverdue">—</div><div class="kpi-d up" id="socKpiOverduePct">— % от обр.</div></div>
-    <div class="kpi"><div class="kpi-lbl">Повторные обращения</div><div class="kpi-val" style="color:#d97706" id="socKpiRepeat">—</div><div class="kpi-d" id="socKpiRepeatPct">— не решены с 1-го раза</div></div>
-    <div class="kpi"><div class="kpi-lbl">Перенаправлено</div><div class="kpi-val" style="color:#7c3aed" id="socKpiForward">—</div><div class="kpi-d" id="socKpiForwardPct">— футбол ответственности</div></div>
-    <div class="kpi"><div class="kpi-lbl">Жалобы на бездействие</div><div class="kpi-val" style="color:#dc2626" id="socKpiInaction">—</div><div class="kpi-d" id="socKpiInactionPct">— % жалоб</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="social.kpi.overdue">Просрочено</div><div class="kpi-val" style="color:#dc2626" id="socKpiOverdue">—</div><div class="kpi-d up" id="socKpiOverduePct">— % от обр.</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="social.kpi.repeat">Повторные обращения</div><div class="kpi-val" style="color:#d97706" id="socKpiRepeat">—</div><div class="kpi-d" id="socKpiRepeatPct">— не решены с 1-го раза</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="social.kpi.forward">Перенаправлено</div><div class="kpi-val" style="color:#7c3aed" id="socKpiForward">—</div><div class="kpi-d" id="socKpiForwardPct">— футбол ответственности</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="social.kpi.inaction">Жалобы на бездействие</div><div class="kpi-val" style="color:#dc2626" id="socKpiInaction">—</div><div class="kpi-d" id="socKpiInactionPct">— % жалоб</div></div>
   </div>
 
   <!-- Рейтинг регионов + Худшие органы -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
     <div class="card" style="padding:12px">
-      <div class="card-title">🌍 Рейтинг регионов по индексу недовольства</div>
+      <div class="card-title" data-i18n="social.block.byRegion">🌍 Рейтинг регионов по индексу недовольства</div>
       <div style="font-size:10px;color:var(--text3);margin-bottom:6px">Сортировка по убыванию · клик по строке — фильтр по региону</div>
       <div id="socRegionsList" class="region-list-scroll" style="max-height:450px"></div>
     </div>
     <div class="card" style="padding:12px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:4px">
-        <div class="card-title" style="margin:0">🏛️ Госорганы с наибольшими просрочками</div>
+        <div class="card-title" style="margin:0" data-i18n="social.block.executors">🏛️ Госорганы с наибольшими просрочками</div>
         <div style="display:flex;gap:3px">
-          <button class="soc-org-mode active" data-mode="org" onclick="_socSetOrgMode('org')">По органам</button>
-          <button class="soc-org-mode" data-mode="ministry" onclick="_socSetOrgMode('ministry')">По министерствам</button>
+          <button class="soc-org-mode active" data-mode="org" onclick="_socSetOrgMode('org')" data-i18n="social.orgmode.byOrg">По органам</button>
+          <button class="soc-org-mode" data-mode="ministry" onclick="_socSetOrgMode('ministry')" data-i18n="social.orgmode.byMin">По министерствам</button>
         </div>
       </div>
       <div style="font-size:10px;color:var(--text3);margin-bottom:6px" id="socOrgsHint">Минимум 50 обращений · сортировка по доле просрочек</div>
@@ -1240,7 +1267,7 @@ input[type=file]{display:none}
 
   <!-- Аномалии + Инсайт -->
   <div class="card" style="padding:14px;margin-bottom:14px">
-    <div class="card-title">🚨 Выявленные аномалии</div>
+    <div class="card-title" data-i18n="social.block.anomalies">🚨 Выявленные аномалии</div>
     <div id="socAnomalies" style="margin-top:6px"></div>
   </div>
   <div id="socInsight"></div>
@@ -1259,7 +1286,7 @@ input[type=file]{display:none}
   </div>
   <div class="kpi-grid">
     <div class="kpi"><div class="kpi-lbl">Всего обращений</div><div class="kpi-val" id="appKpiTotal">352 641</div><div class="kpi-d nu">с 01.07.2021</div></div>
-    <div class="kpi"><div class="kpi-lbl">Исполнено</div><div class="kpi-val" id="appKpiDone" style="color:#16A34A">98%</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="taza.kpi.done">Исполнено</div><div class="kpi-val" id="appKpiDone" style="color:#16A34A">98%</div></div>
     <div class="kpi"><div class="kpi-lbl">В работе</div><div class="kpi-val" id="appKpiWork">5 457</div></div>
     <div class="kpi"><div class="kpi-lbl">Просрочено</div><div class="kpi-val" id="appKpiLate" style="color:#DC2626">885</div></div>
     <div class="kpi"><div class="kpi-lbl">Повторные обращения</div><div class="kpi-val" id="appKpiDup" style="color:#d97706">9 331</div><div class="kpi-d nu">незакрытые проблемы</div></div>
@@ -1550,20 +1577,20 @@ input[type=file]{display:none}
 
   <!-- KPI -->
   <div class="kpi-grid" style="margin-bottom:14px" id="tzKpiGrid">
-    <div class="kpi"><div class="kpi-lbl">Всего заявок</div><div class="kpi-val" id="tzTotal">—</div><div class="kpi-d nu" id="tzPeriod">июн 2024 — апр 2026</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="taza.kpi.total">Всего заявок</div><div class="kpi-val" id="tzTotal">—</div><div class="kpi-d nu" id="tzPeriod">июн 2024 — апр 2026</div></div>
     <div class="kpi"><div class="kpi-lbl">Исполнено</div><div class="kpi-val" style="color:#16a34a" id="tzDonePct">—</div><div class="kpi-d dn">от всех заявок</div></div>
     <div class="kpi"><div class="kpi-lbl">Просрочено</div><div class="kpi-val" style="color:#dc2626" id="tzKpiOverdue">—</div><div class="kpi-d up" id="tzOverduePct">—</div></div>
-    <div class="kpi"><div class="kpi-lbl">Отменено</div><div class="kpi-val" id="tzCancelled">—</div><div class="kpi-d nu">заявок</div></div>
-    <div class="kpi"><div class="kpi-lbl">Медиана закрытия</div><div class="kpi-val" id="tzMedianDays">—</div><div class="kpi-d dn">дней</div></div>
-    <div class="kpi"><div class="kpi-lbl">Среднее закрытия</div><div class="kpi-val" id="tzAvgDays">—</div><div class="kpi-d nu">дней</div></div>
-    <div class="kpi"><div class="kpi-lbl">Регионов охвачено</div><div class="kpi-val" id="tzRegCount">—</div><div class="kpi-d nu">из 20</div></div>
-    <div class="kpi"><div class="kpi-lbl">Категорий услуг</div><div class="kpi-val" id="tzCatCount">—</div><div class="kpi-d nu">видов работ</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="taza.kpi.cancelled">Отменено</div><div class="kpi-val" id="tzCancelled">—</div><div class="kpi-d nu">заявок</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="taza.kpi.median">Медиана закрытия</div><div class="kpi-val" id="tzMedianDays">—</div><div class="kpi-d dn">дней</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="taza.kpi.avg">Среднее закрытия</div><div class="kpi-val" id="tzAvgDays">—</div><div class="kpi-d nu">дней</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="taza.kpi.regs">Регионов охвачено</div><div class="kpi-val" id="tzRegCount">—</div><div class="kpi-d nu">из 20</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="taza.kpi.cats">Категорий услуг</div><div class="kpi-val" id="tzCatCount">—</div><div class="kpi-d nu">видов работ</div></div>
   </div>
 
   <!-- КАРТА ТАЗА (4 режима, реальные границы регионов) -->
   <div class="card" style="padding:14px;margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-      <div class="card-title" style="margin:0">🗺️ Карта заявок Таза Казахстан <span style="font-size:10px;color:var(--text3);font-weight:400" id="tzMapCount"></span></div>
+      <div class="card-title" style="margin:0"><span data-i18n="taza.block.map">🗺️ Карта заявок Таза Казахстан</span> <span style="font-size:10px;color:var(--text3);font-weight:400" id="tzMapCount"></span></div>
     </div>
     <div id="tazaMapContainer" style="position:relative;height:600px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border);z-index:0;isolation:isolate">
       <div id="mapTaza" style="height:100%;width:100%"></div>
@@ -1580,7 +1607,7 @@ input[type=file]{display:none}
   <!-- ROW 1: Тренд (на всю ширину, интерактивный) -->
   <div class="card" style="padding:14px;margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-      <div class="card-title" style="margin:0">📈 Динамика заявок</div>
+      <div class="card-title" style="margin:0" data-i18n="taza.block.dynamics">📈 Динамика заявок</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
         <span style="font-size:10px;color:var(--text3);font-weight:600">Группировка:</span>
         <button class="tz-gran" data-gran="day"     onclick="tzSetGran('day')">По дням</button>
@@ -1610,7 +1637,7 @@ input[type=file]{display:none}
   <!-- ROW 3: Количество заявок по регионам (stacked bar: исполнено / просрочено) -->
   <div class="card region-stat-card" id="regionsStatCard" style="padding:14px;margin-bottom:14px">
     <div class="region-stat-header">
-      <div class="card-title" style="margin:0">📊 Количество заявок по регионам</div>
+      <div class="card-title" style="margin:0" data-i18n="taza.block.regions">📊 Количество заявок по регионам</div>
       <div class="region-stat-controls">
         <button class="sort-btn active" data-sort="total"          onclick="setTzRegSort('total',this)">По количеству</button>
         <button class="sort-btn"        data-sort="overdue_count"  onclick="setTzRegSort('overdue_count',this)">Просрочки (кол-во)</button>
@@ -1852,6 +1879,8 @@ function _initFlatpickr(){
   });
 }
 document.addEventListener('DOMContentLoaded', ()=>setTimeout(_initFlatpickr, 50));
+// Применить сохранённый язык сразу после загрузки DOM
+document.addEventListener('DOMContentLoaded', ()=>{ try { if(typeof setLang==='function') setLang(curLang); } catch(_){} });
 
 // Helper: включить числовые подписи на ключевых чартах panel-main.
 // Запускается из любого места после рендера; идемпотентен.
@@ -1989,51 +2018,310 @@ function applyRegionalMode(){
   applyFilter();
 }
 
-// ── I18N ──
-const LANG={
-  ru:{
-    title:'Единая Национальная система мониторинга экологии и благоустройства',
-    sub:'Smart Data Ukimet · НБД окружающей среды · Е-обращения · TazaQazBot',
-    badge:'Прототип',
-    tab_main:'Обращения граждан', tab_em:'Выбросы', tab_waste:'Отходы', tab_hear:'Слушания',
-    tab_app:'Обращения', tab_map:'Карта обращений', tab_news:'Новости',
-    kpi_eco:'Всего обращений', kpi_taza:'Таза Казахстан', kpi_ikom:'iKomek звонков',
-    kpi_done:'Исполнено', kpi_work:'В работе', kpi_late:'Просрочено',
-    kpi_pek:'Объекты ПЭК', kpi_emerg:'Аварийных выбросов',
-    real_data:'реальные данные', high_rate:'высокий показатель',
-    current:'текущие', needs_attn:'требует внимания',
-    topic_lbl:'Тема:', region_lbl:'Регион:', all_opt:'Все',
-    opt_air:'Воздух', opt_waste:'Отходы', opt_taza:'Таза КЗ',
-    opt_urban:'Благоустройство', opt_inc:'Инциденты', opt_pol:'Политика',
-    btn_refresh:'Обновить сейчас', btn_reg_news:'📰 Новости этого региона →',
+// ── I18N: двуязычие интерфейса (ру / қаз) ───────────────────────────────────
+const I18N = {
+  ru: {
+    // Шапка
+    'title':'Единая Национальная система мониторинга экологии и благоустройства',
+    'sub':'Smart Data Ukimet · НБД окружающей среды · Е-Өтініш · TazaQazBot',
+    'badge':'Прототип',
+    // Табы
+    'tab_main':'Обращения граждан', 'tab_taza':'Таза Казахстан',
+    'tab_em':'Мониторинг НБД СОС', 'tab_kgs':'КГС',
+    'tab_hear':'Социальное напряжение', 'tab_news':'Новости',
+    'tab_waste':'Отходы',
+    // Универсальные KPI / лейблы фильтров
+    'kpi_eco':'Всего обращений', 'kpi_taza':'Таза Казахстан', 'kpi_ikom':'iKomek звонков',
+    'kpi_done':'Исполнено', 'kpi_work':'В работе', 'kpi_late':'Просрочено',
+    'kpi_pek':'Объекты ПЭК', 'kpi_emerg':'Аварийных выбросов',
+    'real_data':'реальные данные', 'high_rate':'высокий показатель',
+    'current':'текущие', 'needs_attn':'требует внимания',
+    // Фильтры
+    'filter.period':'Период', 'filter.year':'Год', 'filter.month':'Месяц', 'filter.day':'День',
+    'filter.range':'Диапазон', 'filter.region':'Регион', 'filter.all':'Все',
+    'filter.reset':'Сбросить', 'filter.apply':'Применить', 'filter.from':'С', 'filter.to':'По',
+    'filter.search':'Поиск…', 'filter.export':'📥 Экспорт CSV',
+    // Обращения (главная)
+    'appeals.filter.type':'Тип', 'appeals.filter.status':'Статус',
+    'appeals.filter.repeat':'Повторные', 'appeals.filter.category':'Категория',
+    'appeals.filter.subcategory':'Подкатегория', 'appeals.filter.character':'Характер вопроса',
+    'appeals.filter.cgo':'Госорган', 'appeals.filter.organ':'Конкретный орган',
+    'appeals.kpi.total':'Всего обращений', 'appeals.kpi.overdue':'Просрочено',
+    'appeals.kpi.repeat':'Повторные обращения', 'appeals.kpi.forwarded':'Перенаправлено',
+    'appeals.block.map':'Карта обращений по регионам',
+    'appeals.block.dynamics':'Динамика обращений',
+    'appeals.block.regions':'Регионы по обращениям',
+    'appeals.block.executors':'Органы-исполнители',
+    'appeals.block.analytics':'Аналитика обращений',
+    'appeals.block.preview':'Общая информация по обращениям',
+    'appeals.chart.category':'Категория', 'appeals.chart.subcategory':'Подкатегория',
+    'appeals.chart.character':'Характер вопроса', 'appeals.chart.type':'Тип обращений',
+    'appeals.dyn.appeals':'Обращения', 'appeals.dyn.overdue':'Просрочено',
+    'appeals.dyn.group':'Группировка',
+    // НБД СОС
+    'nbd.env.air':'Воздух', 'nbd.env.water':'Вода', 'nbd.env.fire':'Факел',
+    'nbd.filter.substance':'Вещество', 'nbd.filter.org':'Организация',
+    'nbd.filter.onlyExceed':'Только превышения',
+    'nbd.kpi.measurements':'Замеров', 'nbd.kpi.orgs':'Организаций',
+    'nbd.kpi.exceed':'Превышения ПДК', 'nbd.kpi.regions':'Регионов',
+    'nbd.block.substances':'Загрязняющие вещества',
+    'nbd.block.orgs':'Организации-эмиттеры',
+    'nbd.block.trend':'Месячный тренд', 'nbd.block.byRegion':'По регионам',
+    'nbd.block.exceedOrgs':'Организации по превышениям',
+    'nbd.block.exceedSubs':'Вещества по превышениям',
+    'nbd.block.map':'Карта объектов НБД СОС',
+    'nbd.fresh':'🆕 Свежие данные НБД СОС',
+    // Таза Казахстан
+    'taza.kpi.total':'Всего заявок', 'taza.kpi.done':'Исполнено',
+    'taza.kpi.donePct':'%', 'taza.kpi.overdue':'Просрочено',
+    'taza.kpi.cancelled':'Отменено', 'taza.kpi.median':'Медиана закрытия',
+    'taza.kpi.avg':'Среднее закрытия', 'taza.kpi.regs':'Регионов охвачено',
+    'taza.kpi.cats':'Категорий услуг',
+    'taza.filter.category':'Категория услуги', 'taza.filter.status':'Статус',
+    'taza.filter.overdue':'Просрочка', 'taza.filter.rating':'Рейтинг',
+    'taza.block.regions':'📊 Количество заявок по регионам',
+    'taza.block.dynamics':'📈 Динамика заявок',
+    'taza.block.cats':'Категории по объёму',
+    'taza.block.sat':'⭐ Рейтинг по регионам',
+    'taza.block.overdue':'⚠️ Просроченные заявки по регионам',
+    'taza.block.speed':'⏱ Скорость закрытия',
+    'taza.block.map':'🗺️ Карта заявок Таза Казахстан',
+    'taza.block.table':'📋 Общая информация по заявкам Таза Казахстан',
+    // Социальное напряжение
+    'social.index.title':'📊 Индекс недовольства бездействием',
+    'social.index.sub':'Композит из 5 объективных показателей · шкала 0–10',
+    'social.kpi.overdue':'Просрочено',
+    'social.kpi.repeat':'Повторные обращения',
+    'social.kpi.forward':'Перенаправлено',
+    'social.kpi.inaction':'Жалобы на бездействие',
+    'social.block.byRegion':'🌍 Рейтинг регионов по индексу недовольства',
+    'social.block.executors':'🏛️ Госорганы с наибольшими просрочками',
+    'social.block.anomalies':'🚨 Выявленные аномалии',
+    'social.comp.overdue':'Просрочки',
+    'social.comp.repeat':'Повторные обращения',
+    'social.comp.forwarded':'Перенаправлено',
+    'social.comp.inaction':'Жалобы на бездействие',
+    'social.comp.stuck':'Зависшие просрочки',
+    'social.orgmode.byOrg':'По органам',
+    'social.orgmode.byMin':'По министерствам',
+    // Статусы
+    'status.done':'Выполнено', 'status.overdue':'Просрочено',
+    'status.working':'В работе', 'status.cancelled':'Отменено',
+    'status.created':'Создано',
+    // Уровни
+    'level.calm':'🟢 Спокойно', 'level.attention':'🟡 Внимание',
+    'level.moderate':'🟠 Умеренное', 'level.high':'🔴 Высокое',
+    'level.critical':'⚫ Критическое',
+    // Общее
+    'common.found':'Найдено', 'common.of':'из',
+    'common.measurements':'замеров', 'common.appeals':'обращений',
+    'common.loading':'Загрузка…', 'common.noData':'Нет данных',
+    'common.requiresControl':'Требует контроля',
+    'common.attention':'Внимание', 'common.info':'Информация',
+    // Кнопки/прочие
+    'btn_refresh':'Обновить сейчас',
+    'btn_reg_news':'📰 Новости этого региона →',
+    'topic_lbl':'Тема:', 'region_lbl':'Регион:', 'all_opt':'Все',
+    'opt_air':'Воздух', 'opt_waste':'Отходы', 'opt_taza':'Таза КЗ',
+    'opt_urban':'Благоустройство', 'opt_inc':'Инциденты', 'opt_pol':'Политика',
   },
-  kz:{
-    title:'Экология және абаттандыруды мониторингтеудің бірыңғай ұлттық жүйесі',
-    sub:'Smart Data Ukimet · Қоршаған орта НДҚ · Е-өтініштер · TazaQazBot',
-    badge:'Прототип',
-    tab_main:'Азаматтардың өтініштері', tab_em:'Шығарындылар', tab_waste:'Қалдықтар',
-    tab_hear:'Тыңдаулар', tab_app:'Өтініштер', tab_map:'Өтініштер картасы',
-    tab_news:'Жаңалықтар',
-    kpi_eco:'Барлық өтініштер', kpi_taza:'Таза Қазақстан', kpi_ikom:'iKomek қоңыраулары',
-    kpi_done:'Орындалды', kpi_work:'Жұмыста', kpi_late:'Мерзімі өтті',
-    kpi_pek:'ӨЭБ объектілері', kpi_emerg:'Авариялық шығарындылар',
-    real_data:'нақты деректер', high_rate:'жоғары көрсеткіш',
-    current:'ағымдағы', needs_attn:'назар аудару қажет',
-    topic_lbl:'Тақырып:', region_lbl:'Аймақ:', all_opt:'Барлығы',
-    opt_air:'Ауа', opt_waste:'Қалдықтар', opt_taza:'Таза ҚЗ',
-    opt_urban:'Абаттандыру', opt_inc:'Оқиғалар', opt_pol:'Саясат',
-    btn_refresh:'Қазір жаңарту', btn_reg_news:'📰 Осы аймақтың жаңалықтары →',
+  kz: {
+    // Шапка
+    'title':'Экология мен абаттандыруды бақылаудың бірыңғай ұлттық жүйесі',
+    'sub':'Smart Data Ukimet · Қоршаған орта ҰДБ · Е-Өтініш · TazaQazBot',
+    'badge':'Прототип',
+    // Табы
+    'tab_main':'Азаматтардың өтініштері', 'tab_taza':'Таза Қазақстан',
+    'tab_em':'ҚОЖ ҰДБ мониторингі', 'tab_kgs':'ҚГС',
+    'tab_hear':'Әлеуметтік шиеленіс', 'tab_news':'Жаңалықтар',
+    'tab_waste':'Қалдықтар',
+    // KPI / общие
+    'kpi_eco':'Барлық өтініштер', 'kpi_taza':'Таза Қазақстан', 'kpi_ikom':'iKomek қоңыраулары',
+    'kpi_done':'Орындалды', 'kpi_work':'Жұмыста', 'kpi_late':'Мерзімі өткен',
+    'kpi_pek':'ӨЭБ объектілері', 'kpi_emerg':'Авариялық шығарындылар',
+    'real_data':'нақты деректер', 'high_rate':'жоғары көрсеткіш',
+    'current':'ағымдағы', 'needs_attn':'назар аудару қажет',
+    // Фильтры
+    'filter.period':'Кезең', 'filter.year':'Жыл', 'filter.month':'Ай', 'filter.day':'Күн',
+    'filter.range':'Аралық', 'filter.region':'Өңір', 'filter.all':'Барлығы',
+    'filter.reset':'Тазарту', 'filter.apply':'Қолдану', 'filter.from':'Бастап', 'filter.to':'Дейін',
+    'filter.search':'Іздеу…', 'filter.export':'📥 CSV экспорт',
+    // Обращения
+    'appeals.filter.type':'Түрі', 'appeals.filter.status':'Мәртебесі',
+    'appeals.filter.repeat':'Қайталама', 'appeals.filter.category':'Санаты',
+    'appeals.filter.subcategory':'Ішкі санаты', 'appeals.filter.character':'Сұрақ сипаты',
+    'appeals.filter.cgo':'Мемлекеттік орган', 'appeals.filter.organ':'Нақты орган',
+    'appeals.kpi.total':'Барлық өтініштер', 'appeals.kpi.overdue':'Мерзімі өткен',
+    'appeals.kpi.repeat':'Қайталама өтініштер', 'appeals.kpi.forwarded':'Қайта бағытталған',
+    'appeals.block.map':'Өңірлер бойынша өтініштер картасы',
+    'appeals.block.dynamics':'Өтініштер динамикасы',
+    'appeals.block.regions':'Өңірлер бойынша өтініштер',
+    'appeals.block.executors':'Орындаушы органдар',
+    'appeals.block.analytics':'Өтініштер талдауы',
+    'appeals.block.preview':'Өтініштер бойынша жалпы ақпарат',
+    'appeals.chart.category':'Санаты', 'appeals.chart.subcategory':'Ішкі санаты',
+    'appeals.chart.character':'Сұрақ сипаты', 'appeals.chart.type':'Өтініш түрі',
+    'appeals.dyn.appeals':'Өтініштер', 'appeals.dyn.overdue':'Мерзімі өткен',
+    'appeals.dyn.group':'Топтастыру',
+    // НБД
+    'nbd.env.air':'Ауа', 'nbd.env.water':'Су', 'nbd.env.fire':'Алау',
+    'nbd.filter.substance':'Зат', 'nbd.filter.org':'Ұйым',
+    'nbd.filter.onlyExceed':'Тек асып кетулер',
+    'nbd.kpi.measurements':'Өлшеулер', 'nbd.kpi.orgs':'Ұйымдар',
+    'nbd.kpi.exceed':'ШРК асып кетуі', 'nbd.kpi.regions':'Өңірлер',
+    'nbd.block.substances':'Ластаушы заттар',
+    'nbd.block.orgs':'Эмитент ұйымдар',
+    'nbd.block.trend':'Айлық тренд', 'nbd.block.byRegion':'Өңірлер бойынша',
+    'nbd.block.exceedOrgs':'Асып кету бойынша ұйымдар',
+    'nbd.block.exceedSubs':'Асып кету бойынша заттар',
+    'nbd.block.map':'ҚОЖ ҰДБ объектілерінің картасы',
+    'nbd.fresh':'🆕 ҚОЖ ҰДБ жаңа деректері',
+    // Таза
+    'taza.kpi.total':'Барлық өтінімдер', 'taza.kpi.done':'Орындалды',
+    'taza.kpi.donePct':'%', 'taza.kpi.overdue':'Мерзімі өткен',
+    'taza.kpi.cancelled':'Бас тартылды', 'taza.kpi.median':'Жабу медианасы',
+    'taza.kpi.avg':'Орташа жабу', 'taza.kpi.regs':'Қамтылған өңірлер',
+    'taza.kpi.cats':'Қызмет санаттары',
+    'taza.filter.category':'Қызмет санаты', 'taza.filter.status':'Мәртебесі',
+    'taza.filter.overdue':'Мерзімнің өтуі', 'taza.filter.rating':'Рейтинг',
+    'taza.block.regions':'📊 Өңірлер бойынша өтінімдер саны',
+    'taza.block.dynamics':'📈 Өтінімдер динамикасы',
+    'taza.block.cats':'Көлемі бойынша санаттар',
+    'taza.block.sat':'⭐ Өңірлер бойынша рейтинг',
+    'taza.block.overdue':'⚠️ Өңірлер бойынша мерзімі өткен өтінімдер',
+    'taza.block.speed':'⏱ Жабу жылдамдығы',
+    'taza.block.map':'🗺️ Таза Қазақстан өтінімдер картасы',
+    'taza.block.table':'📋 Таза Қазақстан өтінімдері туралы жалпы ақпарат',
+    // Социальное
+    'social.index.title':'📊 Әрекетсіздікке наразылық индексі',
+    'social.index.sub':'5 объективті көрсеткіштен композит · 0–10 шкаласы',
+    'social.kpi.overdue':'Мерзімі өткен',
+    'social.kpi.repeat':'Қайталама өтініштер',
+    'social.kpi.forward':'Қайта бағытталған',
+    'social.kpi.inaction':'Әрекетсіздікке шағымдар',
+    'social.block.byRegion':'🌍 Наразылық индексі бойынша өңірлер рейтингі',
+    'social.block.executors':'🏛️ Ең көп мерзімі өткен мемлекеттік органдар',
+    'social.block.anomalies':'🚨 Анықталған ауытқулар',
+    'social.comp.overdue':'Мерзім өтулер',
+    'social.comp.repeat':'Қайталама өтініштер',
+    'social.comp.forwarded':'Қайта бағытталған',
+    'social.comp.inaction':'Әрекетсіздікке шағымдар',
+    'social.comp.stuck':'Тұрып қалған мерзім өтулер',
+    'social.orgmode.byOrg':'Органдар бойынша',
+    'social.orgmode.byMin':'Министрліктер бойынша',
+    // Статусы
+    'status.done':'Орындалды', 'status.overdue':'Мерзімі өткен',
+    'status.working':'Жұмыста', 'status.cancelled':'Бас тартылды',
+    'status.created':'Құрылды',
+    // Уровни
+    'level.calm':'🟢 Тыныш', 'level.attention':'🟡 Назар',
+    'level.moderate':'🟠 Орташа', 'level.high':'🔴 Жоғары',
+    'level.critical':'⚫ Сыни',
+    // Общее
+    'common.found':'Табылды', 'common.of':'ішінен',
+    'common.measurements':'өлшеу', 'common.appeals':'өтініш',
+    'common.loading':'Жүктелуде…', 'common.noData':'Деректер жоқ',
+    'common.requiresControl':'Бақылауды талап етеді',
+    'common.attention':'Назар', 'common.info':'Ақпарат',
+    // Кнопки/прочие
+    'btn_refresh':'Қазір жаңарту',
+    'btn_reg_news':'📰 Осы өңірдің жаңалықтары →',
+    'topic_lbl':'Тақырып:', 'region_lbl':'Өңір:', 'all_opt':'Барлығы',
+    'opt_air':'Ауа', 'opt_waste':'Қалдықтар', 'opt_taza':'Таза ҚЗ',
+    'opt_urban':'Абаттандыру', 'opt_inc':'Оқиғалар', 'opt_pol':'Саясат',
   }
 };
-let curLang='ru';
+
+// Словарь имён регионов ru → kz (полные имена с «область»)
+const REGION_KZ = {
+  'Абайская область':'Абай облысы',
+  'Акмолинская область':'Ақмола облысы',
+  'Актюбинская область':'Ақтөбе облысы',
+  'Алматинская область':'Алматы облысы',
+  'Алматинская обл.':'Алматы облысы',
+  'Алматы':'Алматы',
+  'Астана':'Астана',
+  'Атырауская область':'Атырау облысы',
+  'Восточно-Казахстанская область':'Шығыс Қазақстан облысы',
+  'ВКО':'ШҚО',
+  'Жамбылская область':'Жамбыл облысы',
+  'Жетысуская область':'Жетісу облысы',
+  'Западно-Казахстанская область':'Батыс Қазақстан облысы',
+  'ЗКО':'БҚО',
+  'Карагандинская область':'Қарағанды облысы',
+  'Костанайская область':'Қостанай облысы',
+  'Кызылординская область':'Қызылорда облысы',
+  'Мангистауская область':'Маңғыстау облысы',
+  'Павлодарская область':'Павлодар облысы',
+  'Северо-Казахстанская область':'Солтүстік Қазақстан облысы',
+  'СКО':'СҚО',
+  'Туркестанская область':'Түркістан облысы',
+  'Улытауская область':'Ұлытау облысы',
+  'Шымкент':'Шымкент',
+  // Сокращённые имена (как в _AC.regions)
+  'Абайская':'Абай',
+  'Акмолинская':'Ақмола',
+  'Актюбинская':'Ақтөбе',
+  'Атырауская':'Атырау',
+  'Жамбылская':'Жамбыл',
+  'Жетысуская':'Жетісу',
+  'Карагандинская':'Қарағанды',
+  'Костанайская':'Қостанай',
+  'Кызылординская':'Қызылорда',
+  'Мангистауская':'Маңғыстау',
+  'Павлодарская':'Павлодар',
+  'Туркестанская':'Түркістан',
+  'Улытауская':'Ұлытау',
+};
+
+// Текущий язык + persist
+let curLang = (function(){ try{ return localStorage.getItem('dashboardLang')||'ru'; } catch(_){ return 'ru'; } })();
+
+function t(key){
+  return (I18N[curLang] && I18N[curLang][key]) || (I18N.ru && I18N.ru[key]) || key;
+}
+function tRegion(name){
+  if(!name) return name;
+  if(curLang !== 'kz') return name;
+  return REGION_KZ[name] || name;
+}
+function tStatus(key){
+  // принимает либо код DONE/CANCELLED/WORKING/CREATED, либо русский label
+  if(!key) return key;
+  const codeMap = {DONE:'status.done', CANCELLED:'status.cancelled', WORKING:'status.working', CREATED:'status.created', OVERDUE:'status.overdue'};
+  if(codeMap[key]) return t(codeMap[key]);
+  return key;
+}
+
 function setLang(lang){
-  curLang=lang;
-  const T=LANG[lang];
+  curLang = lang;
+  try { localStorage.setItem('dashboardLang', lang); } catch(_){}
+  document.documentElement.lang = (lang==='kz') ? 'kk' : 'ru';
+  // 1. Текст узлов с data-i18n
   document.querySelectorAll('[data-i18n]').forEach(el=>{
-    const k=el.dataset.i18n;
-    if(T[k]!==undefined) el.textContent=T[k];
+    const k = el.dataset.i18n; if(!k) return;
+    const v = (I18N[lang] && I18N[lang][k]); if(v!==undefined) el.textContent = v;
   });
-  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('act',b.dataset.lang===lang));
+  // 2. Плейсхолдеры
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    const k = el.dataset.i18nPlaceholder; const v = (I18N[lang] && I18N[lang][k]);
+    if(v!==undefined) el.placeholder = v;
+  });
+  // 3. Тултипы (title)
+  document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+    const k = el.dataset.i18nTitle; const v = (I18N[lang] && I18N[lang][k]);
+    if(v!==undefined) el.title = v;
+  });
+  // 4. Подсветка кнопки языка
+  document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('act', b.dataset.lang===lang));
+  // 5. Перерисовка активной вкладки (динамический контент)
+  try {
+    const active = document.querySelector('.panel.active')?.id || '';
+    if(active === 'panel-main')      { if(typeof _rechartOnFilter==='function') _rechartOnFilter(); }
+    if(active === 'panel-taza')      { if(typeof rerenderTaza==='function') rerenderTaza(); }
+    if(active === 'panel-emissions') { if(typeof renderNbd2025==='function') renderNbd2025(); }
+    if(active === 'panel-hearings')  { if(typeof rerenderSocial==='function') rerenderSocial(); }
+  } catch(_){}
 }
 
 function switchTab(id, el) {
