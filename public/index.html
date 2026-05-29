@@ -15,8 +15,11 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/plugins/monthSelect/style.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/ru.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/kz.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/plugins/monthSelect/index.js"></script>
 <style>
 :root{--bg:#f5f5f5;--surface:#fff;--surface2:#f9fafb;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.18);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--blue:#0891B2;--green:#16A34A;--red:#DC2626;--amber:#D97706;--radius:8px;--radius-lg:12px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -300,7 +303,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .fbar input[type=date]::-webkit-calendar-picker-indicator:hover{opacity:1}
 /* Унифицированный pill-стиль date-инпутов на ВСЕХ вкладках */
 .fbar input[type=date],
-.taza-filters input[type=date]{font-size:11px;padding:4px 12px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:140px;height:28px;outline:none;font-family:inherit;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
+.taza-filters input[type=date]{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:150px;height:28px;outline:none;font-family:inherit;transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}
 .fbar input[type=date]:hover,
 .taza-filters input[type=date]:hover{border-color:#1B7A3A}
 .fbar input[type=date]:focus,
@@ -308,13 +311,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 /* flatpickr alt-input наследует тот же стиль */
 .fbar input.flatpickr-alt-input,
 .taza-filters input.flatpickr-alt-input,
-.nbd-fltbar input.flatpickr-alt-input{font-size:11px;padding:4px 12px;border-radius:18px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:140px;height:28px;outline:none;font-family:inherit;-webkit-appearance:none;appearance:none}
+.nbd-fltbar input.flatpickr-alt-input{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:150px;height:28px;outline:none;font-family:inherit;-webkit-appearance:none;appearance:none}
 .fbar input.flatpickr-alt-input:hover,
 .taza-filters input.flatpickr-alt-input:hover,
 .nbd-fltbar input.flatpickr-alt-input:hover{border-color:#1B7A3A}
 .fbar input.flatpickr-alt-input:focus,
 .taza-filters input.flatpickr-alt-input:focus,
 .nbd-fltbar input.flatpickr-alt-input:focus{border-color:#1B7A3A;box-shadow:0 0 0 3px rgba(27,122,58,.12)}
+/* Таза: ширина date-инпутов под 160px селекты этой панели */
+.taza-filters input[type=date],
+.taza-filters input.flatpickr-alt-input{width:160px}
+/* НБД / Соц: скругление под 14px-селекты этих панелей */
+.nbd-fltbar input.flatpickr-alt-input{border-radius:14px}
+/* Разделитель «—» между полями диапазона — по центру строки */
+.range-sep{display:inline-flex;align-items:center;padding:0 4px;color:var(--text3);font-size:12px}
+/* ── Календарь flatpickr под зелёную палитру Таза ── */
+.flatpickr-calendar{border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);font-family:inherit;font-size:13px}
+.flatpickr-day.selected,.flatpickr-day.selected:hover,
+.flatpickr-day.startRange,.flatpickr-day.endRange,
+.flatpickr-day.startRange:hover,.flatpickr-day.endRange:hover,
+.flatpickr-day.inRange{background:#1B7A3A;border-color:#1B7A3A;color:#fff;box-shadow:none}
+.flatpickr-day.inRange{background:rgba(27,122,58,.12);border-color:transparent;color:var(--text)}
+.flatpickr-day.today{border-color:#1B7A3A}
+.flatpickr-day.today:hover{background:#1B7A3A;color:#fff}
+.flatpickr-day:hover{background:rgba(27,122,58,.12)}
+.flatpickr-months .flatpickr-month,
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year{color:#1B7A3A;font-weight:600}
+.flatpickr-weekdays,span.flatpickr-weekday{color:#1B7A3A;font-weight:600}
+.flatpickr-months .flatpickr-prev-month:hover svg,
+.flatpickr-months .flatpickr-next-month:hover svg{fill:#1B7A3A}
+/* monthSelect-плагин (НБД / Соц): выбранный месяц — фирменный зелёный */
+.flatpickr-monthSelect-month.selected,
+.flatpickr-monthSelect-month.selected:hover{background:#1B7A3A;color:#fff}
+.flatpickr-monthSelect-month:hover{background:rgba(27,122,58,.12)}
 .nbd-fltbar-check{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);font-weight:500;cursor:pointer;margin-left:6px}
 .nbd-fltbar-check input{accent-color:#dc2626}
 .nbd-fltbar-reset{margin-left:auto;font-size:10px;padding:5px 11px;border-radius:14px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer}
@@ -637,9 +667,9 @@ input[type=file]{display:none}
   </select>
   <div class="fbar-sep"></div>
   <span class="fbar-label">Диапазон</span>
-  <input type="date" id="gDateFrom" min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" placeholder="С">
-  <span style="color:var(--text3);font-size:11px">—</span>
-  <input type="date" id="gDateTo"   min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" placeholder="По">
+  <input type="date" id="gDateFrom" min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" placeholder="Начало периода" data-i18n-placeholder="filter.range.from">
+  <span class="range-sep">—</span>
+  <input type="date" id="gDateTo"   min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" placeholder="Конец периода" data-i18n-placeholder="filter.range.to">
   <div class="fbar-sep"></div>
   <span class="fbar-label">Регион</span>
   <select id="gReg" onchange="cascadeIssueFilter();onGlobalFilter()">
@@ -1035,9 +1065,9 @@ input[type=file]{display:none}
       </select>
       <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
       <span class="nbd-fltbar-sub">Диапазон</span>
-      <input type="month" id="nbdFltDateFrom" min="2025-01" max="2026-12" onchange="_onNbdRangeChange()">
-      <span style="color:var(--text3);font-size:11px">—</span>
-      <input type="month" id="nbdFltDateTo" min="2025-01" max="2026-12" onchange="_onNbdRangeChange()">
+      <input type="text" id="nbdFltDateFrom" min="2025-01" max="2026-12" onchange="_onNbdRangeChange()" placeholder="Начало периода" data-i18n-placeholder="filter.range.from">
+      <span class="range-sep">—</span>
+      <input type="text" id="nbdFltDateTo" min="2025-01" max="2026-12" onchange="_onNbdRangeChange()" placeholder="Конец периода" data-i18n-placeholder="filter.range.to">
       <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
       <span class="nbd-fltbar-sub">Регион</span>
       <select id="nbdFltRegion" onchange="_onNbdSelectChange('region',this.value)"><option value="">Все</option></select>
@@ -1179,9 +1209,9 @@ input[type=file]{display:none}
       </select>
       <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
       <span class="nbd-fltbar-sub">Диапазон</span>
-      <input type="month" id="socFltDateFrom" min="2021-01" max="2026-12" onchange="_onSocRange()">
-      <span style="color:var(--text3);font-size:11px">—</span>
-      <input type="month" id="socFltDateTo" min="2021-01" max="2026-12" onchange="_onSocRange()">
+      <input type="text" id="socFltDateFrom" min="2021-01" max="2026-12" onchange="_onSocRange()" placeholder="Начало периода" data-i18n-placeholder="filter.range.from">
+      <span class="range-sep">—</span>
+      <input type="text" id="socFltDateTo" min="2021-01" max="2026-12" onchange="_onSocRange()" placeholder="Конец периода" data-i18n-placeholder="filter.range.to">
       <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
       <span class="nbd-fltbar-sub">Регион</span>
       <select id="socFltRegion" onchange="_onSocChange('region',this.value)"><option value="">Все</option></select>
@@ -1537,9 +1567,9 @@ input[type=file]{display:none}
       </select>
       <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 6px"></span>
       <span class="taza-flbl">Диапазон</span>
-      <input type="date" id="tzDateFrom" min="2024-06-01" max="2026-04-28" onchange="onTzDateRangeChange();onTazaFilter()">
-      <span style="color:var(--text3);font-size:11px">—</span>
-      <input type="date" id="tzDateTo" min="2024-06-01" max="2026-04-28" onchange="onTzDateRangeChange();onTazaFilter()">
+      <input type="date" id="tzDateFrom" min="2024-06-01" max="2026-04-28" onchange="onTzDateRangeChange();onTazaFilter()" placeholder="Начало периода" data-i18n-placeholder="filter.range.from">
+      <span class="range-sep">—</span>
+      <input type="date" id="tzDateTo" min="2024-06-01" max="2026-04-28" onchange="onTzDateRangeChange();onTazaFilter()" placeholder="Конец периода" data-i18n-placeholder="filter.range.to">
     </div>
     <div class="taza-row">
       <span class="taza-flbl">Регион</span>
@@ -1850,34 +1880,79 @@ if (typeof ChartDataLabels !== 'undefined') {
   if (Chart.defaults && Chart.defaults.set) Chart.defaults.set('plugins.datalabels', { display: false });
 }
 
-// flatpickr — русская локаль, формат d.m.Y. Применяем ко всем date-inputs.
+// flatpickr — единый русский/казахский календарь для всех диапазонов дат.
+// Пары [idНачало, idКонец, isMonth]: даты (Обращения, Таза) и месяцы (НБД, Соц).
+const _FP_PAIRS = [
+  ['gDateFrom',     'gDateTo',     false],
+  ['tzDateFrom',    'tzDateTo',    false],
+  ['nbdFltDateFrom','nbdFltDateTo', true],
+  ['socFltDateFrom','socFltDateTo', true],
+];
+let _fpLocaleName = 'ru';
+
 function _initFlatpickr(){
   if(typeof flatpickr === 'undefined') return;
-  if(window.flatpickr && window.flatpickr.l10ns && window.flatpickr.l10ns.ru){
-    flatpickr.localize(flatpickr.l10ns.ru);
-  }
-  const targets = document.querySelectorAll('input[type="date"]');
-  targets.forEach(inp=>{
-    if(inp._fp) return; // уже инициализирован
-    const min = inp.getAttribute('min') || undefined;
-    const max = inp.getAttribute('max') || undefined;
-    // Берём существующий onchange handler, чтобы не сломать кросс-фильтрацию
-    const onChangeAttr = inp.getAttribute('onchange') || '';
-    const fp = flatpickr(inp, {
-      locale: 'ru',
-      dateFormat: 'Y-m-d',     // value остаётся ISO для совместимости с движками
-      altInput: true,
-      altFormat: 'd.m.Y',       // визуально пользователь видит русский формат
-      allowInput: true,
-      minDate: min, maxDate: max,
-      onChange: ()=>{
-        if(onChangeAttr){
-          try { (new Function(onChangeAttr)).call(inp); } catch(e){}
-        }
-      },
-    });
-    inp._fp = fp;
+  const phFrom = (typeof t==='function') ? t('filter.range.from') : 'Начало периода';
+  const phTo   = (typeof t==='function') ? t('filter.range.to')   : 'Конец периода';
+
+  _FP_PAIRS.forEach(([fromId, toId, isMonth])=>{
+    const fromEl = document.getElementById(fromId);
+    const toEl   = document.getElementById(toId);
+    if(!fromEl || !toEl) return;
+    if(isMonth && typeof monthSelectPlugin === 'undefined') return; // плагин ещё не загружен
+
+    const build = (el, ph, isFrom)=>{
+      if(el._flatpickr) return; // уже инициализирован
+      const minA = el.getAttribute('min') || '';
+      const maxA = el.getAttribute('max') || '';
+      // существующий onchange сохраняем, чтобы не сломать кросс-фильтрацию
+      const onChangeAttr = el.getAttribute('onchange') || '';
+      const opts = {
+        locale: _fpLocaleName,
+        altInput: true,
+        altInputClass: 'flatpickr-alt-input', // иначе alt-input без класса → теряет pill-стиль
+        disableMobile: true,                   // flatpickr и на мобильных, не нативный пикер
+        onChange: (sel)=>{
+          // связанный диапазон: выбор начала ограничивает минимум конца
+          if(isFrom && sel[0] && toEl._flatpickr) toEl._flatpickr.set('minDate', sel[0]);
+          if(onChangeAttr){ try { (new Function(onChangeAttr)).call(el); } catch(e){} }
+        },
+      };
+      if(isMonth){
+        // value остаётся 'YYYY-MM' для строкового сравнения в фильтрах НБД/Соц
+        opts.plugins = [ new monthSelectPlugin({ shorthand:false, dateFormat:'Y-m', altFormat:'F Y' }) ];
+        if(minA) opts.minDate = minA + '-01';
+        if(maxA) opts.maxDate = maxA + '-01';
+      } else {
+        opts.dateFormat = 'Y-m-d';   // value остаётся ISO для совместимости с движками
+        opts.altFormat  = 'd.m.Y';   // пользователь видит 27.05.2026
+        opts.allowInput = true;
+        if(minA) opts.minDate = minA;
+        if(maxA) opts.maxDate = maxA;
+      }
+      const fp = flatpickr(el, opts);
+      if(fp && fp.altInput) fp.altInput.placeholder = ph;
+    };
+
+    build(fromEl, phFrom, true);
+    build(toEl,   phTo,   false);
   });
+}
+
+// Смена языка пикеров: пересоздаём инстансы с нужной локалью и плейсхолдерами.
+// Значения сохраняются (flatpickr перечитывает их из исходного input при init).
+function _applyDatePickerLang(lang){
+  if(typeof flatpickr === 'undefined') return;
+  _fpLocaleName = (lang==='kz' && flatpickr.l10ns && flatpickr.l10ns.kz) ? 'kz' : 'ru';
+  _FP_PAIRS.forEach(([f,tt])=>{ [f,tt].forEach(id=>{
+    const el = document.getElementById(id);
+    if(!el) return;
+    try { if(el._flatpickr) el._flatpickr.destroy(); } catch(e){}
+    // flatpickr 4.6.13 не очищает ссылку при destroy → чистим вручную,
+    // иначе guard в _initFlatpickr заблокирует пересоздание
+    el._flatpickr = undefined;
+  }); });
+  _initFlatpickr();
 }
 document.addEventListener('DOMContentLoaded', ()=>setTimeout(_initFlatpickr, 50));
 // Применить сохранённый язык сразу после загрузки DOM
@@ -2039,7 +2114,7 @@ const I18N = {
     'current':'текущие', 'needs_attn':'требует внимания',
     // Фильтры
     'filter.period':'Период', 'filter.year':'Год', 'filter.month':'Месяц', 'filter.day':'День',
-    'filter.range':'Диапазон', 'filter.region':'Регион', 'filter.all':'Все',
+    'filter.range':'Диапазон', 'filter.range.from':'Начало периода', 'filter.range.to':'Конец периода', 'filter.region':'Регион', 'filter.all':'Все',
     'filter.reset':'Сбросить', 'filter.apply':'Применить', 'filter.from':'С', 'filter.to':'По',
     'filter.search':'Поиск…', 'filter.export':'📥 Экспорт CSV',
     // Обращения (главная)
@@ -2144,7 +2219,7 @@ const I18N = {
     'current':'ағымдағы', 'needs_attn':'назар аудару қажет',
     // Фильтры
     'filter.period':'Кезең', 'filter.year':'Жыл', 'filter.month':'Ай', 'filter.day':'Күн',
-    'filter.range':'Аралық', 'filter.region':'Өңір', 'filter.all':'Барлығы',
+    'filter.range':'Аралық', 'filter.range.from':'Кезеңнің басталуы', 'filter.range.to':'Кезеңнің аяқталуы', 'filter.region':'Өңір', 'filter.all':'Барлығы',
     'filter.reset':'Тазарту', 'filter.apply':'Қолдану', 'filter.from':'Бастап', 'filter.to':'Дейін',
     'filter.search':'Іздеу…', 'filter.export':'📥 CSV экспорт',
     // Обращения
@@ -2323,6 +2398,8 @@ function setLang(lang){
     if(active === 'panel-emissions') { if(typeof renderNbd2025==='function') renderNbd2025(); }
     if(active === 'panel-hearings')  { if(typeof rerenderSocial==='function') rerenderSocial(); }
   } catch(_){}
+  // 6. Дата-пикеры: локаль календаря + плейсхолдеры (после возможной перерисовки фильтр-бара)
+  try { if(typeof _applyDatePickerLang==='function') _applyDatePickerLang(lang); } catch(_){}
 }
 
 function switchTab(id, el) {
