@@ -529,10 +529,6 @@ tr:hover td{background:var(--surface2)}
 .n-head{font-size:12px;font-weight:600;margin-bottom:3px;line-height:1.4}
 .n-text{font-size:11px;color:var(--text2);line-height:1.5}
 .n-delta{font-size:10px;font-weight:600;color:var(--red);margin-top:3px}
-.imp-row{display:flex;gap:8px;padding:9px 0;border-bottom:0.5px solid var(--border);align-items:flex-start}
-.imp-row:last-child{border-bottom:none}
-.imp-ic{width:28px;height:28px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
-.ih{background:#fee2e2;color:#991b1b}.im{background:#fef3c7;color:#92400e}
 .social-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .sp-item{padding:10px 12px;border-radius:8px;background:var(--bg2);border:0.5px solid var(--border);display:flex;flex-direction:column;gap:6px}
 .sp-meta{display:flex;align-items:center;gap:7px}
@@ -544,10 +540,6 @@ tr:hover td{background:var(--surface2)}
 .sp-text{font-size:12px;color:var(--text2);line-height:1.55;flex:1}
 .sp-link{font-size:11px;color:#0891B2;text-decoration:none;font-weight:500}
 .sp-link:hover{text-decoration:underline}
-.imp-h{font-size:11px;font-weight:600;margin-bottom:2px}
-.imp-t{font-size:11px;color:var(--text2);line-height:1.4}
-.imp-d{font-size:10px;font-weight:600;margin-top:3px}
-.du{color:var(--red)}.dd{color:var(--green)}
 .skeleton{background:var(--surface2);border-radius:3px;animation:sh 1.2s ease infinite}
 @keyframes sh{0%,100%{opacity:1}50%{opacity:.4}}
 .skl{height:11px;margin-bottom:7px;border-radius:2px}
@@ -1799,15 +1791,9 @@ input[type=file]{display:none}
     </div>
     <div id="mainNewsFeed"><div class="skeleton skl" style="width:60%;margin-bottom:6px"></div><div class="skeleton skl" style="width:100%;margin-bottom:14px"></div><div class="skeleton skl" style="width:55%;margin-bottom:6px"></div><div class="skeleton skl" style="width:100%"></div></div>
   </div>
-  <div class="r2">
-    <div class="card">
-      <div class="card-title">Новости <span id="nCount" style="font-size:10px;font-weight:400;color:var(--text3)">—</span></div>
-      <div id="newsList"><div class="empty">Загрузка...</div></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Влияние на показатели <span id="iCount" style="font-size:10px;font-weight:400;color:var(--text3)">—</span></div>
-      <div id="impactList"><div class="empty">Загрузка...</div></div>
-    </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-title">Новости <span id="nCount" style="font-size:10px;font-weight:400;color:var(--text3)">—</span></div>
+    <div id="newsList"><div class="empty">Загрузка...</div></div>
   </div>
   <div class="card" style="margin-top:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -8643,14 +8629,13 @@ function setStatus(state,txt,ts){const d=document.getElementById('sDot'),t=docum
 function setProg(p,show=true){document.getElementById('pbar').style.display=show?'block':'none';document.getElementById('pfill').style.width=p+'%';}
 function markSrc(ok){document.querySelectorAll('#srcRow .sc').forEach(e=>e.className='sc'+(ok?' ok':''));}
 function showAlert(txt){document.getElementById('alertTxt').textContent='⚠ ИНЦИДЕНТ: '+txt;document.getElementById('alertBar').classList.add('show');document.getElementById('newsDot').style.display='';}
-function renderSkel(){const s=()=>`<div class="news-item"><div class="skeleton skl" style="width:40%"></div><div class="skeleton skl" style="width:75%"></div><div class="skeleton skl"></div></div>`;document.getElementById('newsList').innerHTML=s().repeat(4);document.getElementById('impactList').innerHTML=s().repeat(3);}
+function renderSkel(){const s=()=>`<div class="news-item"><div class="skeleton skl" style="width:40%"></div><div class="skeleton skl" style="width:75%"></div><div class="skeleton skl"></div></div>`;document.getElementById('newsList').innerHTML=s().repeat(4);}
 function applyFilter(){
   const reg=document.getElementById('gReg')?.value||'all';
   const f=allNews.filter(n=>reg==='all'||n.region===reg);
   renderNews(f);
 }
 function renderNews(items){document.getElementById('nCount').textContent=items.length+' новостей';if(!items.length){document.getElementById('newsList').innerHTML='<div class="empty">Нет новостей по фильтрам</div>';return;}document.getElementById('newsList').innerHTML=items.map(n=>`<div class="news-item"><div class="n-meta"><span class="n-date">${n.date||''}</span><span class="n-src">${n.src||''}</span>${(n.tags||[]).map(t=>TAG_META[t]?`<span class="tag ${TAG_META[t].c}">${TAG_META[t].l}</span>`:'').join('')}${n.region&&n.region!=='Казахстан'?`<span class="tag t-reg">${n.region}</span>`:''}<span class="tag t-new">NEW</span></div><div class="n-head"><a href="${n.link||'#'}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${n.head||''}</a></div><div class="n-text">${n.text||''}</div></div>`).join('');}
-function renderImpacts(news){const hi=news.filter(n=>n.impact==='high'||n.impact==='med');document.getElementById('iCount').textContent=hi.length+' факторов';if(!hi.length){document.getElementById('impactList').innerHTML='<div class="empty">Нет данных</div>';return;}document.getElementById('impactList').innerHTML=hi.map(n=>`<div class="imp-row"><div class="imp-ic ${n.impact==='high'?'ih':'im'}">${n.impact==='high'?'!':'~'}</div><div><div class="imp-h">${(n.region||'КЗ')} — ${n.head.substring(0,55)}${n.head.length>55?'...':''}</div><div class="imp-t">${n.text}</div><div class="imp-d ${n.impact==='high'?'du':'dd'}">${n.delta||'Влияние фиксируется'}</div></div></div>`).join('');}
 function renderMainNewsFeed(){const el=document.getElementById('mainNewsFeed');if(!el)return;const items=allNews.slice(0,5);if(!items.length){el.innerHTML='<div class="empty">Загрузка новостей...</div>';return;}el.innerHTML=items.map(n=>`<div class="news-item"><div class="n-meta"><span class="n-date">${n.date||''}</span><span class="n-src">${n.src||''}</span>${(n.tags||[]).map(t=>TAG_META[t]?`<span class="tag ${TAG_META[t].c}">${TAG_META[t].l}</span>`:'').join('')}${n.region&&n.region!=='Казахстан'?`<span class="tag t-reg">${n.region}</span>`:''}</div><div class="n-head"><a href="${n.link||'#'}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${n.head||''}</a></div></div>`).join('');}
 function loadCache(){try{const d=JSON.parse(localStorage.getItem(CACHE_KEY));if(d&&d.ts&&Date.now()-d.ts<TTL)return d;}catch(e){}return null;}
 function saveCache(d){try{localStorage.setItem(CACHE_KEY,JSON.stringify({...d,ts:Date.now()}));}catch(e){}}
@@ -8816,7 +8801,7 @@ async function fetchOneRss(source){
     return [];
   }
 }
-async function fetchNews(){if(isLoading)return;isLoading=true;const btn=document.getElementById('btnR');btn.disabled=true;btn.textContent='Обновляется...';setStatus('loading','Загружаю RSS-ленты...');setProg(5);renderSkel();const allItems=[];const step=90/RSS_SOURCES.length;for(let i=0;i<RSS_SOURCES.length;i++){const src=RSS_SOURCES[i];setStatus('loading','Загружаю '+src.name+' ('+( i+1)+'/'+RSS_SOURCES.length+')');const items=await fetchOneRss(src);allItems.push(...items);setProg(5+Math.round(step*(i+1)));}allItems.sort((a,b)=>{const o={high:0,med:1,low:2};if(o[a.impact]!==o[b.impact])return o[a.impact]-o[b.impact];return 0;});const seen=new Set();const unique=allItems.filter(n=>{const key=n.head.substring(0,40).toLowerCase();if(seen.has(key))return false;seen.add(key);return true;});const alerts=unique.filter(n=>n.impact==='high');setProg(100);setTimeout(()=>setProg(0,false),500);if(unique.length===0){setStatus('err','Не удалось загрузить новости.');document.getElementById('newsList').innerHTML='<div class="empty">Нет данных. Нажмите «Обновить сейчас».</div>';document.getElementById('impactList').innerHTML='<div class="empty">Нет данных.</div>';}else{saveCache({news:unique,alerts});allNews=unique;applyFilter();renderImpacts(unique);renderMainNewsFeed();markSrc(true);setStatus('live','Загружено '+unique.length+' новостей из '+RSS_SOURCES.length+' источников',Date.now());if(alerts.length)showAlert(alerts[0].head);}isLoading=false;btn.disabled=false;btn.textContent='Обновить сейчас';}
+async function fetchNews(){if(isLoading)return;isLoading=true;const btn=document.getElementById('btnR');btn.disabled=true;btn.textContent='Обновляется...';setStatus('loading','Загружаю RSS-ленты...');setProg(5);renderSkel();const allItems=[];const step=90/RSS_SOURCES.length;for(let i=0;i<RSS_SOURCES.length;i++){const src=RSS_SOURCES[i];setStatus('loading','Загружаю '+src.name+' ('+( i+1)+'/'+RSS_SOURCES.length+')');const items=await fetchOneRss(src);allItems.push(...items);setProg(5+Math.round(step*(i+1)));}allItems.sort((a,b)=>{const o={high:0,med:1,low:2};if(o[a.impact]!==o[b.impact])return o[a.impact]-o[b.impact];return 0;});const seen=new Set();const unique=allItems.filter(n=>{const key=n.head.substring(0,40).toLowerCase();if(seen.has(key))return false;seen.add(key);return true;});const alerts=unique.filter(n=>n.impact==='high');setProg(100);setTimeout(()=>setProg(0,false),500);if(unique.length===0){setStatus('err','Не удалось загрузить новости.');document.getElementById('newsList').innerHTML='<div class="empty">Нет данных. Нажмите «Обновить сейчас».</div>';}else{saveCache({news:unique,alerts});allNews=unique;applyFilter();renderMainNewsFeed();markSrc(true);setStatus('live','Загружено '+unique.length+' новостей из '+RSS_SOURCES.length+' источников',Date.now());if(alerts.length)showAlert(alerts[0].head);}isLoading=false;btn.disabled=false;btn.textContent='Обновить сейчас';}
 function triggerRefresh(){localStorage.removeItem(CACHE_KEY);fetchNews();fetchSocial();}
 
 // ── SOCIAL MEDIA ──
@@ -9420,7 +9405,7 @@ ${buildAICtx()}`;
   inp.focus();
 }
 
-async function initNews(){newsInit=true;setStatus('loading','Проверка кеша...');const c=loadCache();if(c&&c.news&&c.news.length>0){allNews=c.news;applyFilter();renderImpacts(c.news);renderMainNewsFeed();markSrc(true);const age=Math.round((Date.now()-c.ts)/60000);setStatus('live','Из кеша ('+age+' мин.) · '+c.news.length+' новостей',c.ts);if(c.alerts&&c.alerts.length)showAlert(c.alerts[0].head||c.alerts[0].text);if(Date.now()-c.ts>30*60*1000)setTimeout(fetchNews,2000);}else{setStatus('live','Загружаю новости...');fetchNews();}fetchSocial();}
+async function initNews(){newsInit=true;setStatus('loading','Проверка кеша...');const c=loadCache();if(c&&c.news&&c.news.length>0){allNews=c.news;applyFilter();renderMainNewsFeed();markSrc(true);const age=Math.round((Date.now()-c.ts)/60000);setStatus('live','Из кеша ('+age+' мин.) · '+c.news.length+' новостей',c.ts);if(c.alerts&&c.alerts.length)showAlert(c.alerts[0].head||c.alerts[0].text);if(Date.now()-c.ts>30*60*1000)setTimeout(fetchNews,2000);}else{setStatus('live','Загружаю новости...');fetchNews();}fetchSocial();}
 
 // ── СОЦИАЛЬНОЕ НАПРЯЖЕНИЕ: индекс недовольства бездействием ─────────────────
 const socFilters = { yearMonth:null, dateFrom:null, dateTo:null, region:null, level:null, source:null };
