@@ -1781,7 +1781,7 @@ input[type=file]{display:none}
   </div>
   <div class="pbar" id="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
   <div class="src-row" id="srcRow">
-    <span class="sc">Tengrinews.kz</span><span class="sc">Kapital.kz</span><span class="sc">24.kz</span><span class="sc">Kursiv.kz</span><span class="sc">Primeminister.kz</span><span class="sc">Lsm.kz</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Tengrinews</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Акорда</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Борт №1</span><span class="sc" style="background:#dcfce7;color:#15803d;border-color:#86efac">Казгидромет</span>
+    <span class="sc">Tengrinews.kz</span><span class="sc">Kapital.kz</span><span class="sc">24.kz</span><span class="sc">Kursiv.kz</span><span class="sc">Primeminister.kz</span><span class="sc">Lsm.kz</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Tengrinews</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Акорда</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Борт №1</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG МЭПР</span><span class="sc" style="background:#dcfce7;color:#15803d;border-color:#86efac">Казгидромет</span>
   </div>
   <!-- фильтры перенесены в глобальную панель -->
   <div class="card" style="margin-bottom:14px">
@@ -8574,7 +8574,9 @@ function initLeafletMap(){
 }
 
 // ── NEWS ──
-const CACHE_KEY='eco_news_v5', TTL=2*60*60*1000;
+const CACHE_KEY='eco_news_v6', TTL=2*60*60*1000;
+// Источники с гарантированно эко-релевантным потоком (фильтр isEcoRelevant пропускаем)
+const NEWS_SKIP_ECO_FILTER = new Set(['TG МЭПР']);
 const TAG_META={air:{l:'Воздух',c:'t-air'},waste:{l:'Отходы',c:'t-waste'},taza:{l:'Таза КЗ',c:'t-taza'},urban:{l:'Благоустройство',c:'t-urban'},incident:{l:'Инцидент',c:'t-incident'},policy:{l:'Политика',c:'t-policy'}};
 let allNews=[],newsInit=false,isLoading=false;
 const RSS_SOURCES=[
@@ -8589,6 +8591,7 @@ const RSS_SOURCES=[
   {name:'TG Tengrinews',    url:'https://t.me/s/tengrinews',      type:'telegram'},
   {name:'TG Акорда',        url:'https://t.me/s/aqorda_resmi',    type:'telegram'},
   {name:'TG Борт №1',       url:'https://t.me/s/bort_01',         type:'telegram'},
+  {name:'TG МЭПР',          url:'https://t.me/s/EcologyofQazaqstan', type:'telegram'},
   // Казгидромет — HTML-парсинг (страница новостей сервер-рендерится)
   {name:'Казгидромет',      url:'https://www.kazhydromet.kz/ru/news/news_main', type:'html_kazhydromet'},
 ];
@@ -8724,8 +8727,8 @@ function parseTelegramHTML(html, sourceName){
       if(!textEl) return;
       const fullText = textEl.textContent.trim();
       if(!fullText) return;
-      // Фильтр по эко-релевантности (вкл. все варианты «Таза Казахстан»)
-      if(!isEcoRelevant(fullText)) return;
+      // Фильтр по эко-релевантности (для тематически-чистых каналов — пропускаем)
+      if(!NEWS_SKIP_ECO_FILTER.has(sourceName) && !isEcoRelevant(fullText)) return;
       const pubDate = dateEl ? dateEl.getAttribute('datetime') : '';
       const link = linkEl ? linkEl.getAttribute('href') : '';
       const head = fullText.split(/[.!?\n]/)[0].slice(0, 110).trim();
