@@ -10,7 +10,8 @@ export default async function handler(req, res) {
     const allowed = [
       'tengrinews.kz', 'kapital.kz', '24.kz', 'kursiv.kz', 'kz.kursiv.media',
       'primeminister.kz', 'lsm.kz', 'gov.kz', 'rsshub.app',
-      't.me'   // Telegram preview pages (t.me/s/<channel>)
+      't.me',          // Telegram preview pages (t.me/s/<channel>)
+      'kazhydromet.kz' // HTML-парсинг новостной ленты Казгидромета
     ];
     if (!allowed.some(d => url.includes(d))) {
       return res.status(403).json({ error: 'Domain not allowed' });
@@ -26,9 +27,9 @@ export default async function handler(req, res) {
       });
       if (!r.ok) return res.status(r.status).json({ error: `Upstream ${r.status}` });
       const body = await r.text();
-      const isTelegram = url.includes('t.me');
+      const isHtml = url.includes('t.me') || url.includes('kazhydromet.kz');
       res.setHeader('Content-Type',
-        isTelegram ? 'text/html; charset=utf-8' : 'application/xml; charset=utf-8');
+        isHtml ? 'text/html; charset=utf-8' : 'application/xml; charset=utf-8');
       res.setHeader('Cache-Control', 's-maxage=900, stale-while-revalidate=1800');
       return res.status(200).send(body);
     } catch (e) {

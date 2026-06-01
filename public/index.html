@@ -1789,7 +1789,7 @@ input[type=file]{display:none}
   </div>
   <div class="pbar" id="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
   <div class="src-row" id="srcRow">
-    <span class="sc">Tengrinews.kz</span><span class="sc">Kapital.kz</span><span class="sc">24.kz</span><span class="sc">Kursiv.kz</span><span class="sc">Primeminister.kz</span><span class="sc">Lsm.kz</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Tengrinews</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Акорда</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Борт №1</span>
+    <span class="sc">Tengrinews.kz</span><span class="sc">Kapital.kz</span><span class="sc">24.kz</span><span class="sc">Kursiv.kz</span><span class="sc">Primeminister.kz</span><span class="sc">Lsm.kz</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Tengrinews</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Акорда</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Борт №1</span><span class="sc" style="background:#dcfce7;color:#15803d;border-color:#86efac">Казгидромет</span>
   </div>
   <!-- фильтры перенесены в глобальную панель -->
   <div class="card" style="margin-bottom:14px">
@@ -8603,6 +8603,8 @@ const RSS_SOURCES=[
   {name:'TG Tengrinews',    url:'https://t.me/s/tengrinews',      type:'telegram'},
   {name:'TG Акорда',        url:'https://t.me/s/aqorda_resmi',    type:'telegram'},
   {name:'TG Борт №1',       url:'https://t.me/s/bort_01',         type:'telegram'},
+  // Казгидромет — HTML-парсинг (страница новостей сервер-рендерится)
+  {name:'Казгидромет',      url:'https://www.kazhydromet.kz/ru/news/news_main', type:'html_kazhydromet'},
 ];
 const ECO_KEYWORDS=['эколог','выброс','загрязнен','отход','воздух','таза','taza','мэпр','природ','атмосфер','радиац','токсич','мусор','свалк','переработ','озон','климат','co2','парниковый','нефт','пэк','инцидент','чс'];
 const TAG_RULES=[
@@ -8758,15 +8760,55 @@ function parseTelegramHTML(html, sourceName){
   } catch(e){ console.warn('Telegram parse error:', sourceName, e.message); }
   return items;
 }
+// Казгидромет: серверно-рендеренный список новостей. Реальные карточки —
+// .news-item с .news-name (ссылка вида /ru/post/N), .news-date (DD.MM.YYYY),
+// .news-desc (часто пустое). Простые .card на странице — это навигационные
+// плитки (Карта предупреждений / Наукастинг), их трогать НЕ нужно.
+function parseKazhydrometHTML(html, sourceName){
+  const items = [];
+  try {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const cards = doc.querySelectorAll('.news-item');
+    cards.forEach(card => {
+      const a = card.querySelector('a.news-name');
+      const title = a ? a.textContent.trim() : '';
+      if(!title) return;
+      let link = a.getAttribute('href') || '';
+      if(link && !link.startsWith('http')){
+        link = 'https://www.kazhydromet.kz' + (link.startsWith('/') ? link : '/' + link);
+      }
+      const dateStr = (card.querySelector('.news-date')?.textContent || '').trim();
+      // DD.MM.YYYY → ISO; иначе текущая дата (на странице порядок убывающий по дате)
+      let iso = new Date().toISOString();
+      const md = dateStr.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+      if(md) iso = new Date(Date.UTC(+md[3], +md[2]-1, +md[1])).toISOString();
+      const desc = (card.querySelector('.news-desc')?.textContent || '').trim();
+      const fullText = title + (desc ? ' ' + desc : '');
+      // Эко-фильтр НЕ применяем — Казгидромет тематически весь экологичен.
+      const tags = detectTags(fullText);
+      if(!tags.includes('air') && !tags.includes('taza')) tags.push('air');
+      const region = detectRegion(fullText);
+      const text = (desc || title).slice(0, 200) + ((desc || title).length > 200 ? '…' : '');
+      items.push({
+        date: iso, src: sourceName, head: title, text, link,
+        tags, region,
+        impact: detectImpact(fullText, tags),
+        delta: null, isNew: true,
+      });
+    });
+  } catch(e){ console.warn('Kazhydromet parse error:', sourceName, e.message); }
+  return items;
+}
 async function fetchOneRss(source){
   try{
     const url = '/api/proxy?rss=' + encodeURIComponent(source.url);
     const r = await fetch(url, {signal: AbortSignal.timeout(12000)});
     if(!r.ok) throw new Error('HTTP ' + r.status);
     const body = await r.text();
-    const items = source.type === 'telegram'
-      ? parseTelegramHTML(body, source.name)
-      : parseRssXml(body, source.name);
+    let items;
+    if(source.type === 'telegram')               items = parseTelegramHTML(body, source.name);
+    else if(source.type === 'html_kazhydromet')  items = parseKazhydrometHTML(body, source.name);
+    else                                          items = parseRssXml(body, source.name);
     console.log('OK ' + source.name + ': ' + items.length);
     return items;
   } catch(e){
