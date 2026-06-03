@@ -4736,7 +4736,11 @@ function renderTazaTab(d) {
     const overdue = agg.vals.map(v=>v.o);
     const cancelled = agg.vals.map(v=>v.c);
     const showPoints = labels.length<=60;
-    const showLabels = labels.length<=30;
+    // Datalabels: для плотных диапазонов (неделя/день) показываем только серию «Всего» через шаг,
+    // целясь ~40 видимых меток. Для разреженных (месяц ≤30) — все серии.
+    const N_LABELS = labels.length;
+    const denseMode = N_LABELS > 40;
+    const denseStep = denseMode ? Math.max(1, Math.ceil(N_LABELS / 40)) : 1;
     const mkDS = (lbl,data,col,hidden)=>({
       label:lbl, data, borderColor:col,
       backgroundColor:col+'22',
@@ -4785,11 +4789,18 @@ function renderTazaTab(d) {
             callbacks:{label:c=>` ${c.dataset.label}: ${c.raw.toLocaleString('ru-RU')}`}
           },
           datalabels:{
-            display: ctx=>showLabels && ctx.dataset.data[ctx.dataIndex]>0 && !ctx.dataset.hidden,
+            display: ctx=>{
+              if(ctx.dataset.hidden) return false;
+              const v = ctx.dataset.data[ctx.dataIndex];
+              if(!v || v<=0) return false;
+              if(!denseMode) return true;                       // ≤40 точек — все серии
+              if(ctx.dataset.label !== 'Всего') return false;   // dense: только «Всего»
+              return ctx.dataIndex % denseStep === 0;            // через шаг
+            },
             align:'top', anchor:'end',
             font:{size:9,weight:'600'},
             color:c=>c.dataset.borderColor,
-            formatter:v=>v.toLocaleString('ru-RU'),
+            formatter:v=>v>=1000 ? (v/1000).toFixed(1).replace('.0','')+'k' : v.toLocaleString('ru-RU'),
             padding:{bottom:2}
           },
           zoom: zoomOpts.zoom ? zoomOpts : undefined,
