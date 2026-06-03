@@ -7498,19 +7498,25 @@ function resetPreset(){
 _buildPresetPanel();
 
 function onGlobalFilter(){
-  if(!_presetApplying) _clearActivePreset();
-  const typeVal=document.getElementById('gType')?.value||'all';
-  const at=document.getElementById('appTypeFilter');
-  if(at) at.value=typeVal==='all'?'':typeVal;
-  // Сброс KPI к базовым значениям, если все фильтры сняты
-  if(!engineFilterActive()) applyRealKPIs();
-  filterAppTable();
-  loadChunkForFilters();
-  applyFilter();
-  applyGlobalFiltersToCharts();
-  updateFilterChips();
-  if(engineFilterActive()) applyTimeEngine();
-  _updateMapPeriodTag();
+  // Каждый шаг в индивидуальном try/catch: сбой одного не должен блокировать
+  // applyTimeEngine (раньше throw в applyGlobalFiltersToCharts обрывал chain
+  // → applyTimeEngine не запускался → KPI Перенаправлено/В работе/Просрочено/
+  // Повторные оставались на baseline-значениях).
+  const _g = fn => { try { fn(); } catch(_){} };
+  _g(()=>{ if(!_presetApplying) _clearActivePreset(); });
+  _g(()=>{
+    const typeVal=document.getElementById('gType')?.value||'all';
+    const at=document.getElementById('appTypeFilter');
+    if(at) at.value=typeVal==='all'?'':typeVal;
+  });
+  _g(()=>{ if(!engineFilterActive()) applyRealKPIs(); });
+  _g(()=>filterAppTable());
+  _g(()=>loadChunkForFilters());
+  _g(()=>applyFilter());
+  _g(()=>applyGlobalFiltersToCharts());
+  _g(()=>updateFilterChips());
+  _g(()=>{ if(engineFilterActive()) applyTimeEngine(); });
+  _g(()=>_updateMapPeriodTag());
 }
 
 function applyGlobalFiltersToCharts(){
