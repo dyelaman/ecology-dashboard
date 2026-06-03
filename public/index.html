@@ -3009,62 +3009,65 @@ function renderMainCharts() {
     const preview = await pRes.json();
     const kgs = kgsRes.ok ? await kgsRes.json() : null;
     _DATA = { summary, preview };
-    const byRegion = summary.appeals.by_region;
-    Object.keys(byRegion).forEach(r => { REAL_ECO[r] = byRegion[r]; });
-    applyRealKPIs();
-    if(summary.appeals.by_year_cross) _YEAR_CROSS = summary.appeals.by_year_cross;
-    renderMainCharts();
-    renderTimeDynamics();
-    if(typeof _scheduleMainDL==='function') _scheduleMainDL();
-    // renderClosingSpeed / renderApplicantDemo вызываются лениво при открытии подвкладки
-    if (preview.length) {
-      window._APP_REAL = preview;
-      initAppTable();
-    }
-    if (kgs) { _DATA_KGS = kgs; }  // _DATA_KGS питает AI-контекст + subpanel-land (renderKgsLandCharts)
-    const kgsMap = kgsMapRes.ok ? await kgsMapRes.json() : null;
-    if (kgsMap) _KGS_MAP = kgsMap;
-    const tzData = tzRes.ok ? await tzRes.json() : null;
-    if (tzData) {
-      window._DATA_TAZA = tzData; _tzInited = false;
-      const tzEl = document.getElementById('kpiTaza');
-      if(tzEl) tzEl.textContent = tzData.total.toLocaleString('ru-RU');
-      // Если пользователь приземлился на Таза до загрузки данных (восстановление из sessionStorage) — отрендерить сейчас
-      if(document.getElementById('panel-taza')?.classList.contains('active')){
-        _tzInited = true; renderTazaTab(tzData); _renderTazaMap(tzData);
-        try { _restoreScrollForTab('taza'); } catch(_){}
+    console.log('[init] M0: _DATA ready');
+    // Каждый sync-вызов в свой try-catch + маркер, чтобы единичный сбой
+    // НЕ обрывал инициализацию (раньше один throw блокировал populateFilters → пустые селекты).
+    const _step = (n, name, fn) => {
+      try { console.log('[init] M'+n+': '+name+' start'); fn(); console.log('[init] M'+n+': '+name+' OK'); }
+      catch(e) { console.error('[init] M'+n+' FAILED in '+name+':', e && e.message, e && e.stack); }
+    };
+    _step(1, 'byRegion → REAL_ECO', ()=>{
+      const byRegion = summary.appeals.by_region;
+      Object.keys(byRegion).forEach(r => { REAL_ECO[r] = byRegion[r]; });
+    });
+    _step(2, 'applyRealKPIs', ()=>applyRealKPIs());
+    _step(3, '_YEAR_CROSS assign', ()=>{ if(summary.appeals.by_year_cross) _YEAR_CROSS = summary.appeals.by_year_cross; });
+    _step(4, 'renderMainCharts', ()=>renderMainCharts());
+    _step(5, 'renderTimeDynamics', ()=>renderTimeDynamics());
+    _step(6, '_scheduleMainDL', ()=>{ if(typeof _scheduleMainDL==='function') _scheduleMainDL(); });
+    _step(7, 'initAppTable (preview)', ()=>{
+      if (preview.length) { window._APP_REAL = preview; initAppTable(); }
+    });
+    _step(8, '_DATA_KGS assign', ()=>{ if (kgs) { _DATA_KGS = kgs; } });
+    let kgsMap = null, tzData = null;
+    try { kgsMap = kgsMapRes.ok ? await kgsMapRes.json() : null; } catch(e){ console.error('[init] M9 FAILED kgsMap json:', e.message); }
+    _step(10, '_KGS_MAP assign', ()=>{ if (kgsMap) _KGS_MAP = kgsMap; });
+    try { tzData = tzRes.ok ? await tzRes.json() : null; } catch(e){ console.error('[init] M11 FAILED tzData json:', e.message); }
+    _step(12, 'tzData hydrate', ()=>{
+      if (tzData) {
+        window._DATA_TAZA = tzData; _tzInited = false;
+        const tzEl = document.getElementById('kpiTaza');
+        if(tzEl) tzEl.textContent = tzData.total.toLocaleString('ru-RU');
+        if(document.getElementById('panel-taza')?.classList.contains('active')){
+          _tzInited = true; renderTazaTab(tzData); _renderTazaMap(tzData);
+          try { _restoreScrollForTab('taza'); } catch(_){}
+        }
       }
-    }
+    });
+    // Фоновые fetch'и — у каждого свой .catch, не блокирующие
     fetch('/data/chunks/manifest.json').then(r=>r.json()).then(m=>{_CHUNK_MANIFEST=m;}).catch(()=>{});
-    // Свежие агрегаты НБД СОС 2025-2026 (фоновая загрузка)
     fetch('/data/nbd_2025.json').then(r=>r.json()).then(j=>{
       window._NBD_2025 = j;
       if(typeof renderNbd2025 === 'function') renderNbd2025();
     }).catch(e=>console.warn('nbd_2025 load failed:', e.message));
-    // Компактный массив фактов для кросс-фильтрации НБД
     if(typeof _loadNbdFacts === 'function') _loadNbdFacts();
-    // Per-request датасет Таза Казахстан — для клиентской кросс-фильтрации
     fetch('/data/taza_compact.json').then(r=>r.json()).then(tc=>{
       _TAZA=tc; populateTazaFilters();
       if(document.getElementById('panel-taza')?.classList.contains('active') && tazaEngineFilterActive()) rerenderTaza();
     }).catch(e=>console.warn('taza_compact load failed:',e.message));
-    // Компактный per-appeal датасет — для фильтрации по месяцам/дням (загружаем в фоне)
     fetch('/data/appeals_compact.json').then(r=>r.json()).then(ac=>{
       _AC=ac;
       if(engineFilterActive()) applyTimeEngine();
-      // Если открыта вкладка Соц. напряжение — инициализировать сейчас
       if(document.getElementById('panel-hearings')?.classList.contains('active')
          && typeof _socInit==='function') _socInit();
     }).catch(e=>console.warn('appeals_compact load failed:',e.message));
-    // Заполняем фильтр «День» (1–31)
-    (function(){
+    _step(13, 'populate gDay 1-31', ()=>{
       const gd=document.getElementById('gDay');
       if(gd) for(let d=1;d<=31;d++){const o=document.createElement('option');o.value=String(d);o.textContent=String(d);gd.appendChild(o);}
-    })();
-    renderHearingsTab(summary.appeals);
-    _buildMinTree();
-    // Populate global filter dropdowns from real data
-    (function populateFilters(a){
+    });
+    _step(14, 'renderHearingsTab', ()=>renderHearingsTab(summary.appeals));
+    _step(15, '_buildMinTree', ()=>_buildMinTree());
+    _step(16, 'populateFilters (gType/gCatF/gIssueF/gSubF + ЦГО/МИО + datalist)', ()=>(function populateFilters(a){
       const addOpts=(id,items,valFn,lblFn)=>{
         const el=document.getElementById(id); if(!el) return;
         items.forEach(it=>{const o=document.createElement('option');o.value=valFn(it);o.textContent=lblFn(it);el.appendChild(o);});
@@ -3111,7 +3114,7 @@ function renderMainCharts() {
           });
         }
       }
-    })(summary.appeals);
+    })(summary.appeals));
   } catch(e) { console.warn('Dashboard data load failed:', e.message); }
 })();
 
