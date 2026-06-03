@@ -249,3 +249,30 @@ _emChartC5/C6/Types/Season  // инстансы Chart.js вкладки Выбр
 mapMainInst, geoLayerMain, hydroLayerMain, pekLayerMain, emergLayerMain
 allNews          // все новости после фильтрации
 ```
+
+---
+
+## Skill routing
+
+When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
+
+Key routing rules:
+- Бaги / ошибки / «почему не работает» → invoke `/investigate`
+- QA-проверка фичи в браузере (НМО, фильтры, карта, графики) → invoke `/qa` (или `/qa-only` если только отчёт)
+- Скриншоты, ручные клики, проверка вёрстки → invoke `/browse`
+- Визуальная полировка (отступы, сетка, hierarchy) → invoke `/design-review`
+- Review кода перед коммитом / merge → invoke `/review` или `/code-review`
+- Деплой через vercel + проверка → invoke `/ship` или `/land-and-deploy`
+- Брейншторм новой фичи / вкладки → invoke `/brainstorming` (superpowers)
+- Парсинг внешних сайтов (Telegram, RSS, HTML-каталоги) → invoke `/scrape`
+- Сохранить контекст перед паузой → invoke `/context-save`; восстановить → `/context-restore`
+
+Project-specific notes:
+- Этот проект — single-file SPA (`public/index.html` ~9700 строк). Перед большими правками **всегда** grep по уникальному якорю (id / function / комментарий) — построчные смещения после splice-ов ненадёжны.
+- Деплой: `vercel deploy --prod && vercel alias set <url> taza-eco.vercel.app` (alias обязателен, иначе прод не обновится).
+- JS-syntax sanity check inline-скриптов перед коммитом:
+  ```bash
+  node -e "const fs=require('fs');const h=fs.readFileSync('public/index.html','utf8');const m=[...h.matchAll(/<script[^>]*>([\\s\\S]*?)<\\/script>/g)];let bad=0;m.forEach((s,i)=>{if(s[1].length<60)return;try{new Function(s[1]);}catch(e){console.log('#'+i+': '+e.message);bad++;}});console.log(bad?'BAD':'JS OK');"
+  ```
+- Источник правды о состоянии сессии — `CONTEXT.md` (не в git, обновляется в конце сессии).
+
