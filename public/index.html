@@ -367,6 +367,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .kgs-status-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer}
 .kgs-status-row:hover{background:var(--surface2)}
 .kgs-status-row.sel{background:rgba(27,122,58,.12)}
+/* ── iKomek KPI карточка приглушённая (нет per-call датасета для full cross-filter) ── */
+.kpi.kpi-muted{opacity:.55;position:relative}
+.kpi.kpi-muted::after{content:'ℹ️';position:absolute;top:8px;right:10px;font-size:13px;cursor:help;opacity:.6}
+.kpi.kpi-muted:hover::after{content:'Полная фильтрация iKomek в разработке. Снимите фильтры чтобы увидеть общее число звонков.';position:absolute;top:-6px;right:30px;background:rgba(0,0,0,.88);color:#fff;padding:7px 11px;border-radius:6px;font-size:11px;white-space:normal;width:230px;line-height:1.4;z-index:100;opacity:1;font-weight:400}
 /* ── Скролл-блок «Доля жалоб» в Тазе ── */
 .taza-complaints-list{max-height:420px;overflow-y:auto;padding-right:6px}
 .taza-complaints-list::-webkit-scrollbar{width:6px}
@@ -787,7 +791,7 @@ input[type=file]{display:none}
   <div class="kpi-grid" style="margin-bottom:14px">
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_eco">Всего обращений</div><div class="kpi-val" id="kpiEco">352 641</div><div class="kpi-d nu">с 01.07.2021</div></div>
     <div class="kpi" style="cursor:pointer" onclick="switchTab('taza',document.querySelector('[onclick*=\'taza\']'))"><div class="kpi-lbl" data-i18n="kpi_taza">Таза Казахстан</div><div class="kpi-val" id="kpiTaza">42 644</div><div class="kpi-d nu">заявок · июн 2024–апр 2026</div></div>
-    <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_ikom">iKomek звонков</div><div class="kpi-val" id="kpiIkom">16 103</div><div class="kpi-d nu">с 01.04.2019</div></div>
+    <div class="kpi" id="kpiIkomCard"><div class="kpi-lbl" data-i18n="kpi_ikom">iKomek звонков</div><div class="kpi-val" id="kpiIkom">16 103</div><div class="kpi-d nu" id="kpiIkomSub">с 01.04.2019</div></div>
     <div class="kpi"><div class="kpi-lbl">Перенаправленные обращения</div><div class="kpi-val" id="kpiFwdTotal" style="color:#7c3aed">—</div><div class="kpi-d nu" id="kpiFwdSub">—</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_work">В работе</div><div class="kpi-val" id="kpiWork">6 342</div><div class="kpi-d nu" data-i18n="current">текущие</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_late">Просрочено</div><div class="kpi-val" id="kpiLate" style="color:#DC2626">885</div><div class="kpi-d up" data-i18n="needs_attn">требует внимания</div></div>
@@ -3113,6 +3117,38 @@ function renderMainCharts() {
   } catch(e) { console.warn('Dashboard data load failed:', e.message); }
 })();
 
+// Честное поведение карточки iKomek под фильтрами:
+// нет per-call датасета (TODO #2) → когда задан год/тип/категория без региона
+// показываем «—» и приглушаем карточку с tooltip-объяснением.
+// Известный путь: gReg + REAL_IKOMEK[reg] → показать число региона.
+function _updateIkomekKpi(){
+  const val = document.getElementById('kpiIkom');
+  const sub = document.getElementById('kpiIkomSub');
+  const card= document.getElementById('kpiIkomCard');
+  if(!val) return;
+  // ACTIVE_REGION (клик по региону на карте) сам пишет kpiIkom — не перезаписываем
+  if(typeof ACTIVE_REGION!=='undefined' && ACTIVE_REGION) return;
+  const baseline = _DATA?.summary?.ikomek?.total ?? 16103;
+  const reg = document.getElementById('gReg')?.value || 'all';
+  const filtersActive = (typeof engineFilterActive==='function') && engineFilterActive();
+  if(!filtersActive){
+    val.textContent = baseline.toLocaleString('ru-RU');
+    if(sub) sub.textContent = 'с 01.04.2019';
+    card && card.classList.remove('kpi-muted');
+    return;
+  }
+  if(reg!=='all' && typeof REAL_IKOMEK!=='undefined' && REAL_IKOMEK && REAL_IKOMEK[reg]!=null){
+    const v = REAL_IKOMEK[reg].total ?? REAL_IKOMEK[reg];
+    val.textContent = (typeof v==='number'?v:Number(v)||0).toLocaleString('ru-RU');
+    if(sub) sub.textContent = 'Регион: '+reg;
+    card && card.classList.remove('kpi-muted');
+  } else {
+    val.textContent = '—';
+    if(sub) sub.textContent = 'Детализация по периоду в разработке';
+    card && card.classList.add('kpi-muted');
+  }
+}
+
 function applyRealKPIs() {
   if (!_DATA || ACTIVE_REGION) return;
   const a = _DATA.summary.appeals;
@@ -3120,7 +3156,7 @@ function applyRealKPIs() {
   const em = _DATA.summary.emergency;
   const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
   setEl('kpiEco',  a.total.toLocaleString('ru-RU'));
-  setEl('kpiIkom', ik.total.toLocaleString('ru-RU'));
+  // kpiIkom — через _updateIkomekKpi() ниже, чтобы корректно учесть фильтры/регион
   setEl('kpiDone', a.done_pct + '%');
   // МЭПР KPI
   const mk = a.mepr_kpi;
@@ -3167,6 +3203,7 @@ function applyRealKPIs() {
     setEl('envEmerg2025', (em.by_year[String(em.cur_year-1)] || 0).toLocaleString('ru-RU'));
     setEl('envEmergDelta', `Jan–Apr ${em.cur_year}: ${em.cur_ytd.toLocaleString('ru-RU')} vs ${em.cur_year-1}: ${em.prev_ytd.toLocaleString('ru-RU')} (${sign}${em.delta_ytd})`);
   }
+  _updateIkomekKpi();
 }
 
 const EM_COLORS=['#dc2626','#d97706','#7c3aed','#0891B2','#16a34a','#f97316','#6b7280','#0ea5e9','#84cc16','#e879f9'];
@@ -7263,6 +7300,7 @@ function onGlobalFilter(){
   _g(()=>updateFilterChips());
   _g(()=>{ if(engineFilterActive()) applyTimeEngine(); });
   _g(()=>_updateMapPeriodTag());
+  _g(()=>_updateIkomekKpi());
 }
 
 function applyGlobalFiltersToCharts(){
@@ -7336,8 +7374,7 @@ function applyGlobalFiltersToCharts(){
     $('appKpiExtFwd',(rd.ext_fwd||0).toLocaleString('ru-RU'));
     // iKomek по региону
     const ik=REAL_IKOMEK[reg];
-    if(ik) $('kpiIkom', ik.total.toLocaleString('ru-RU'));
-    else   $('kpiIkom', '—');
+    // kpiIkom — централизованно через _updateIkomekKpi() в onGlobalFilter (с приглушением)
     // Синхронизировать appealsRegion → перерисовать c12/c13
     const ar=document.getElementById('appealsRegion');
     if(ar){for(const o of ar.options){if(o.value===reg||o.text===reg){ar.value=o.value;break;}}}
