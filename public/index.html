@@ -3047,6 +3047,8 @@ function renderMainCharts() {
       if(typeof renderNbd2025 === 'function') renderNbd2025();
     }).catch(e=>console.warn('nbd_2025 load failed:', e.message));
     if(typeof _loadNbdFacts === 'function') _loadNbdFacts();
+    // iKomek per-call датасет (для полноценной кросс-фильтрации kpiIkom)
+    if(typeof _loadIkomek === 'function') _loadIkomek();
     fetch('/data/taza_compact.json').then(r=>r.json()).then(tc=>{
       _TAZA=tc; populateTazaFilters();
       if(document.getElementById('panel-taza')?.classList.contains('active') && tazaEngineFilterActive()) rerenderTaza();
@@ -3117,36 +3119,85 @@ function renderMainCharts() {
   } catch(e) { console.warn('Dashboard data load failed:', e.message); }
 })();
 
-// Честное поведение карточки iKomek под фильтрами:
-// нет per-call датасета (TODO #2) → когда задан год/тип/категория без региона
-// показываем «—» и приглушаем карточку с tooltip-объяснением.
-// Известный путь: gReg + REAL_IKOMEK[reg] → показать число региона.
+// ─── iKomek per-call датасет (полноценная кросс-фильтрация) ───
+// _IK: { w, n, data (flat int), regions, cats, chars, statuses, meta }
+// Структура копирует _AC: каждая строка — [ymd, regionIdx, catIdx, charIdx, statusIdx], w=5.
+let _IK = null;
+async function _loadIkomek(){
+  try {
+    const r = await fetch('/data/ikomek_compact.json');
+    if(!r.ok) return;
+    _IK = await r.json();
+    _updateIkomekKpi(); // первый расчёт после загрузки (на случай если фильтры уже активны)
+  } catch(_){}
+}
+// Region-name → iKomek idx. _IK.regions хранятся в коротких формах под #gReg
+// (см. process_ikomek.py REGION_NORM): «ВКО», «Карагандинская», «Астана», …
+function _ikRegionIdx(name){
+  if(!_IK || !name || name==='all') return -2;            // -2 = «без фильтра по региону»
+  const i = _IK.regions.indexOf(name);
+  return (i>=0) ? i : -1;                                  // -1 = регион выбран, но нет в iKomek (≠ ВКО/Караганд/…)
+}
+// Считает звонки под текущим набором фильтров. Возвращает общий total + by-разделы.
+function _ikComputeFiltered(){
+  if(!_IK) return null;
+  const D=_IK.data, W=_IK.w, N=_IK.n;
+  const yF=document.getElementById('gYear')?.value||'all';
+  const mF=document.getElementById('gMonth')?.value||'all';
+  const dF=document.getElementById('gDay')?.value||'all';
+  const reg=document.getElementById('gReg')?.value||'all';
+  const dfStr=document.getElementById('gDateFrom')?.value||'';     // flatpickr value: ISO YYYY-MM-DD
+  const dtStr=document.getElementById('gDateTo')?.value||'';
+  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF, dN=dF==='all'?-1:+dF;
+  const toYmd = s => s ? +s.slice(0,10).replace(/-/g,'') : 0;
+  const dfInt = toYmd(dfStr), dtInt = toYmd(dtStr) || 99999999;
+  const ri = _ikRegionIdx(reg);
+  if(reg!=='all' && ri===-1){
+    // Регион выбран, но iKomek не покрывает его → честно: 0
+    return {total:0, regionUnknown:true};
+  }
+  let total=0;
+  for(let i=0;i<N;i++){
+    const o=i*W, ymd=D[o];
+    if(yN>=0){ const yy=(ymd/10000)|0; if(yy!==yN) continue; }
+    if(mN>=0){ const mm=((ymd/100)|0)%100; if(mm!==mN) continue; }
+    if(dN>=0){ const dd=ymd%100; if(dd!==dN) continue; }
+    if(dfStr && ymd<dfInt) continue;
+    if(dtStr && ymd>dtInt) continue;
+    if(ri>=0 && D[o+1]!==ri) continue;
+    total++;
+  }
+  return {total, regionUnknown:false};
+}
+
+// Обновляет карточку #kpiIkom. Приоритет:
+// 1) ACTIVE_REGION (клик по карте) — пишет свой режим, не трогаем.
+// 2) _IK загружен → честный пересчёт через _ikComputeFiltered (это норма).
+// 3) _IK ещё не загружен → fallback: показать baseline без приглушения (на стадии init).
 function _updateIkomekKpi(){
   const val = document.getElementById('kpiIkom');
   const sub = document.getElementById('kpiIkomSub');
   const card= document.getElementById('kpiIkomCard');
   if(!val) return;
-  // ACTIVE_REGION (клик по региону на карте) сам пишет kpiIkom — не перезаписываем
   if(typeof ACTIVE_REGION!=='undefined' && ACTIVE_REGION) return;
-  const baseline = _DATA?.summary?.ikomek?.total ?? 16103;
-  const reg = document.getElementById('gReg')?.value || 'all';
   const filtersActive = (typeof engineFilterActive==='function') && engineFilterActive();
-  if(!filtersActive){
-    val.textContent = baseline.toLocaleString('ru-RU');
-    if(sub) sub.textContent = 'с 01.04.2019';
+  // iKomek датасет уже загружен — реальный пересчёт
+  if(_IK){
+    const r = _ikComputeFiltered();
+    val.textContent = r.total.toLocaleString('ru-RU');
+    if(sub){
+      if(!filtersActive) sub.textContent = 'с 01.04.2019';
+      else if(r.regionUnknown) sub.textContent = 'нет звонков iKomek в этом регионе';
+      else sub.textContent = 'по выбранным фильтрам';
+    }
     card && card.classList.remove('kpi-muted');
     return;
   }
-  if(reg!=='all' && typeof REAL_IKOMEK!=='undefined' && REAL_IKOMEK && REAL_IKOMEK[reg]!=null){
-    const v = REAL_IKOMEK[reg].total ?? REAL_IKOMEK[reg];
-    val.textContent = (typeof v==='number'?v:Number(v)||0).toLocaleString('ru-RU');
-    if(sub) sub.textContent = 'Регион: '+reg;
-    card && card.classList.remove('kpi-muted');
-  } else {
-    val.textContent = '—';
-    if(sub) sub.textContent = 'Детализация по периоду в разработке';
-    card && card.classList.add('kpi-muted');
-  }
+  // Fallback пока _IK не догрузился — baseline без приглушения
+  const baseline = _DATA?.summary?.ikomek?.total ?? 16103;
+  val.textContent = baseline.toLocaleString('ru-RU');
+  if(sub) sub.textContent = 'с 01.04.2019';
+  card && card.classList.remove('kpi-muted');
 }
 
 function applyRealKPIs() {
