@@ -1706,13 +1706,13 @@ input[type=file]{display:none}
       <table style="width:100%;border-collapse:collapse;font-size:11px" id="tzRegTable">
         <thead>
           <tr style="border-bottom:1px solid var(--border);color:var(--text2)">
-            <th style="text-align:left;padding:6px 8px;font-weight:600">Регион</th>
-            <th style="text-align:right;padding:6px 8px;font-weight:600">Заявок</th>
-            <th style="text-align:right;padding:6px 8px;font-weight:600">Исп. %</th>
-            <th style="text-align:right;padding:6px 8px;font-weight:600">Просрочено</th>
-            <th style="text-align:right;padding:6px 8px;font-weight:600">Просроч. %</th>
-            <th style="text-align:right;padding:6px 8px;font-weight:600">Рейтинг ⭐</th>
-            <th style="text-align:right;padding:6px 8px;font-weight:600">Жалобы %</th>
+            <th style="text-align:left;padding:6px 8px;font-weight:600"  data-i18n="taza.tbl.region">Регион</th>
+            <th style="text-align:right;padding:6px 8px;font-weight:600" data-i18n="taza.reg.count">Заявок</th>
+            <th style="text-align:right;padding:6px 8px;font-weight:600" data-i18n="taza.reg.donePct">Исп. %</th>
+            <th style="text-align:right;padding:6px 8px;font-weight:600" data-i18n="taza.reg.overdue">Просрочено</th>
+            <th style="text-align:right;padding:6px 8px;font-weight:600" data-i18n="taza.reg.overduePct">Просроч. %</th>
+            <th style="text-align:right;padding:6px 8px;font-weight:600" data-i18n="taza.reg.rating">Рейтинг ⭐</th>
+            <th style="text-align:right;padding:6px 8px;font-weight:600" data-i18n="taza.reg.complaintsPct">Жалобы %</th>
           </tr>
         </thead>
         <tbody id="tzRegTableBody"></tbody>
@@ -1727,24 +1727,24 @@ input[type=file]{display:none}
       <span id="tazaTableFoundCount" class="found-count">—</span>
     </div>
     <div class="table-controls">
-      <input type="search" id="tazaTableSearch" placeholder="🔍 Поиск: номер заявки, описание, адрес…" />
+      <input type="search" id="tazaTableSearch" placeholder="🔍 Поиск: номер заявки, описание, адрес…" data-i18n-placeholder="taza.tbl.searchPh" />
       <button id="tazaTableResetBtn" class="reset-btn">× Сбросить поиск</button>
       <button id="tazaTableExportBtn" class="export-btn">📥 Экспорт CSV</button>
     </div>
     <div class="table-scroll">
       <table id="tazaRequestsTable" class="appeals-table">
         <thead><tr>
-          <th data-sort="uniq_code">Номер заявки</th>
-          <th data-sort="created_at" class="sort-desc">Дата подачи</th>
-          <th data-sort="category">Категория</th>
-          <th data-sort="region">Регион</th>
-          <th data-sort="address">Адрес</th>
-          <th data-sort="service_state">Статус</th>
-          <th data-sort="processing_days">Закрыто за</th>
-          <th data-sort="is_overdue">Просрочка</th>
-          <th data-sort="rating">Рейтинг</th>
+          <th data-sort="uniq_code"      data-i18n="taza.tbl.code">Номер заявки</th>
+          <th data-sort="created_at" class="sort-desc" data-i18n="taza.tbl.date">Дата подачи</th>
+          <th data-sort="category"       data-i18n="taza.tbl.category">Категория</th>
+          <th data-sort="region"         data-i18n="taza.tbl.region">Регион</th>
+          <th data-sort="address"        data-i18n="taza.tbl.address">Адрес</th>
+          <th data-sort="service_state"  data-i18n="taza.tbl.status">Статус</th>
+          <th data-sort="processing_days" data-i18n="taza.tbl.closedIn">Закрыто за</th>
+          <th data-sort="is_overdue"     data-i18n="taza.tbl.overdue">Просрочка</th>
+          <th data-sort="rating"         data-i18n="taza.tbl.rating">Рейтинг</th>
         </tr></thead>
-        <tbody id="tazaTableBody"><tr><td colspan="9" class="empty-row">Загрузка…</td></tr></tbody>
+        <tbody id="tazaTableBody"><tr><td colspan="9" class="empty-row" data-i18n="common.loading">Загрузка…</td></tr></tbody>
       </table>
     </div>
     <div class="table-pagination">
@@ -2090,6 +2090,11 @@ const I18N = {
     'kgs.tab.all':'Все', 'kgs.tab.forest':'Рубки', 'kgs.tab.nedra':'Карьеры', 'kgs.tab.waste':'Свалки', 'kgs.tab.land_seizure':'Самозахваты',
     'kgs.header.title':'Космический мониторинг · КГС', 'kgs.title.byRegion':'По регионам', 'kgs.title.yearChart':'Динамика по годам',
     'kgs.title.subChart':'Категории', 'kgs.title.status':'Статусы утилизации', 'kgs.title.table':'Детальный список объектов', 'kgs.tbl.search':'Поиск…',
+    'common.loading':'Загрузка…',
+    'taza.tbl.code':'Номер заявки','taza.tbl.date':'Дата подачи','taza.tbl.category':'Категория','taza.tbl.region':'Регион',
+    'taza.tbl.address':'Адрес','taza.tbl.status':'Статус','taza.tbl.closedIn':'Закрыто за','taza.tbl.overdue':'Просрочка','taza.tbl.rating':'Рейтинг',
+    'taza.tbl.searchPh':'🔍 Поиск: номер заявки, описание, адрес…',
+    'taza.reg.count':'Заявок','taza.reg.donePct':'Исп. %','taza.reg.overdue':'Просрочено','taza.reg.overduePct':'Просроч. %','taza.reg.rating':'Рейтинг ⭐','taza.reg.complaintsPct':'Жалобы %',
     'filter.reset':'Сбросить', 'filter.apply':'Применить', 'filter.from':'С', 'filter.to':'По',
     'filter.search':'Поиск…', 'filter.export':'📥 Экспорт CSV',
     // Обращения (главная)
@@ -2198,6 +2203,11 @@ const I18N = {
     'kgs.tab.all':'Барлығы', 'kgs.tab.forest':'Қиюлар', 'kgs.tab.nedra':'Карьерлер', 'kgs.tab.waste':'Үйінділер', 'kgs.tab.land_seizure':'Басып алу',
     'kgs.header.title':'Спутниктік мониторинг · ҚҒС', 'kgs.title.byRegion':'Өңірлер бойынша', 'kgs.title.yearChart':'Жылдар бойынша динамика',
     'kgs.title.subChart':'Санаттар', 'kgs.title.status':'Кәдеге жарату мәртебелері', 'kgs.title.table':'Нысандардың толық тізімі', 'kgs.tbl.search':'Іздеу…',
+    'common.loading':'Жүктелуде…',
+    'taza.tbl.code':'Өтініш нөмірі','taza.tbl.date':'Берілген күні','taza.tbl.category':'Санат','taza.tbl.region':'Өңір',
+    'taza.tbl.address':'Мекенжай','taza.tbl.status':'Мәртебесі','taza.tbl.closedIn':'Жабылған уақыт','taza.tbl.overdue':'Кешігу','taza.tbl.rating':'Рейтинг',
+    'taza.tbl.searchPh':'🔍 Іздеу: өтініш нөмірі, сипаттама, мекенжай…',
+    'taza.reg.count':'Өтініштер','taza.reg.donePct':'Орынд. %','taza.reg.overdue':'Мерзімі өтіп кеткен','taza.reg.overduePct':'Мерзім. %','taza.reg.rating':'Рейтинг ⭐','taza.reg.complaintsPct':'Шағымдар %',
     'filter.reset':'Тазарту', 'filter.apply':'Қолдану', 'filter.from':'Бастап', 'filter.to':'Дейін',
     'filter.search':'Іздеу…', 'filter.export':'📥 CSV экспорт',
     // Обращения
@@ -3799,6 +3809,38 @@ function renderHearingsTab(a) {
 // ── ДВИЖОК КРОСС-ФИЛЬТРАЦИИ ТАЗА КАЗАХСТАН ──────────────────────────────────
 let _TAZA=null;
 
+// KZ-локализация модуля Таза: ключи — ru, значения — kz
+const TAZA_KZ = {
+  // Status labels (от backend)
+  'Выполнено':'Орындалды','Отменено':'Бас тартылды','В работе':'Жұмыста',
+  'Создано':'Жасалды','Возвращено оператору':'Операторға қайтарылды',
+  'Просрочено':'Мерзімі өтіп кеткен','Не просрочено':'Мерзімінде','Завершён':'Аяқталды',
+  // KPI / metrics
+  'Всего заявок':'Барлық өтініштер','Исполнено':'Орындалды','Просрочено':'Мерзімі өтіп кеткен',
+  'В работе':'Жұмыста','Отменено':'Бас тартылды','Среднее время решения':'Орташа шешу уақыты',
+  'Регионов охвачено':'Қамтылған өңірлер','Категорий':'Санаттар',
+  'Найдено':'Табылды','заявок':'өтініш','заявка':'өтініш','заявки':'өтініш',
+  // Table column headers
+  '№':'№','Дата':'Күн','Регион':'Өңір','Категория':'Санат','Статус':'Мәртебесі',
+  'Срок':'Мерзімі','Просрочка':'Кешігу','Рейтинг':'Рейтинг','Адрес':'Мекенжай','Описание':'Сипаттама',
+  // Search / pagination
+  'Поиск по заявкам…':'Өтініштер бойынша іздеу…','Найдено ':'Табылды ',
+  'Нет заявок по выбранным фильтрам':'Таңдалған сүзгілер бойынша өтініштер жоқ',
+  'из ':'барлығынан ','страница ':'бет ',
+  // Map popup / region tooltip
+  'Заявок':'Өтініштер','Исполнено':'Орындалды','Не утилизировано':'Кәдеге жаратылмаған',
+  'Клик — фильтр по региону':'Басу — өңір бойынша сүзгі','Объектов':'Нысандар',
+  // Tabs / panels titles
+  'Регионы':'Өңірлер','По регионам':'Өңірлер бойынша','По категориям':'Санаттар бойынша',
+  'Динамика':'Динамика','Топ исполнителей':'Орындаушылар үздігі','Топ организаций':'Үздік ұйымдар',
+  'Статус заявок':'Өтініштер мәртебесі','Карта заявок':'Өтініштер картасы','Детальный список заявок':'Өтініштердің толық тізімі',
+  // Misc
+  'Нет данных':'Деректер жоқ','дней':'күн','день':'күн','дня':'күн','часов':'сағат',
+  'минут':'минут','сегодня':'бүгін','вчера':'кеше',
+  'Все категории':'Барлық санаттар','Все статусы':'Барлық мәртебелер','Все регионы':'Барлық өңірлер',
+};
+function _tzT(s){ return (typeof curLang!=='undefined' && curLang==='kz') ? (TAZA_KZ[s]||s) : s; }
+
 function populateTazaFilters(){
   if(!_TAZA) return;
   const rEl=document.getElementById('tzReg');
@@ -4154,13 +4196,13 @@ function renderTazaRequestsTable(){
   const start = (S.page-1)*S.size;
   const slice = filtered.slice(start, start+S.size);
 
-  document.getElementById('tazaTableFoundCount').textContent = `Найдено ${total.toLocaleString('ru-RU')} заявок`;
+  document.getElementById('tazaTableFoundCount').textContent = `${_tzT('Найдено')} ${total.toLocaleString('ru-RU')} ${_tzT('заявок')}`;
   document.getElementById('tazaPageInfo').textContent = `${S.page} / ${pages}`;
   document.getElementById('tazaPrevPage').disabled = S.page<=1;
   document.getElementById('tazaNextPage').disabled = S.page>=pages;
 
   if(!slice.length){
-    tbody.innerHTML = '<tr><td colspan="9" class="empty-row">Нет заявок по выбранным фильтрам</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="9" class="empty-row">${_tzT('Нет заявок по выбранным фильтрам')}</td></tr>`;
     return;
   }
   tbody.innerHTML = slice.map(i=>{
@@ -7958,6 +8000,33 @@ function _renderNbdList(elId, items, opts){
 }
 
 // Главный алерт — меняется по режиму (Воздух / Вода / Факел)
+// KZ-локализация модуля НБД (для динамических hero/badge/coverage сообщений)
+const NBD_KZ = {
+  'КРИТИЧНО':'СЫНДАРЛЫ','ВНИМАНИЕ':'НАЗАР АУДАРЫҢЫЗ','Статус':'Мәртебе',
+  'Требует контроля':'Бақылауды талап етеді','Внимание':'Назар аударыңыз','В норме':'Нормада','Информация':'Ақпарат',
+  'измеренных замеров воздуха превышают ПДК':'өлшенген ауа сынамаларының ШРК-дан асады',
+  'превышений из':'асулар, барлығы','замеров с замеренным коэффициентом ПДК':'ШРК коэффициенті өлшенген сынамалардан',
+  'По всем':'Барлық','замерам':'сынамаларынан','Период данных:':'Деректер кезеңі:',
+  'замеров сточных вод имеют pH вне нормы 6–9':'ағынды су сынамаларының pH мәні 6–9 нормасынан тыс',
+  'замеров вне диапазона из':'диапазоннан тыс сынамалар, барлығы','корректных замеров pH':'дұрыс pH өлшеулерінен',
+  'Средний pH:':'Орташа pH:','Покрытие — сточные воды':'Қамту — ағынды сулар',
+  'промпредприятий в':'өнеркәсіптік кәсіпорындар','регионах.':'өңірлерде.',
+  'Факельные выбросы — узкий срез данных':'Алау шығарындылары — деректердің тар бөлігі',
+  'Только':'Тек','организации:':'ұйым:','Всего':'Барлығы','замеров за':'сынамалар',
+  'Это не полная картина факельных выбросов по РК.':'Бұл ҚР бойынша алау шығарындыларының толық суреті емес.',
+  'Нет данных по выбранным фильтрам':'Таңдалған сүзгілер бойынша деректер жоқ',
+  'Сбросьте фильтры или измените период':'Сүзгілерді тастаңыз немесе кезеңді өзгертіңіз',
+  'Пусто':'Бос','замеров с коэф. ПДК':'ШРК коэффициенті бар сынамалар',
+  'замеров pH вне нормы 6–9':'pH 6–9 нормасынан тыс сынамалар',
+  'из':'барлығынан','корректных замеров pH':'дұрыс pH өлшеулерінен',
+  'Всего замеров в выборке:':'Таңдамадағы барлық сынамалар:',
+  // Coverage texts
+  'Плановые замеры стационарных источников промпредприятий. 18 регионов, 69 организаций (после фильтра тест-данных).':'Өнеркәсіптік кәсіпорындардың тұрақты көздерінің жоспарлы өлшеулері. 18 өңір, 69 ұйым (тест-деректер сүзгілерінен кейін).',
+  '⚠️ Сточные воды 23 крупных промпредприятий в 9 регионах. Не отражает качество воды по всему Казахстану.':'⚠️ 9 өңірдегі 23 ірі өнеркәсіптік кәсіпорынның ағынды сулары. Бүкіл Қазақстан бойынша су сапасын көрсетпейді.',
+  '⚠️ Факельные выбросы только 2 организаций: NCOC (Кашаган) и GAS PROCESSING COMPANY. Только Атырауская и Актюбинская области.':'⚠️ Тек 2 ұйымның алау шығарындылары: NCOC (Қашаған) және GAS PROCESSING COMPANY. Тек Атырау және Ақтөбе облыстары.',
+};
+function _nbdT(s){ return (typeof curLang!=='undefined' && curLang==='kz') ? (NBD_KZ[s]||s) : s; }
+
 function _renderNbdAlert(d, mode){
   const wrap = document.getElementById('nbdAlert');
   const main = document.getElementById('nbdAlertMain');
@@ -7973,24 +8042,24 @@ function _renderNbdAlert(d, mode){
     const level = pctM >= 50 ? 'critical' : pctM >= 25 ? 'warning' : 'info';
     const icon  = level === 'critical' ? '🔴' : level === 'warning' ? '🟠' : 'ℹ️';
     wrap.className = 'nbd-alert nbd-alert-' + level;
-    main.innerHTML = `${icon} ${level==='critical'?'КРИТИЧНО':level==='warning'?'ВНИМАНИЕ':'Статус'}: <b>${Math.round(pctM)}%</b> измеренных замеров воздуха превышают ПДК`;
-    det.innerHTML  = `<b>${fmt(es.exceed_count)}</b> превышений из <b>${fmt(es.ratio_filled)}</b> замеров с замеренным коэффициентом ПДК. По всем ${fmt(es.total_rows)} замерам — <b>${es.pct_of_all||0}%</b>. Период данных: <b>${d.air?.period_from||'—'} → ${d.air?.period_to||'—'}</b>.`;
-    bdg.textContent = level === 'critical' ? 'Требует контроля' : level === 'warning' ? 'Внимание' : 'В норме';
+    main.innerHTML = `${icon} ${_nbdT(level==='critical'?'КРИТИЧНО':level==='warning'?'ВНИМАНИЕ':'Статус')}: <b>${Math.round(pctM)}%</b> ${_nbdT('измеренных замеров воздуха превышают ПДК')}`;
+    det.innerHTML  = `<b>${fmt(es.exceed_count)}</b> ${_nbdT('превышений из')} <b>${fmt(es.ratio_filled)}</b> ${_nbdT('замеров с замеренным коэффициентом ПДК')}. ${_nbdT('По всем')} ${fmt(es.total_rows)} ${_nbdT('замерам')} — <b>${es.pct_of_all||0}%</b>. ${_nbdT('Период данных:')} <b>${d.air?.period_from||'—'} → ${d.air?.period_to||'—'}</b>.`;
+    bdg.textContent = _nbdT(level === 'critical' ? 'Требует контроля' : level === 'warning' ? 'Внимание' : 'В норме');
   }
   else if(mode === 'water'){
     const ph = d.water?.ph || {};
     const pct = ph.out_of_range_pct || 0;
     const level = pct >= 30 ? 'warning' : pct >= 15 ? 'warning' : 'info';
     wrap.className = 'nbd-alert nbd-alert-' + level;
-    main.innerHTML = `🟠 ВНИМАНИЕ: <b>${Math.round(pct)}%</b> замеров сточных вод имеют pH вне нормы 6–9`;
-    det.innerHTML  = `<b>${fmt(ph.out_of_range_n)}</b> замеров вне диапазона из <b>${fmt(ph.n)}</b> корректных замеров pH. Средний pH: <b>${ph.avg||'—'}</b>. <span style="color:#999">Покрытие — сточные воды ${d.water?.orgs_n||0} промпредприятий в ${d.water?.regions_n||0} регионах.</span>`;
-    bdg.textContent = 'Внимание';
+    main.innerHTML = `🟠 ${_nbdT('ВНИМАНИЕ')}: <b>${Math.round(pct)}%</b> ${_nbdT('замеров сточных вод имеют pH вне нормы 6–9')}`;
+    det.innerHTML  = `<b>${fmt(ph.out_of_range_n)}</b> ${_nbdT('замеров вне диапазона из')} <b>${fmt(ph.n)}</b> ${_nbdT('корректных замеров pH')}. ${_nbdT('Средний pH:')} <b>${ph.avg||'—'}</b>. <span style="color:#999">${_nbdT('Покрытие — сточные воды')} ${d.water?.orgs_n||0} ${_nbdT('промпредприятий в')} ${d.water?.regions_n||0} ${_nbdT('регионах.')}</span>`;
+    bdg.textContent = _nbdT('Внимание');
   }
   else if(mode === 'fire'){
     wrap.className = 'nbd-alert nbd-alert-info';
-    main.innerHTML = `ℹ️ Факельные выбросы — узкий срез данных`;
-    det.innerHTML  = `Только <b>2 организации</b>: NCOC (Кашаган, Атырауская обл.) и GAS PROCESSING COMPANY (Актюбинская обл.). Всего <b>${fmt(d.fire?.rows)}</b> замеров за <b>${d.fire?.period_from||'—'} → ${d.fire?.period_to||'—'}</b>. Это не полная картина факельных выбросов по РК.`;
-    bdg.textContent = 'Информация';
+    main.innerHTML = `ℹ️ ${_nbdT('Факельные выбросы — узкий срез данных')}`;
+    det.innerHTML  = `${_nbdT('Только')} <b>2 ${_nbdT('организации:')}</b> NCOC (Кашаган, Атырауская обл.) и GAS PROCESSING COMPANY (Актюбинская обл.). ${_nbdT('Всего')} <b>${fmt(d.fire?.rows)}</b> ${_nbdT('замеров за')} <b>${d.fire?.period_from||'—'} → ${d.fire?.period_to||'—'}</b>. ${_nbdT('Это не полная картина факельных выбросов по РК.')}`;
+    bdg.textContent = _nbdT('Информация');
   }
 }
 
@@ -8011,7 +8080,7 @@ function _renderNbdCoverageNote(mode, metadata){
     ? (mode==='air' ? note.text : '⚠️ ' + metadata[mode].coverage_note)
     : note.text;
   el.className = 'coverage-note coverage-' + note.level;
-  el.textContent = text;
+  el.textContent = _nbdT(text);
   el.style.display = '';
 }
 
@@ -8127,27 +8196,27 @@ function _renderNbdAlertFromFiltered(T, A, d){
   const noData = A.totalMeas === 0;
   if(noData){
     wrap.className = 'nbd-alert nbd-alert-info';
-    main.textContent = 'ℹ️ Нет данных по выбранным фильтрам';
-    det.textContent  = 'Сбросьте фильтры или измените период';
-    bdg.textContent  = 'Пусто';
+    main.textContent = 'ℹ️ '+_nbdT('Нет данных по выбранным фильтрам');
+    det.textContent  = _nbdT('Сбросьте фильтры или измените период');
+    bdg.textContent  = _nbdT('Пусто');
     return;
   }
   if(T==='air'){
     const level = A.pct_of_measured>=50?'critical':A.pct_of_measured>=25?'warning':'info';
     const icon  = level==='critical'?'🔴':level==='warning'?'🟠':'ℹ️';
     wrap.className = 'nbd-alert nbd-alert-'+level;
-    main.innerHTML = `${icon} ${level==='critical'?'КРИТИЧНО':level==='warning'?'ВНИМАНИЕ':'Статус'}: <b>${Math.round(A.pct_of_measured)}%</b> измеренных замеров воздуха превышают ПДК`;
-    det.innerHTML  = `<b>${fmt(A.totalExceed)}</b> превышений из <b>${fmt(A.ratioFilled)}</b> замеров с коэф. ПДК. По всем ${fmt(A.totalMeas)} замерам — <b>${A.pct_of_all}%</b>. Период данных: <b>${meta.period||'—'}</b>.`;
-    bdg.textContent = level==='critical'?'Требует контроля':level==='warning'?'Внимание':'В норме';
+    main.innerHTML = `${icon} ${_nbdT(level==='critical'?'КРИТИЧНО':level==='warning'?'ВНИМАНИЕ':'Статус')}: <b>${Math.round(A.pct_of_measured)}%</b> ${_nbdT('измеренных замеров воздуха превышают ПДК')}`;
+    det.innerHTML  = `<b>${fmt(A.totalExceed)}</b> ${_nbdT('превышений из')} <b>${fmt(A.ratioFilled)}</b> ${_nbdT('замеров с коэф. ПДК')}. ${_nbdT('По всем')} ${fmt(A.totalMeas)} ${_nbdT('замерам')} — <b>${A.pct_of_all}%</b>. ${_nbdT('Период данных:')} <b>${meta.period||'—'}</b>.`;
+    bdg.textContent = _nbdT(level==='critical'?'Требует контроля':level==='warning'?'Внимание':'В норме');
   } else if(T==='water'){
     const level = A.ph_pct>=30?'warning':A.ph_pct>=15?'warning':'info';
     wrap.className = 'nbd-alert nbd-alert-'+level;
-    main.innerHTML = `🟠 ВНИМАНИЕ: <b>${Math.round(A.ph_pct)}%</b> замеров pH вне нормы 6–9`;
-    det.innerHTML  = `<b>${fmt(A.ph_out)}</b> из <b>${fmt(A.ph_count)}</b> корректных замеров pH. Всего замеров в выборке: <b>${fmt(A.totalMeas)}</b>.`;
-    bdg.textContent = 'Внимание';
+    main.innerHTML = `🟠 ${_nbdT('ВНИМАНИЕ')}: <b>${Math.round(A.ph_pct)}%</b> ${_nbdT('замеров pH вне нормы 6–9')}`;
+    det.innerHTML  = `<b>${fmt(A.ph_out)}</b> ${_nbdT('из')} <b>${fmt(A.ph_count)}</b> ${_nbdT('корректных замеров pH')}. ${_nbdT('Всего замеров в выборке:')} <b>${fmt(A.totalMeas)}</b>.`;
+    bdg.textContent = _nbdT('Внимание');
   } else {
     wrap.className = 'nbd-alert nbd-alert-info';
-    main.innerHTML = `ℹ️ Факельные выбросы — узкий срез данных`;
+    main.innerHTML = `ℹ️ ${_nbdT('Факельные выбросы — узкий срез данных')}`;
     det.innerHTML  = `<b>${fmt(A.totalMeas)}</b> замеров в выборке. ${Object.keys(A.byOrg).length} организаций, ${Object.keys(A.byRegion).length} регионов.`;
     bdg.textContent = 'Информация';
   }
@@ -9835,6 +9904,16 @@ function _socRenderInsight(offsets, components, idx){
   </div></div>`;
 }
 
+// KZ-локализация модуля «Социальное напряжение»
+const SOC_KZ = {
+  'Индекс недовольства бездействием:':'Әрекетсіздікке наразылық индексі:',
+  'обращений в выборке':'таңдамадағы өтініштер',
+  'Композит из 5 объективных показателей: просрочки, повторы, перенаправления, жалобы на бездействие, зависшие просрочки.':'5 объективті көрсеткіштің композиті: мерзімнің өтуі, қайталанулар, бағыттаулар, әрекетсіздікке шағымдар, ілінген мерзімдер.',
+  'Требует контроля':'Бақылауды талап етеді','Внимание':'Назар аударыңыз','В норме':'Нормада',
+  'Период:':'Кезең:','Регион:':'Өңір:','Уровень:':'Деңгей:','Источник:':'Дереккөз:',
+};
+function _socT(s){ return (typeof curLang!=='undefined' && curLang==='kz') ? (SOC_KZ[s]||s) : s; }
+
 function _socRenderAlert(idx, total){
   const lvl = _socIndexLevel(idx);
   const wrap = document.getElementById('socAlert');
@@ -9844,19 +9923,19 @@ function _socRenderAlert(idx, total){
   if(!wrap||!m||!d||!b) return;
   const cls = idx>=6 ? 'critical' : idx>=4 ? 'warning' : 'info';
   wrap.className = 'nbd-alert nbd-alert-'+cls;
-  m.innerHTML = `${lvl.label.split(' ')[0]} Индекс недовольства бездействием: <b>${idx.toFixed(1)}/10</b> (${lvl.label.split(' ').slice(1).join(' ')})`;
-  d.innerHTML = `<b>${total.toLocaleString('ru-RU')}</b> обращений в выборке. Композит из 5 объективных показателей: просрочки, повторы, перенаправления, жалобы на бездействие, зависшие просрочки.`;
-  b.textContent = idx>=6?'Требует контроля':idx>=4?'Внимание':'В норме';
+  m.innerHTML = `${lvl.label.split(' ')[0]} ${_socT('Индекс недовольства бездействием:')} <b>${idx.toFixed(1)}/10</b> (${lvl.label.split(' ').slice(1).join(' ')})`;
+  d.innerHTML = `<b>${total.toLocaleString('ru-RU')}</b> ${_socT('обращений в выборке')}. ${_socT('Композит из 5 объективных показателей: просрочки, повторы, перенаправления, жалобы на бездействие, зависшие просрочки.')}`;
+  b.textContent = _socT(idx>=6?'Требует контроля':idx>=4?'Внимание':'В норме');
 }
 
 function _socRenderChips(){
   const el = document.getElementById('socFltChips'); if(!el) return;
   const chips = [];
-  if(socFilters.yearMonth) chips.push({label:'Период: '+socFilters.yearMonth, key:'time'});
+  if(socFilters.yearMonth) chips.push({label:_socT('Период:')+' '+socFilters.yearMonth, key:'time'});
   if(socFilters.dateFrom && socFilters.dateTo) chips.push({label:`${socFilters.dateFrom} — ${socFilters.dateTo}`, key:'time'});
-  if(socFilters.region) chips.push({label:'Регион: '+socFilters.region, key:'region'});
-  if(socFilters.level) chips.push({label:'Уровень: '+document.querySelector(`#socFltLevel option[value="${socFilters.level}"]`)?.textContent, key:'level'});
-  if(socFilters.source) chips.push({label:'Источник: '+socFilters.source, key:'source'});
+  if(socFilters.region) chips.push({label:_socT('Регион:')+' '+tRegion(socFilters.region), key:'region'});
+  if(socFilters.level) chips.push({label:_socT('Уровень:')+' '+document.querySelector(`#socFltLevel option[value="${socFilters.level}"]`)?.textContent, key:'level'});
+  if(socFilters.source) chips.push({label:_socT('Источник:')+' '+socFilters.source, key:'source'});
   el.innerHTML = chips.map(c=>`<span class="fchip">${_esc(c.label)}<span class="fchip-x" onclick="_socClearChip('${c.key}')">✕</span></span>`).join('');
 }
 function _socClearChip(key){
