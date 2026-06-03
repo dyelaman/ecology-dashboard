@@ -367,6 +367,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .kgs-status-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer}
 .kgs-status-row:hover{background:var(--surface2)}
 .kgs-status-row.sel{background:rgba(27,122,58,.12)}
+/* ── Скролл-блок «Доля жалоб» в Тазе ── */
+.taza-complaints-list{max-height:420px;overflow-y:auto;padding-right:6px}
+.taza-complaints-list::-webkit-scrollbar{width:6px}
+.taza-complaints-list::-webkit-scrollbar-thumb{background:#c4c4c4;border-radius:3px}
+.taza-complaints-list::-webkit-scrollbar-track{background:transparent}
+/* ── Аномалии (Соц.напряжение) — список со скроллом ── */
+.anomalies-list{max-height:380px;overflow-y:auto;padding-right:6px}
+.anomalies-list::-webkit-scrollbar{width:6px}
+.anomalies-list::-webkit-scrollbar-thumb{background:#c4c4c4;border-radius:3px}
+.anomaly-row{padding:10px 14px;margin-bottom:6px;border-radius:8px;border-left:4px solid;font-size:13px;line-height:1.45;transition:background .12s}
+.anomaly-row:last-child{margin-bottom:0}
+.anomaly-critical{background:rgba(229,57,53,.06);border-color:#E53935}
+.anomaly-warning{background:rgba(251,140,0,.06);border-color:#FB8C00}
+.anomaly-row[onclick]:hover{background:rgba(0,0,0,.04)}
 .nbd-fltbar-check{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2);font-weight:500;cursor:pointer;margin-left:6px}
 .nbd-fltbar-check input{accent-color:#dc2626}
 .nbd-fltbar-reset{margin-left:auto;font-size:10px;padding:5px 11px;border-radius:14px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer}
@@ -3819,7 +3833,7 @@ const TAZA_KZ = {
   'Всего заявок':'Барлық өтініштер','Исполнено':'Орындалды','Просрочено':'Мерзімі өтіп кеткен',
   'В работе':'Жұмыста','Отменено':'Бас тартылды','Среднее время решения':'Орташа шешу уақыты',
   'Регионов охвачено':'Қамтылған өңірлер','Категорий':'Санаттар',
-  'Найдено':'Табылды','заявок':'өтініш','заявка':'өтініш','заявки':'өтініш',
+  'Найдено':'Табылды','заявок':'өтініш','заявка':'өтініш','заявки':'өтініш','жалоб':'шағым',
   // Table column headers
   '№':'№','Дата':'Күн','Регион':'Өңір','Категория':'Санат','Статус':'Мәртебесі',
   'Срок':'Мерзімі','Просрочка':'Кешігу','Рейтинг':'Рейтинг','Адрес':'Мекенжай','Описание':'Сипаттама',
@@ -3883,10 +3897,26 @@ function onTazaFilter(){
 }
 
 function resetTazaFilters(){
-  ['tzDateFrom','tzDateTo'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  ['tzReg','tzCat','tzStatus','tzOverdue','tzRating'].forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
+  // Date inputs: если есть flatpickr — clear через API, иначе обнуляем value
+  ['tzDateFrom','tzDateTo'].forEach(id=>{
+    const el=document.getElementById(id); if(!el) return;
+    if(el._flatpickr) el._flatpickr.clear(); else el.value='';
+  });
+  // Селекты: год/месяц/день + категориальные
+  ['tzYear','tzMonth','tzDay','tzReg','tzCat','tzStatus','tzOverdue','tzRating'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.selectedIndex=0;
+  });
+  // Поиск + локальное состояние таблицы
+  const srch=document.getElementById('tazaTableSearch'); if(srch) srch.value='';
+  if(typeof _tazaTableState==='object'){
+    _tazaTableState.search='';
+    _tazaTableState.state=null; _tazaTableState.category=null; _tazaTableState.region=null;
+    _tazaTableState.overdue=null; _tazaTableState.rating=null; _tazaTableState.page=1;
+  }
   document.querySelectorAll('.taza-quick button').forEach(b=>b.classList.remove('active'));
+  // Пересчёт + перерисовка
   onTazaFilter();
+  if(typeof rerenderTaza==='function') rerenderTaza();
 }
 
 function applyTazaEngine(){
@@ -4845,27 +4875,28 @@ function renderTazaTab(d) {
       }}});
   })();
 
-  // ── Жалобы по регионам (progress bars) ──
+  // ── Жалобы по регионам (progress bars) — ВСЕ регионы со скроллом, формат «N жалоб (X%)»
   (function(){
     const el = document.getElementById('tzComplaintBars'); if(!el) return;
-    const regs = d.by_region
-      .filter(r=>r.complaint_pct>0)
-      .sort((a,b)=>b.complaint_pct-a.complaint_pct)
-      .slice(0,12);
+    const regs = [...d.by_region]
+      .sort((a,b)=>(b.complaint_pct||0)-(a.complaint_pct||0));
     if(!regs.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет данных о жалобах</div>'; return; }
-    el.innerHTML = regs.map(r=>{
-      const color = r.complaint_pct>=10?'#dc2626':r.complaint_pct>=6?'#f97316':'#d97706';
-      const w = Math.min(100, r.complaint_pct*4);
+    const maxPct = Math.max(...regs.map(r=>r.complaint_pct||0), 1);
+    el.innerHTML = '<div class="taza-complaints-list">' + regs.map(r=>{
+      const pct = r.complaint_pct||0;
+      const cnt = Math.round((r.total||0)*pct/100);
+      const color = pct>=10?'#dc2626':pct>=6?'#f97316':pct>0?'#d97706':'#9ca3af';
+      const w = Math.min(100, (pct/maxPct)*100);
       return `<div style="margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px">
-          <span>${trunc(r.name,22)}</span>
-          <span style="color:${color};font-weight:600">${r.complaint_pct}%</span>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--text2);margin-bottom:3px;gap:8px">
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_kgsEsc(tRegion(r.name))}</span>
+          <span style="color:${color};font-weight:600;font-size:11px;white-space:nowrap">${cnt.toLocaleString('ru-RU')} ${_tzT('жалоб')} <span style="color:var(--text3);font-weight:500">(${pct}%)</span></span>
         </div>
         <div style="background:var(--surface2);border-radius:3px;height:5px;overflow:hidden">
           <div style="width:${w}%;height:100%;background:${color};border-radius:3px"></div>
         </div>
       </div>`;
-    }).join('');
+    }).join('') + '</div>';
   })();
 
   // ── Таблица регионов ──
@@ -9816,15 +9847,15 @@ function _socRenderAnomalies(offsets, globalAvgOverdue){
   const el = document.getElementById('socAnomalies'); if(!el) return;
   const D = _AC.data, w = _AC.w;
   const regions = _AC.regions, orgs = _AC.orgs;
-  // По регионам
+  // Аккумуляторы: по регионам (overdue + repeat flag) и по органам (overdue)
   const regAcc = new Map();
   for(let i=0;i<offsets.length;i++){
-    const o = offsets[i], ri = D[o+1], st = D[o+4];
-    let a = regAcc.get(ri); if(!a){ a={total:0, overdue:0}; regAcc.set(ri,a); }
+    const o = offsets[i], ri = D[o+1], st = D[o+4], fl = D[o+8];
+    let a = regAcc.get(ri); if(!a){ a={total:0, overdue:0, repeat:0}; regAcc.set(ri,a); }
     a.total++;
     if(st===2||st===3) a.overdue++;
+    if(fl & 1) a.repeat++;
   }
-  // По органам
   const orgAcc = new Map();
   for(let i=0;i<offsets.length;i++){
     const o = offsets[i], oi = D[o+7], st = D[o+4];
@@ -9832,35 +9863,70 @@ function _socRenderAnomalies(offsets, globalAvgOverdue){
     a.total++;
     if(st===2||st===3) a.overdue++;
   }
+  // Средний процент повторных по выборке — для базы сравнения
+  let totRep=0, totAll=0;
+  regAcc.forEach(a=>{ totRep+=a.repeat; totAll+=a.total; });
+  const avgRepeatPct = totAll>0 ? totRep/totAll*100 : 0;
+
   const anoms = [];
   regAcc.forEach((a, ri)=>{
+    const regName = regions[ri]||'—';
     if(a.total < 50) return;
-    const pct = a.overdue/a.total*100;
-    if(pct > globalAvgOverdue * 1.8 && pct >= 5){
+    // Тип 1: просрочки в N× выше среднего по выборке
+    const ovdPct = a.overdue/a.total*100;
+    if(ovdPct > globalAvgOverdue * 1.5 && ovdPct >= 3){
+      const ratio = ovdPct/Math.max(globalAvgOverdue, 0.01);
       anoms.push({
-        sev: pct>=20?'crit':pct>=10?'high':'warn',
-        text: `<b>${regions[ri]||'—'}</b>: <b>${a.overdue.toLocaleString('ru-RU')} просрочек из ${a.total.toLocaleString('ru-RU')}</b> (${pct.toFixed(0)}%) — в ${(pct/Math.max(globalAvgOverdue,0.01)).toFixed(1)}× выше среднего по выборке (${globalAvgOverdue.toFixed(1)}%)`
+        sev: ratio>=3 ? 'crit' : ratio>=1.5 ? 'warn' : 'info',
+        ratio, region: regName,
+        type: 'overdue',
+        text: `<b>${_esc(regName)}</b>: <b>${a.overdue.toLocaleString('ru-RU')} просрочек</b> (${ovdPct.toFixed(1)}%) — в ${ratio.toFixed(1)}× выше среднего (${globalAvgOverdue.toFixed(1)}%)`
+      });
+    }
+    // Тип 2: повторные обращения существенно выше среднего
+    const repPct = a.repeat/a.total*100;
+    if(avgRepeatPct>0 && repPct > avgRepeatPct * 1.8 && a.repeat >= 30){
+      const ratio = repPct/Math.max(avgRepeatPct, 0.01);
+      anoms.push({
+        sev: ratio>=3 ? 'crit' : 'warn',
+        ratio, region: regName,
+        type: 'repeat',
+        text: `<b>${_esc(regName)}</b>: <b>${a.repeat.toLocaleString('ru-RU')} повторных</b> (${repPct.toFixed(1)}%) — проблема не решается с первого раза (среднее ${avgRepeatPct.toFixed(1)}%)`
       });
     }
   });
+  // По органам — критические уровни просрочек (>= 50%)
   orgAcc.forEach((a, oi)=>{
     if(a.total < 100) return;
     const pct = a.overdue/a.total*100;
     if(pct >= 50){
       const org = orgs[oi]||'—';
       anoms.push({
-        sev: 'crit',
-        text: `<b>${org.length>70?org.slice(0,68)+'…':org}</b>: <b>${a.overdue.toLocaleString('ru-RU')} из ${a.total.toLocaleString('ru-RU')}</b> обращений просрочены (${pct.toFixed(0)}%) — критический уровень`
+        sev: 'crit', ratio: pct/Math.max(globalAvgOverdue, 0.01), region: null,
+        type: 'org',
+        text: `<b>${_esc(org.length>70?org.slice(0,68)+'…':org)}</b>: <b>${a.overdue.toLocaleString('ru-RU')} из ${a.total.toLocaleString('ru-RU')}</b> обращений просрочены (${pct.toFixed(0)}%) — критический уровень`
       });
     }
   });
-  if(!anoms.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:6px">Аномалий не обнаружено</div>'; return; }
-  anoms.sort((a,b)=>({crit:0,high:1,warn:2}[a.sev]-({crit:0,high:1,warn:2}[b.sev])));
-  el.innerHTML = anoms.slice(0,10).map(a=>{
-    const cls = a.sev==='crit'?'soc-anom-crit':a.sev==='warn'?'soc-anom-warn':'';
-    const icon = a.sev==='crit'?'⚫':a.sev==='high'?'🔴':'🟠';
-    return `<div class="soc-anom ${cls}"><span class="soc-anom-icon">${icon}</span><div>${a.text}</div></div>`;
-  }).join('');
+  if(!anoms.length){
+    el.innerHTML='<div style="padding:14px;background:rgba(22,163,74,0.06);border-left:4px solid #16a34a;border-radius:8px;color:var(--text2);font-size:13px">✅ '+_socT('Аномалий не выявлено. Все регионы в пределах нормы.')+'</div>';
+    return;
+  }
+  // Сортировка: критические выше + ratio убыванием
+  const sevRank={crit:0,warn:1,info:2};
+  anoms.sort((a,b)=>(sevRank[a.sev]-sevRank[b.sev]) || (b.ratio-a.ratio));
+  el.innerHTML = '<div class="anomalies-list">' + anoms.map(a=>{
+    const cls = a.sev==='crit' ? 'anomaly-critical' : 'anomaly-warning';
+    const icon = a.sev==='crit' ? '🔴' : '🟠';
+    const onCl = a.region ? ` onclick="_socAnomClick('${_esc(a.region).replace(/'/g,"\\'")}')"` : '';
+    const cur = a.region ? ' style="cursor:pointer"' : '';
+    return `<div class="anomaly-row ${cls}"${cur}${onCl}>${icon} ${a.text}</div>`;
+  }).join('') + '</div>';
+}
+function _socAnomClick(region){
+  socFilters.region = region;
+  const sel = document.getElementById('socFltRegion'); if(sel) sel.value = region;
+  rerenderSocial();
 }
 
 function _socRenderInsight(offsets, components, idx){
@@ -9911,6 +9977,7 @@ const SOC_KZ = {
   'Композит из 5 объективных показателей: просрочки, повторы, перенаправления, жалобы на бездействие, зависшие просрочки.':'5 объективті көрсеткіштің композиті: мерзімнің өтуі, қайталанулар, бағыттаулар, әрекетсіздікке шағымдар, ілінген мерзімдер.',
   'Требует контроля':'Бақылауды талап етеді','Внимание':'Назар аударыңыз','В норме':'Нормада',
   'Период:':'Кезең:','Регион:':'Өңір:','Уровень:':'Деңгей:','Источник:':'Дереккөз:',
+  'Аномалий не выявлено. Все регионы в пределах нормы.':'Аномалия анықталмады. Барлық өңірлер норма шегінде.',
 };
 function _socT(s){ return (typeof curLang!=='undefined' && curLang==='kz') ? (SOC_KZ[s]||s) : s; }
 
