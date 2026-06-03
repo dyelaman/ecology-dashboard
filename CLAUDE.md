@@ -257,15 +257,35 @@ allNews          // все новости после фильтрации
 When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
 
 Key routing rules:
-- Бaги / ошибки / «почему не работает» → invoke `/investigate`
+**Багфикс / QA / визуальная проверка:**
+- Баги / ошибки / «почему не работает» → invoke `/investigate`
 - QA-проверка фичи в браузере (НМО, фильтры, карта, графики) → invoke `/qa` (или `/qa-only` если только отчёт)
 - Скриншоты, ручные клики, проверка вёрстки → invoke `/browse`
 - Визуальная полировка (отступы, сетка, hierarchy) → invoke `/design-review`
+
+**Большие фичи и редизайн:**
+- Vague идея → точная 5-фазовая спека до кода (большая фича / новая вкладка) → invoke `/spec`
+- Брейншторм / open-ended обсуждение фичи → invoke `/brainstorming` (superpowers)
+- Полный редизайн (design system: цвета, типографика, layout, spacing, motion) → invoke `/design-consultation`
+- Сравнить N AI-сгенерированных вариантов вёрстки на board'е → invoke `/design-shotgun`
+- Точечная UI/UX-доводка (компоненты, палитры, анимации) → invoke `/ui-ux-pro-max`
+
+**Ship / Deploy:**
 - Review кода перед коммитом / merge → invoke `/review` или `/code-review`
 - Деплой через vercel + проверка → invoke `/ship` или `/land-and-deploy`
-- Брейншторм новой фичи / вкладки → invoke `/brainstorming` (superpowers)
-- Парсинг внешних сайтов (Telegram, RSS, HTML-каталоги) → invoke `/scrape`
+- Post-deploy мониторинг прод-сайта (несколько минут после вылета) → invoke `/canary`
+
+**Безопасность:**
+- Аудит whitelist в `api/proxy.js`, утечки секретов в git-истории, .env-снифф → invoke `/cso`
+
+**Документация и контекст:**
+- Дока после ship-а (CONTEXT.md, CHANGELOG, README) → invoke `/document-release`
+- Сгенерить с нуля доку для модуля / API / pipeline → invoke `/document-generate`
 - Сохранить контекст перед паузой → invoke `/context-save`; восстановить → `/context-restore`
+
+**Внешние данные:**
+- Парсинг внешних сайтов (Telegram, RSS, HTML-каталоги, JSON-API) → invoke `/scrape`
+- Удачный `/scrape` flow → закодифицировать в постоянный browser-skill → invoke `/skillify`
 
 Project-specific notes:
 - Этот проект — single-file SPA (`public/index.html` ~9700 строк). Перед большими правками **всегда** grep по уникальному якорю (id / function / комментарий) — построчные смещения после splice-ов ненадёжны.
@@ -275,4 +295,14 @@ Project-specific notes:
   node -e "const fs=require('fs');const h=fs.readFileSync('public/index.html','utf8');const m=[...h.matchAll(/<script[^>]*>([\\s\\S]*?)<\\/script>/g)];let bad=0;m.forEach((s,i)=>{if(s[1].length<60)return;try{new Function(s[1]);}catch(e){console.log('#'+i+': '+e.message);bad++;}});console.log(bad?'BAD':'JS OK');"
   ```
 - Источник правды о состоянии сессии — `CONTEXT.md` (не в git, обновляется в конце сессии).
+
+## Health Stack
+
+Стандартного TS/lint/test-стэка в проекте нет. /health прогоняет tailored-проверки на реальных surface'ах:
+
+- **inline-js** (weight 35%): синтаксис каждого `<script>` в `public/index.html` через `new Function()` (10 = JS OK / 0 = BAD)
+- **api-js** (weight 15%): `node -e "require('./api/X.js')"` для каждого Vercel-handler'а
+- **python** (weight 15%): `python3 -m py_compile scripts/*.py`
+- **json-data** (weight 25%): `json.load()` для каждого `public/data/*.json`
+- **size** (weight 10%): line-count `public/index.html` (бэнды: <8 000 → 10, 8–12k → 7, 12–15k → 4, >15k → 0)
 
