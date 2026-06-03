@@ -5759,8 +5759,13 @@ function _pieChart(id,pairs,filterSelectId,resetIds){
       const v=d[els[0].index]?.[0];
       if(!v||v==='Прочее') return;
       const sel=document.getElementById(filterSelectId); if(!sel) return;
-      if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
-      sel.value=v;
+      // Toggle: повторный клик на тот же сегмент → сброс фильтра
+      if(sel.value===v){
+        sel.value='all';
+      } else {
+        if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
+        sel.value=v;
+      }
       (resetIds||[]).forEach(rid=>{const r=document.getElementById(rid);if(r)r.selectedIndex=0;});
       onGlobalFilter();
     } : null)
@@ -7170,8 +7175,13 @@ function _engSetChart(id,pairs,limit,filterSelectId,resetIds){
       if(v==='Прочее') return;
       const sel=document.getElementById(filterSelectId);
       if(!sel) return;
-      if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
-      sel.value=v;
+      // Toggle: повторный клик → снять фильтр
+      if(sel.value===v){
+        sel.value='all';
+      } else {
+        if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
+        sel.value=v;
+      }
       (resetIds||[]).forEach(rid=>{const r=document.getElementById(rid);if(r)r.selectedIndex=0;});
       onGlobalFilter();
     };
@@ -7682,8 +7692,10 @@ function resetGlobalFilter(){
   const ds = document.getElementById('gDupSel');
   if(ds) ds.value = 'all';
   // Сброс кастомного диапазона + активной кнопки пресета
+  // ВАЖНО: на flatpickr-managed инпутах el.value='' не пробивает altInput — clear() через API
   const df=document.getElementById('gDateFrom'), dt=document.getElementById('gDateTo');
-  if(df) df.value=''; if(dt) dt.value='';
+  if(df){ if(df._flatpickr) df._flatpickr.clear(); else df.value=''; }
+  if(dt){ if(dt._flatpickr) dt._flatpickr.clear(); else dt.value=''; }
   document.querySelectorAll('#gPeriodPresets button').forEach(b=>b.classList.remove('active'));
   ['gYear','gMonth','gDay','gReg','gStatus','gType','gCatF','gIssueF','gSubF','gCGO','gMIO'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='all';
