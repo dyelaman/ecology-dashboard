@@ -61,6 +61,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .fbar-chip.active{background:#f0fdf4;border-color:var(--green);color:var(--green);font-weight:600}
 .fbar-reset{font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;margin-left:auto}
 .fbar-reset:hover{color:var(--red);border-color:var(--red)}
+/* Multi-select dropdown (см. _msMount в JS) */
+.ms-host{position:relative;display:inline-block;vertical-align:middle}
+.ms-btn{font-size:11px;padding:5px 22px 5px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;font-weight:500;font-family:inherit;text-align:left;width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
+.ms-btn::after{content:'▾';position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--text3)}
+.ms-btn:hover{border-color:var(--green)}
+.ms-btn.active{background:#f0fdf4;border-color:var(--green);color:#15803d;font-weight:600}
+.ms-pop{position:absolute;top:calc(100% + 4px);left:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px;width:280px;display:none;z-index:600;box-shadow:0 6px 24px rgba(0,0,0,.14);flex-direction:column;max-height:380px}
+.ms-pop.open{display:flex}
+.ms-search{font-size:11px;padding:6px 8px;border:1px solid var(--border2);border-radius:6px;margin-bottom:6px;outline:none;font-family:inherit;color:var(--text)}
+.ms-search:focus{border-color:var(--green)}
+.ms-list{overflow-y:auto;flex:1;max-height:260px;display:flex;flex-direction:column;gap:1px}
+.ms-item{display:flex;align-items:center;gap:7px;padding:5px 6px;font-size:11px;border-radius:4px;cursor:pointer;color:var(--text);user-select:none}
+.ms-item:hover{background:var(--surface2)}
+.ms-item.sel{background:#f0fdf4;color:#15803d;font-weight:500}
+.ms-item input{cursor:pointer;accent-color:var(--green);margin:0}
+.ms-item span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-actions{display:flex;justify-content:space-between;gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--border2)}
+.ms-clear,.ms-apply{font-size:10px;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);cursor:pointer;background:var(--surface);font-family:inherit;font-weight:600}
+.ms-clear:hover{border-color:var(--red);color:var(--red)}
+.ms-apply{background:var(--green);color:#fff;border-color:var(--green)}
+.ms-apply:hover{background:#15803d;border-color:#15803d}
 .fchip{font-size:10px;padding:3px 4px 3px 8px;border-radius:14px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
 .fchip b{font-weight:600}
 .fchip-x{cursor:pointer;color:#16a34a;font-weight:700;font-size:11px;width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;opacity:.55}
@@ -2072,9 +2093,8 @@ function applyRegionalMode(){
   // Баннер в header
   const badge=document.getElementById('regionBadge');
   if(badge){badge.textContent='📍 '+ACTIVE_REGION;badge.style.display='block';}
-  // Глобальный фильтр по региону
-  const gReg=document.getElementById('gReg');
-  if(gReg){for(const o of gReg.options){if(o.value===ACTIVE_REGION||o.text===ACTIVE_REGION){gReg.value=o.value;break;}}}
+  // Глобальный фильтр по региону (multi-select: ставим как единственное значение)
+  if(typeof _mSet==='function') _mSet('gReg', [ACTIVE_REGION]);
   // Фильтр обращений
   const aReg=document.getElementById('appealsRegion');
   if(aReg){for(const o of aReg.options){if(o.value===ACTIVE_REGION||o.text===ACTIVE_REGION){aReg.value=o.value;break;}}}
@@ -3231,6 +3251,8 @@ function renderMainCharts() {
           });
         }
       }
+      // Multi-select popover'ы поверх 8 фильтров (после populate option'ов)
+      if(typeof _msMountAll==='function') _msMountAll();
     })(summary.appeals));
   } catch(e) { console.warn('Dashboard data load failed:', e.message); }
 })();
@@ -5736,15 +5758,17 @@ function _pieChart(id,pairs,filterSelectId,resetIds){
       if(!els.length) return;
       const v=d[els[0].index]?.[0];
       if(!v||v==='Прочее') return;
-      const sel=document.getElementById(filterSelectId); if(!sel) return;
-      // Toggle: повторный клик на тот же сегмент → сброс фильтра
-      if(sel.value===v){
-        sel.value='all';
+      if(_MS_IDS.includes(filterSelectId)){
+        _mToggle(filterSelectId, v);
+        (resetIds||[]).forEach(rid => { if(_MS_IDS.includes(rid)) _mClear(rid); });
       } else {
-        if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
-        sel.value=v;
+        const sel=document.getElementById(filterSelectId); if(!sel) return;
+        if(sel.value===v) sel.value='all';
+        else {
+          if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
+          sel.value=v;
+        }
       }
-      (resetIds||[]).forEach(rid=>{const r=document.getElementById(rid);if(r)r.selectedIndex=0;});
       onGlobalFilter();
     } : null)
   });
@@ -5807,10 +5831,10 @@ function _renderC3(){
     options:_pieOptions((e,els)=>{
       if(!els.length) return;
       const v=piesD[els[0].index]?.[0]; if(!v||v==='Прочее') return;
-      const cEl=document.getElementById('gCatF'); if(!cEl) return;
-      // Toggle: повторный клик → снять фильтр
-      if(cEl.value===v){ cEl.value='all'; }
-      else { if(![...cEl.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;cEl.appendChild(o);} cEl.value=v; }
+      _mToggle('gCatF', v);
+      // При смене категории — сбрасываем подкатегорию/характер (зависимые уровни)
+      _mClear('gIssueF');
+      _mClear('gSubF');
       if(typeof cascadeIssueFilter==='function') cascadeIssueFilter();
       onGlobalFilter();
     })
@@ -5859,9 +5883,8 @@ function _renderCAppSub(){
     options:_pieOptions((e,els)=>{
       if(!els.length) return;
       const v=piesS[els[0].index]?.[0]; if(!v||v==='Прочее') return;
-      const fEl=document.getElementById('gIssueF'); if(!fEl) return;
-      if(fEl.value===v){ fEl.value='all'; }
-      else { if(![...fEl.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;fEl.appendChild(o);} fEl.value=v; }
+      _mToggle('gIssueF', v);
+      _mClear('gSubF');
       if(typeof cascadeSubFilter==='function') cascadeSubFilter();
       onGlobalFilter();
     })
@@ -6307,7 +6330,7 @@ setTimeout(()=>{
 
   // Обращения — реальные данные
   const topR=Object.entries(REAL_ECO).sort((a,b)=>b[1].total-a[1].total);
-  c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;const gR=document.getElementById('gReg');if(gR){for(const o of gR.options){if(o.value===reg||o.text===reg){gR.value=o.value;break;}}onGlobalFilter();}}}});
+  c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;if(typeof _mToggle==='function'){_mToggle('gReg', reg); onGlobalFilter();}}}});
   _fitRegionCanvas('c12',topR.length);
   const allIssues={};Object.values(ecoSrc).forEach(d=>d.issues&&Object.entries(d.issues).forEach(([k,v])=>allIssues[k]=(allIssues[k]||0)+v));
   const ti2=Object.entries(allIssues).sort((a,b)=>b[1]-a[1]).slice(0,6);
@@ -6719,6 +6742,19 @@ function updateFilterChips(){
   _FCHIP_DEFS.forEach(d=>{
     const el=document.getElementById(d.id);
     if(!el) return;
+    // Multi-select фильтр → отдельный чип на каждое выбранное значение (с возможностью убрать по одному)
+    if(typeof _mSel!=='undefined' && _mSel[d.id]){
+      if(_mSel[d.id].size === 0) return;
+      if(_FCHIP_ADV.includes(d.id)) advActive=true;
+      for(const v of _mSel[d.id]){
+        let txt = v;
+        if(txt.length>22) txt = txt.slice(0,21)+'…';
+        const enc = v.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        chips.push(`<span class="fchip"><b>${d.label}:</b> ${txt}<span class="fchip-x" title="Убрать" onclick="clearOneMulti('${d.id}','${enc}')">✕</span></span>`);
+      }
+      return;
+    }
+    // Single-select (gYear/gMonth/gDay/gOrg/gDupSel)
     const v=(el.value||'').trim();
     if(v==='all'||v==='') return;
     let txt=(el.options && el.options[el.selectedIndex]?.text) || v;
@@ -6751,17 +6787,204 @@ function updateFilterChips(){
 }
 
 function clearOneFilter(id){
-  const reset=el=>{ if(!el) return; if(el.tagName==='INPUT') el.value=''; else el.selectedIndex=0; };
-  reset(document.getElementById(id));
-  if(id==='gCatF'){ reset(document.getElementById('gIssueF')); reset(document.getElementById('gSubF')); }
-  if(id==='gIssueF'){ reset(document.getElementById('gSubF')); }
+  // Multi-select: полностью очищает Set
+  if(typeof _MS_IDS!=='undefined' && _MS_IDS.includes(id)){
+    _mClear(id);
+    if(id==='gCatF'){ _mClear('gIssueF'); _mClear('gSubF'); }
+    if(id==='gIssueF'){ _mClear('gSubF'); }
+  } else {
+    const reset=el=>{ if(!el) return; if(el.tagName==='INPUT') el.value=''; else el.selectedIndex=0; };
+    reset(document.getElementById(id));
+  }
   if(['gReg','gType','gCatF'].includes(id)) _doCascadeMid('gCatF','gIssueF','gSubF');
   if(id==='gDupSel'){ onDupFilter(); } else { onGlobalFilter(); }
+}
+// Снять ОДНО значение из multi-select (отдельный чип)
+function clearOneMulti(id, val){
+  if(typeof _mSel!=='undefined' && _mSel[id]){
+    _mSel[id].delete(val);
+    _mSyncSelect(id);
+  }
+  onGlobalFilter();
 }
 
 // ── ДВИЖОК ФИЛЬТРАЦИИ ПО МЕСЯЦАМ/ДНЯМ (per-appeal) ──────────────────────────
 let _AC=null;
 const _MO_RU3=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+
+// ═══ MULTI-SELECT MODEL ═════════════════════════════════════════════════
+// 8 фильтров вкладки «Обращения» поддерживают множественный выбор. Источник
+// истины — `_mSel`: Map<filterId, Set<string>>. UI: кастомный popover c
+// чекбоксами + поиском (см. _msMount). Подложка — оригинальный <select>
+// (скрыт через style.display='none') синкается через _mSyncSelect:
+//   • 0 эл. → 'all' (single-select консьюмеры видят «нет фильтра»)
+//   • 1 эл. → конкретное значение
+//   • 2+ → 'all' (single консьюмеры применят baseline; applyTimeEngine
+//     корректно перерасчитает через _mAllowedArr)
+// Логика: OR внутри одного фильтра, AND между фильтрами.
+const _MS_IDS = ['gReg','gType','gStatus','gCatF','gIssueF','gSubF','gCGO','gMIO'];
+const _mSel = Object.fromEntries(_MS_IDS.map(id => [id, new Set()]));
+
+function _mIs(id, v){ return _mSel[id]?.has(v); }
+function _mActive(id){ return (_mSel[id]?.size || 0) > 0; }
+function _mAnyActive(){ return _MS_IDS.some(id => _mActive(id)); }
+function _mCount(id){ return _mSel[id]?.size || 0; }
+function _mValues(id){ return [...(_mSel[id]||[])]; }
+function _mToggle(id, v){
+  if(!_mSel[id]) _mSel[id] = new Set();
+  if(_mSel[id].has(v)) _mSel[id].delete(v);
+  else _mSel[id].add(v);
+  _mSyncSelect(id);
+}
+function _mClear(id){ if(_mSel[id]) _mSel[id].clear(); _mSyncSelect(id); }
+function _mClearAll(){ _MS_IDS.forEach(id => { if(_mSel[id]) _mSel[id].clear(); _mSyncSelect(id); }); }
+function _mSet(id, vals){
+  if(!_mSel[id]) _mSel[id] = new Set();
+  _mSel[id].clear();
+  (vals||[]).forEach(v => { if(v && v!=='all') _mSel[id].add(v); });
+  _mSyncSelect(id);
+}
+function _mSyncSelect(id){
+  const sel = document.getElementById(id);
+  if(sel){
+    const arr = [..._mSel[id]];
+    if(arr.length === 1){
+      const v = arr[0];
+      if(![...sel.options].some(o => o.value===v)){
+        const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o);
+      }
+      sel.value = v;
+    } else {
+      sel.value = 'all';
+    }
+  }
+  _msUpdateButton(id);
+}
+// Pre-compute Uint8Array of allowed indices — O(1) per row in engine.
+function _mAllowedArr(id, namesArr){
+  if(!_mActive(id)) return null;
+  const out = new Uint8Array(namesArr.length);
+  for(const nm of _mSel[id]){
+    const i = namesArr.indexOf(nm);
+    if(i >= 0) out[i] = 1;
+  }
+  return out;
+}
+// Для статуса (особый набор done/work/late, не индексов): Set значений.
+function _mAllowedStatus(){ return _mActive('gStatus') ? new Set(_mSel.gStatus) : null; }
+function _msEsc(s){ return String(s).replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ── UI: popover c чекбоксами + поиском ────────────────────────────────
+function _msMount(id, opts){
+  opts = opts || {};
+  const sel = document.getElementById(id);
+  if(!sel || sel.dataset.msMounted) return;
+  sel.dataset.msMounted = '1';
+  sel.style.display = 'none';
+
+  const host = document.createElement('div');
+  host.className = 'ms-host';
+  host.dataset.msid = id;
+
+  const btn = document.createElement('button');
+  btn.className = 'ms-btn';
+  btn.type = 'button';
+
+  const pop = document.createElement('div');
+  pop.className = 'ms-pop';
+  pop.innerHTML =
+    '<input class="ms-search" type="text" placeholder="Поиск…">' +
+    '<div class="ms-list"></div>' +
+    '<div class="ms-actions">' +
+      '<button class="ms-clear" type="button">Очистить</button>' +
+      '<button class="ms-apply" type="button">Применить</button>' +
+    '</div>';
+
+  host.appendChild(btn);
+  host.appendChild(pop);
+  sel.parentNode.insertBefore(host, sel);
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    document.querySelectorAll('.ms-pop.open').forEach(p => { if(p !== pop) p.classList.remove('open'); });
+    pop.classList.toggle('open');
+    if(pop.classList.contains('open')){
+      _msRenderList(id);
+      pop.querySelector('.ms-search').focus();
+    }
+  });
+  pop.querySelector('.ms-search').addEventListener('input', () => _msRenderList(id));
+  pop.querySelector('.ms-clear').addEventListener('click', () => {
+    _mClear(id);
+    _msRenderList(id);
+    onGlobalFilter();
+  });
+  pop.querySelector('.ms-apply').addEventListener('click', () => {
+    pop.classList.remove('open');
+    onGlobalFilter();
+  });
+  pop.addEventListener('click', e => e.stopPropagation());
+
+  _msUpdateButton(id);
+}
+function _msRenderList(id){
+  const host = document.querySelector('.ms-host[data-msid="'+id+'"]');
+  if(!host) return;
+  const list = host.querySelector('.ms-list');
+  const search = host.querySelector('.ms-search').value.trim().toLowerCase();
+  const sel = document.getElementById(id);
+  if(!sel) return;
+  const opts = [...sel.options]
+    .filter(o => o.value && o.value !== 'all')
+    .map(o => ({value: o.value, label: o.textContent || o.value}));
+  const filtered = search
+    ? opts.filter(o => o.label.toLowerCase().includes(search) || o.value.toLowerCase().includes(search))
+    : opts;
+  if(!filtered.length){
+    list.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:10px;text-align:center">Ничего не найдено</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(o =>
+    '<label class="ms-item'+(_mIs(id, o.value) ? ' sel' : '')+'">' +
+      '<input type="checkbox" data-val="'+_msEsc(o.value)+'" '+(_mIs(id, o.value) ? 'checked' : '')+'>' +
+      '<span>'+_msEsc(o.label)+'</span>' +
+    '</label>'
+  ).join('');
+  list.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      _mToggle(id, cb.dataset.val);
+      cb.parentElement.classList.toggle('sel', cb.checked);
+    });
+  });
+}
+function _msUpdateButton(id){
+  const host = document.querySelector('.ms-host[data-msid="'+id+'"]');
+  if(!host) return;
+  const btn = host.querySelector('.ms-btn');
+  const arr = _mValues(id);
+  const sel = document.getElementById(id);
+  const placeholder = sel?.options?.[0]?.textContent || 'Все';
+  if(arr.length === 0){
+    btn.textContent = placeholder;
+    btn.title = placeholder;
+    btn.classList.remove('active');
+  } else if(arr.length === 1){
+    btn.textContent = arr[0];
+    btn.title = arr[0];
+    btn.classList.add('active');
+  } else {
+    btn.textContent = arr[0] + ' +' + (arr.length - 1);
+    btn.title = arr.join(', ');
+    btn.classList.add('active');
+  }
+}
+function _msMountAll(){
+  _MS_IDS.forEach(id => _msMount(id));
+}
+// Закрытие popover'ов кликом вне
+document.addEventListener('click', () => {
+  document.querySelectorAll('.ms-pop.open').forEach(p => p.classList.remove('open'));
+});
 
 function timeFilterActive(){
   const m=document.getElementById('gMonth')?.value||'all';
@@ -7049,9 +7272,9 @@ function engineFilterActive(){
   const dfV=(document.getElementById('gDateFrom')?.value||'');
   const dtV=(document.getElementById('gDateTo')?.value||'');
   if(dfV||dtV) return true;
-  return F('gYear')!=='all'||F('gMonth')!=='all'||F('gDay')!=='all'||F('gReg')!=='all'
-    ||F('gType')!=='all'||F('gStatus')!=='all'||F('gCatF')!=='all'||F('gIssueF')!=='all'
-    ||F('gSubF')!=='all'||F('gCGO')!=='all'||F('gMIO')!=='all'||orgV!==''
+  if(typeof _mAnyActive==='function' && _mAnyActive()) return true;   // multi-select
+  return F('gYear')!=='all'||F('gMonth')!=='all'||F('gDay')!=='all'
+    ||orgV!==''
     ||_minSelKeys.size>0||_orgTreeSel.size>0
     ||((typeof _gDupActive!=='undefined')&&_gDupActive);
 }
@@ -7067,16 +7290,21 @@ function _engSetChart(id,pairs,limit,filterSelectId,resetIds){
       if(!els.length) return;
       const v=ch.data.labels[els[0].index];
       if(v==='Прочее') return;
-      const sel=document.getElementById(filterSelectId);
-      if(!sel) return;
-      // Toggle: повторный клик → снять фильтр
-      if(sel.value===v){
-        sel.value='all';
+      // Multi-select toggle: добавить значение или снять (если уже выбрано)
+      if(_MS_IDS.includes(filterSelectId)){
+        _mToggle(filterSelectId, v);
+        // Каскадный сброс зависимых уровней (когда родительский фильтр меняется)
+        (resetIds||[]).forEach(rid => { if(_MS_IDS.includes(rid)) _mClear(rid); });
       } else {
-        if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
-        sel.value=v;
+        // Не-multi (например gYear) — старый путь
+        const sel=document.getElementById(filterSelectId);
+        if(!sel) return;
+        if(sel.value===v) sel.value='all';
+        else {
+          if(![...sel.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);}
+          sel.value=v;
+        }
       }
-      (resetIds||[]).forEach(rid=>{const r=document.getElementById(rid);if(r)r.selectedIndex=0;});
       onGlobalFilter();
     };
   }
@@ -7089,8 +7317,6 @@ function applyTimeEngine(){
   if(!_AC) return;
   const F=id=>document.getElementById(id)?.value||'all';
   const yF=F('gYear'),mF=F('gMonth'),dF=F('gDay');
-  const regF=F('gReg'),catF=F('gCatF'),typF=F('gType'),stF=F('gStatus');
-  const issF=F('gIssueF'),subF=F('gSubF'),cgoF=F('gCGO'),mioF=F('gMIO');
   const orgFsel=(document.getElementById('gOrg')?.value||'').trim();
   const dupOnly=(typeof _gDupActive!=='undefined')&&_gDupActive;
   const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF, dN=dF==='all'?-1:+dF;
@@ -7099,13 +7325,27 @@ function applyTimeEngine(){
   const dtStr=document.getElementById('gDateTo')?.value||'';
   const dfInt=dfStr?+dfStr.replace(/-/g,''):0;
   const dtInt=dtStr?+dtStr.replace(/-/g,''):99999999;
-  const regI=regF==='all'?-1:_AC.regions.indexOf(regF);
-  const catI=catF==='all'?-1:_AC.cats.indexOf(catF);
-  const typI=typF==='all'?-1:_AC.types.indexOf(typF);
-  const issI=issF==='all'?-1:_AC.issues.indexOf(issF);
-  const subI=subF==='all'?-1:_AC.subs.indexOf(subF);
-  const orgF=orgFsel||(cgoF!=='all'?cgoF:(mioF!=='all'?mioF:'all'));
-  const orgI=(!orgF||orgF==='all')?-1:_AC.orgs.indexOf(orgF);
+  // Multi-select: pre-compute boolean arrays для O(1) проверки в hot loop
+  const allowedReg = _mAllowedArr('gReg',    _AC.regions);
+  const allowedCat = _mAllowedArr('gCatF',   _AC.cats);
+  const allowedTyp = _mAllowedArr('gType',   _AC.types);
+  const allowedIss = _mAllowedArr('gIssueF', _AC.issues);
+  const allowedSub = _mAllowedArr('gSubF',   _AC.subs);
+  const allowedStatus = _mAllowedStatus();   // Set<'done'|'work'|'late'> | null
+  // gCGO / gMIO / gOrg текстовое поле — все вместе фильтруют orgs (OR)
+  const allowedOrg = (function(){
+    if(!_mActive('gCGO') && !_mActive('gMIO') && !orgFsel) return null;
+    const wants = new Set();
+    if(_mActive('gCGO')) for(const v of _mSel.gCGO) wants.add(v);
+    if(_mActive('gMIO')) for(const v of _mSel.gMIO) wants.add(v);
+    if(orgFsel) wants.add(orgFsel);
+    const out = new Uint8Array(_AC.orgs.length);
+    for(const nm of wants){
+      const i = _AC.orgs.indexOf(nm);
+      if(i >= 0) out[i] = 1;
+    }
+    return out;
+  })();
   // Иерархический фильтр госорганов: множества выбранных министерств и конкретных органов
   const minFilterOn = _minSelKeys.size>0 || _orgTreeSel.size>0;
   const _minKeyByIdx = (_AC.ministries||[]).map(m=>m.key);
@@ -7126,21 +7366,26 @@ function applyTimeEngine(){
     if(ymd<dfInt||ymd>dtInt) continue;
     const rr=D[o+1],cc=D[o+2],tt=D[o+3],ss=D[o+4],ii=D[o+5],su=D[o+6],og=D[o+7],fl=D[o+8];
     const mn=w>=10?D[o+9]:-1;
-    if(regI>=0&&rr!==regI) continue;
-    if(catI>=0&&cc!==catI) continue;
-    if(typI>=0&&tt!==typI) continue;
-    if(issI>=0&&ii!==issI) continue;
-    if(subI>=0&&su!==subI) continue;
-    if(orgI>=0&&og!==orgI) continue;
+    if(allowedReg && !allowedReg[rr]) continue;
+    if(allowedCat && !allowedCat[cc]) continue;
+    if(allowedTyp && !allowedTyp[tt]) continue;
+    if(allowedIss && !allowedIss[ii]) continue;
+    if(allowedSub && !allowedSub[su]) continue;
+    if(allowedOrg && !allowedOrg[og]) continue;
     if(minFilterOn){
       const mk = mn>=0 ? _minKeyByIdx[mn] : null;
       const orgNm = _AC.orgs[og];
       if(!(mk && _minSelKeys.has(mk)) && !_orgTreeSel.has(orgNm)) continue;
     }
     const isClosed=(ss===1||ss===3), isOverdue=(ss===2), isLate=(ss===2||ss===3);
-    if(stF==='done'&&!isClosed) continue;
-    if(stF==='work'&&!(ss===0||ss===2)) continue;
-    if(stF==='late'&&!isOverdue) continue;
+    if(allowedStatus){
+      // OR между выбранными статусами в multi-фильтре
+      let pass = false;
+      if(allowedStatus.has('done') && isClosed) pass = true;
+      if(!pass && allowedStatus.has('work') && (ss===0||ss===2)) pass = true;
+      if(!pass && allowedStatus.has('late') && isOverdue) pass = true;
+      if(!pass) continue;
+    }
     if(dupOnly&&!(fl&1)) continue;
     total++;
     if(isClosed)closed++; else inwork++;
@@ -7321,9 +7566,12 @@ function _clearActivePreset(){
   const r=document.getElementById('qpReset'); if(r) r.style.display='none';
 }
 function _resetFiltersSilent(){
-  ['gYear','gMonth','gDay','gReg','gStatus','gType','gCatF','gIssueF','gSubF','gCGO','gMIO'].forEach(id=>{
+  // Single-select время
+  ['gYear','gMonth','gDay'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.selectedIndex=0;
   });
+  // Multi-select 8 фильтров
+  if(typeof _mClearAll==='function') _mClearAll();
   const df=document.getElementById('gDateFrom'), dt=document.getElementById('gDateTo');
   if(df) df.value=''; if(dt) dt.value='';
   document.querySelectorAll('#gPeriodPresets button').forEach(b=>b.classList.remove('active'));
@@ -7348,14 +7596,23 @@ function applyPreset(presetId){
   const setV=(id,v)=>{const el=document.getElementById(id); if(el&&v!=null) el.value=v;};
   if(a.year)   setV('gYear',a.year);
   if(a.month)  setV('gMonth',a.month);
-  if(a.status) setV('gStatus',a.status);
+  if(a.status) _mSet('gStatus', [a.status]);
   if(a.type){
+    // Найти первый option соответствующий ключу/префиксу и поставить в multi-select
     const sel=document.getElementById('gType');
-    if(sel){ for(const o of sel.options){ if(o.value===a.type||o.value.indexOf(a.type)===0){sel.value=o.value;break;} } }
+    if(sel){
+      for(const o of sel.options){
+        if(o.value===a.type || o.value.indexOf(a.type)===0){ _mSet('gType', [o.value]); break; }
+      }
+    }
   }
   if(a.catKey){
     const sel=document.getElementById('gCatF');
-    if(sel){ for(const o of sel.options){ if(o.value.toLowerCase().includes(a.catKey)){sel.value=o.value;break;} } }
+    if(sel){
+      for(const o of sel.options){
+        if(o.value.toLowerCase().includes(a.catKey)){ _mSet('gCatF', [o.value]); break; }
+      }
+    }
   }
   if(a.dup){ const ds=document.getElementById('gDupSel'); if(ds) ds.value='dup'; _gDupActive=true; }
   _presetApplying=true;
@@ -7598,9 +7855,12 @@ function resetGlobalFilter(){
   if(df){ if(df._flatpickr) df._flatpickr.clear(); else df.value=''; }
   if(dt){ if(dt._flatpickr) dt._flatpickr.clear(); else dt.value=''; }
   document.querySelectorAll('#gPeriodPresets button').forEach(b=>b.classList.remove('active'));
-  ['gYear','gMonth','gDay','gReg','gStatus','gType','gCatF','gIssueF','gSubF','gCGO','gMIO'].forEach(id=>{
+  // Single-select время + год/месяц/день
+  ['gYear','gMonth','gDay'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='all';
   });
+  // Multi-select 8 фильтров — очищаем _mSel + автосинк подложек <select> + ms-кнопок
+  if(typeof _mClearAll==='function') _mClearAll();
   const org=document.getElementById('gOrg'); if(org) org.value='';
   // сброс иерархического фильтра госорганов
   if(typeof _minSelKeys!=='undefined') _minSelKeys.clear();
@@ -9272,7 +9532,7 @@ function applyAppealFilter(){
   const t2=document.getElementById('c13Title');
   if(region==='all'){
     const topR=Object.entries(REAL_ECO).sort((a,b)=>b[1].total-a[1].total);
-    c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3}]},options:Object.assign({},APPEAL_OPT,{scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;const gR=document.getElementById('gReg');if(gR){for(const o of gR.options){if(o.value===reg||o.text===reg){gR.value=o.value;break;}}onGlobalFilter();}}})});
+    c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3}]},options:Object.assign({},APPEAL_OPT,{scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;if(typeof _mToggle==='function'){_mToggle('gReg', reg); onGlobalFilter();}}})});
     _fitRegionCanvas('c12',topR.length);
     const ai={};Object.values(REAL_ECO).forEach(d=>Object.entries(d.issues).forEach(([k,v])=>ai[k]=(ai[k]||0)+v));
     const ti=Object.entries(ai).sort((a,b)=>b[1]-a[1]).slice(0,6);
@@ -9297,12 +9557,8 @@ const REG_NEWS_MAP={'Астана':'Астана','Алматы':'Алматы',
 
 function openRegionNews(mapRegName){
   const newsReg=REG_NEWS_MAP[mapRegName]||mapRegName;
-  const sel=document.getElementById('gReg');
-  if(sel){
-    let found=false;
-    for(const opt of sel.options){if(opt.value===newsReg||opt.text===newsReg){sel.value=opt.value;found=true;break;}}
-    if(!found)sel.value='all';
-  }
+  // Multi-select gReg: клик по региону на карте — это drill, ставим как единственное
+  if(typeof _mSet==='function') _mSet('gReg', [newsReg]);
   switchTab('news',document.getElementById('tabNews'));
   setTimeout(()=>applyFilter(),newsInit?50:300);
 }
