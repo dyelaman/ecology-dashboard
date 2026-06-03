@@ -1418,13 +1418,13 @@ input[type=file]{display:none}
   <!-- Sticky: переключатель типов + покрытие + фильтры + чипы -->
   <div class="nbd-sticky-zone" id="kgsStickyZone">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-      <div class="card-title" style="margin:0">🛰 Космический мониторинг · КГС <span style="font-size:10px;color:var(--text3);font-weight:400">Қазақстан Ғарыш Сапары</span></div>
+      <div class="card-title" style="margin:0">🛰 <span data-i18n="kgs.header.title">Космический мониторинг · КГС</span> <span style="font-size:10px;color:var(--text3);font-weight:400">Қазақстан Ғарыш Сапары</span></div>
       <div class="kgs-type-switch" id="kgsTypeSwitch">
-        <button class="kgs-type-btn active" data-type="all"          onclick="setKgsType('all')">📊 Все</button>
-        <button class="kgs-type-btn"        data-type="forest"       onclick="setKgsType('forest')">🌲 Рубки</button>
-        <button class="kgs-type-btn"        data-type="nedra"        onclick="setKgsType('nedra')">⛏️ Карьеры</button>
-        <button class="kgs-type-btn"        data-type="waste"        onclick="setKgsType('waste')">🗑️ Свалки</button>
-        <button class="kgs-type-btn"        data-type="land_seizure" onclick="setKgsType('land_seizure')">🏗️ Самозахваты</button>
+        <button class="kgs-type-btn active" data-type="all"          onclick="setKgsType('all')">📊 <span data-i18n="kgs.tab.all">Все</span></button>
+        <button class="kgs-type-btn"        data-type="forest"       onclick="setKgsType('forest')">🌲 <span data-i18n="kgs.tab.forest">Рубки</span></button>
+        <button class="kgs-type-btn"        data-type="nedra"        onclick="setKgsType('nedra')">⛏️ <span data-i18n="kgs.tab.nedra">Карьеры</span></button>
+        <button class="kgs-type-btn"        data-type="waste"        onclick="setKgsType('waste')">🗑️ <span data-i18n="kgs.tab.waste">Свалки</span></button>
+        <button class="kgs-type-btn"        data-type="land_seizure" onclick="setKgsType('land_seizure')">🏗️ <span data-i18n="kgs.tab.land_seizure">Самозахваты</span></button>
       </div>
     </div>
 
@@ -1472,11 +1472,11 @@ input[type=file]{display:none}
   <!-- Регионы + Динамика по годам -->
   <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:14px;margin-bottom:14px">
     <div class="card" style="padding:12px">
-      <div class="card-title" id="kgsRegionTitle">По регионам</div>
+      <div class="card-title" id="kgsRegionTitle" data-i18n="kgs.title.byRegion">По регионам</div>
       <div id="kgsRegionList" class="region-list-scroll" style="max-height:420px;padding-right:6px"></div>
     </div>
     <div class="card" style="padding:12px">
-      <div class="card-title" id="kgsYearTitle">Динамика по годам</div>
+      <div class="card-title" id="kgsYearTitle" data-i18n="kgs.title.yearChart">Динамика по годам</div>
       <div class="rc-host" style="height:300px"><canvas id="kgsYearChart"></canvas></div>
     </div>
   </div>
@@ -1484,12 +1484,12 @@ input[type=file]{display:none}
   <!-- Подкатегории + Статусы -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px" id="kgsRow2">
     <div class="card" style="padding:12px">
-      <div class="card-title" id="kgsSubTitle">Категории</div>
+      <div class="card-title" id="kgsSubTitle" data-i18n="kgs.title.subChart">Категории</div>
       <div class="rc-host" style="height:260px"><canvas id="kgsSubChart"></canvas></div>
       <div id="kgsSubLegend" style="display:flex;flex-direction:column;gap:4px;margin-top:8px;font-size:11px;color:var(--text2)"></div>
     </div>
     <div class="card" id="kgsStatusCard" style="padding:12px">
-      <div class="card-title" id="kgsStatusTitle">Статусы утилизации</div>
+      <div class="card-title" id="kgsStatusTitle" data-i18n="kgs.title.status">Статусы утилизации</div>
       <div id="kgsStatusList" style="margin-top:6px"></div>
     </div>
   </div>
@@ -1497,9 +1497,9 @@ input[type=file]{display:none}
   <!-- ТАБЛИЦА -->
   <div class="card" style="padding:14px">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-      <div class="card-title" style="margin:0" id="kgsTableTitle">Детальный список объектов</div>
+      <div class="card-title" style="margin:0" id="kgsTableTitle" data-i18n="kgs.title.table">Детальный список объектов</div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input id="kgsTblSearch" placeholder="Поиск…" oninput="kgsTblSearch(this.value)" style="font-size:11px;padding:5px 10px;border-radius:14px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:180px;outline:none">
+        <input id="kgsTblSearch" placeholder="Поиск…" data-i18n-placeholder="kgs.tbl.search" oninput="kgsTblSearch(this.value)" style="font-size:11px;padding:5px 10px;border-radius:14px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:180px;outline:none">
         <select id="kgsTblPageSize" onchange="kgsTblSetSize(this.value)" style="font-size:11px;padding:5px 8px;border-radius:14px;border:1px solid var(--border2);background:var(--surface);color:var(--text)">
           <option value="50">50</option><option value="100">100</option><option value="200">200</option>
         </select>
@@ -2087,6 +2087,9 @@ const I18N = {
     // Фильтры
     'filter.period':'Период', 'filter.year':'Год', 'filter.month':'Месяц', 'filter.day':'День',
     'filter.range':'Диапазон', 'filter.range.from':'Начало периода', 'filter.range.to':'Конец периода', 'filter.region':'Регион', 'filter.all':'Все',
+    'kgs.tab.all':'Все', 'kgs.tab.forest':'Рубки', 'kgs.tab.nedra':'Карьеры', 'kgs.tab.waste':'Свалки', 'kgs.tab.land_seizure':'Самозахваты',
+    'kgs.header.title':'Космический мониторинг · КГС', 'kgs.title.byRegion':'По регионам', 'kgs.title.yearChart':'Динамика по годам',
+    'kgs.title.subChart':'Категории', 'kgs.title.status':'Статусы утилизации', 'kgs.title.table':'Детальный список объектов', 'kgs.tbl.search':'Поиск…',
     'filter.reset':'Сбросить', 'filter.apply':'Применить', 'filter.from':'С', 'filter.to':'По',
     'filter.search':'Поиск…', 'filter.export':'📥 Экспорт CSV',
     // Обращения (главная)
@@ -2192,6 +2195,9 @@ const I18N = {
     // Фильтры
     'filter.period':'Кезең', 'filter.year':'Жыл', 'filter.month':'Ай', 'filter.day':'Күн',
     'filter.range':'Аралық', 'filter.range.from':'Кезеңнің басталуы', 'filter.range.to':'Кезеңнің аяқталуы', 'filter.region':'Өңір', 'filter.all':'Барлығы',
+    'kgs.tab.all':'Барлығы', 'kgs.tab.forest':'Қиюлар', 'kgs.tab.nedra':'Карьерлер', 'kgs.tab.waste':'Үйінділер', 'kgs.tab.land_seizure':'Басып алу',
+    'kgs.header.title':'Спутниктік мониторинг · ҚҒС', 'kgs.title.byRegion':'Өңірлер бойынша', 'kgs.title.yearChart':'Жылдар бойынша динамика',
+    'kgs.title.subChart':'Санаттар', 'kgs.title.status':'Кәдеге жарату мәртебелері', 'kgs.title.table':'Нысандардың толық тізімі', 'kgs.tbl.search':'Іздеу…',
     'filter.reset':'Тазарту', 'filter.apply':'Қолдану', 'filter.from':'Бастап', 'filter.to':'Дейін',
     'filter.search':'Іздеу…', 'filter.export':'📥 CSV экспорт',
     // Обращения
@@ -2362,15 +2368,28 @@ function setLang(lang){
   });
   // 4. Подсветка кнопки языка
   document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('act', b.dataset.lang===lang));
-  // 5. Перерисовка активной вкладки (динамический контент)
+  // 5. Region-селекты: option-метки через tRegion (для kz). Сами option.value НЕ трогаем —
+  //    они в RU и используются как ключи в фильтрах. Меняем только видимый textContent.
+  try {
+    ['gReg','tzReg','nbdFltRegion','socFltRegion','kgsFltRegion'].forEach(id=>{
+      const sel = document.getElementById(id); if(!sel) return;
+      Array.from(sel.options).forEach(o=>{
+        if(!o.value) return; // skip «Все»/«Все регионы» (без value)
+        o.textContent = tRegion(o.value);
+      });
+    });
+  } catch(_){}
+  // 6. Перерисовка активной вкладки (динамический контент)
   try {
     const active = document.querySelector('.panel.active')?.id || '';
     if(active === 'panel-main')      { if(typeof _rechartOnFilter==='function') _rechartOnFilter(); }
     if(active === 'panel-taza')      { if(typeof rerenderTaza==='function') rerenderTaza(); }
     if(active === 'panel-emissions') { if(typeof renderNbd2025==='function') renderNbd2025(); }
     if(active === 'panel-hearings')  { if(typeof rerenderSocial==='function') rerenderSocial(); }
+    if(active === 'panel-kgs')       { if(typeof rerenderKgs==='function')   rerenderKgs(); }
+    if(active === 'panel-news')      { if(typeof renderMainNewsFeed==='function') renderMainNewsFeed(); if(typeof applyFilter==='function') applyFilter(); }
   } catch(_){}
-  // 6. Дата-пикеры: локаль календаря + плейсхолдеры (после возможной перерисовки фильтр-бара)
+  // 7. Дата-пикеры: локаль календаря + плейсхолдеры (после возможной перерисовки фильтр-бара)
   try { if(typeof _applyDatePickerLang==='function') _applyDatePickerLang(lang); } catch(_){}
 }
 
@@ -5133,6 +5152,66 @@ const KGS_TYPES = {
 };
 const KGS_TYPE_ORDER = ['forest','nedra','waste','land_seizure'];
 
+// ── KZ-локализация модуля КГС: точечные переводы ru→kz; в ru возвращаем строку как есть.
+const KGS_KZ = {
+  // Type labels
+  'Все типы':'Барлық түрлері','Лесные рубки':'Орман қиюы','Карьеры':'Карьерлер','Свалки':'Қоқыс үйінділері','Самозахваты':'Жерді басып алу',
+  // KPI labels
+  'Рубок всего':'Барлық қиюлар','Из них незаконные':'Соның ішінде заңсыз','Площадь незаконных':'Заңсыздардың ауданы','Лесхозов охвачено':'Орман шаруашылықтары қамтылды',
+  'Карьеров всего':'Барлық карьерлер','Новых':'Жаңалары','Исторических':'Тарихи','Суммарная площадь':'Жалпы ауданы',
+  'Свалок всего':'Барлық үйінділер','Утилизировано':'Кәдеге жаратылды','Не утилизировано':'Кәдеге жаратылмаған','% утилизации':'Кәдеге жарату %',
+  'Самозахватов всего':'Барлық басып алулар','В 2025':'2025 жылы','В 2024':'2024 жылы','Городов охвачено':'Қалалар қамтылды',
+  'участков':'учаскелер','требует контроля':'бақылауды талап етеді','появившиеся':'пайда болғандар','от решённых':'шешілгендерден',
+  // Hero & badges
+  'Требует контроля':'Бақылауды талап етеді','Требует действий':'Әрекетті талап етеді','Спутниковый мониторинг':'Спутниктік мониторинг',
+  'незаконных рубок':'заңсыз қиюлар','новых карьеров':'жаңа карьерлер','выявлено':'анықталды','свалок не утилизировано':'қоқыс үйінділері кәдеге жаратылмаған',
+  'самозахватов в 2025':'2025 ж. жерді басып алулар','нарушений':'бұзушылықтар','выявлено космическим мониторингом КГС':'ҚҒС спутниктік мониторингімен анықталды',
+  'площадь':'ауданы','от всех выявленных':'барлық анықталғандардан','от выявленных требуют действий':'анықталғандардан әрекетті талап етеді','к 2024':'2024 ж. қарағанда',
+  'Лесные рубки — космический мониторинг КГС':'Орман қиюлары — ҚҒС спутниктік мониторингі',
+  'Горные работы и недропользование':'Тау-кен жұмыстары және жер қойнауын пайдалану',
+  'Несанкционированные свалки':'Рұқсатсыз қоқыс үйінділері',
+  'Самозахваты земель (привязка к городам)':'Жерді басып алу (қалаларға байланыс)',
+  'КГС — Қазақстан Ғарыш Сапары':'ҚҒС — Қазақстан Ғарыш Сапары',
+  // Coverage note
+  'Период:':'Кезең:','городов':'қалалар','регионов':'өңірлер','объектов':'нысандар',
+  'Космический мониторинг лесных рубок. Гранулярность — год.':'Орман қиюларының спутниктік мониторингі. Гранулярлық — жыл.',
+  'Космический мониторинг карьеров и недропользования. Все регионы.':'Карьерлер мен жер қойнауын пайдаланудың спутниктік мониторингі. Барлық өңірлер.',
+  'Несанкционированные свалки, выявленные со спутника. Все регионы.':'Серіктен анықталған рұқсатсыз қоқыс үйінділері. Барлық өңірлер.',
+  'Самозахваты земель — короткий период наблюдения (2024-2025), привязка к городам.':'Жерді басып алу — қысқа бақылау кезеңі (2024-2025), қалаларға байланыс.',
+  'Данные космического мониторинга КГС по 4 типам нарушений (2018–2025). Единое временное измерение — год.':'4 түрлі бұзушылықтар бойынша ҚҒС спутниктік мониторинг деректері (2018–2025). Бірыңғай уақыт өлшемі — жыл.',
+  // Chart titles
+  'Динамика по годам':'Жылдар бойынша динамика','Категории':'Санаттар','Распределение по типам':'Түрлер бойынша таралу',
+  'Законные vs незаконные':'Заңды vs заңсыз','Класс карьеров':'Карьерлер класы','Виды отходов':'Қалдық түрлері','Тип нарушения':'Бұзушылық түрі',
+  'Статусы утилизации':'Кәдеге жарату мәртебелері','По регионам':'Өңірлер бойынша',
+  // Year chart datasets
+  'Законные':'Заңды','Незаконные':'Заңсыз','Прочее':'Басқалары',
+  // Status block
+  'Частная территория':'Жеке аумақ','Отсутствует':'Жоқ','Статус не указан':'Мәртебе көрсетілмеген',
+  // Chip prefixes
+  'Тип: ':'Түрі: ','Год: ':'Жыл: ','Регион: ':'Өңір: ','Законность: ':'Заңдылық: ','Класс: ':'Класы: ','Вид: ':'Түрі: ','Статус: ':'Мәртебесі: ','Тип нар.: ':'Бұзу түрі: ',
+  // Table
+  'Детальный список объектов':'Нысандардың толық тізімі','Детальный список · ':'Толық тізім · ','все типы':'барлық түрлер',
+  'Год':'Жыл','Регион':'Өңір','Лесхоз':'Орман шаруашылығы','Законность':'Заңдылық','Площадь, га':'Ауданы, га','Объём, м³':'Көлемі, м³',
+  'Класс':'Класы','Широта':'Ендік','Долгота':'Бойлық','Район':'Аудан','Вид':'Түрі','Статус':'Мәртебесі','Организация':'Ұйым',
+  'Город':'Қала','Тип':'Түрі','Объект':'Нысан','Категория':'Санат',
+  'Поиск…':'Іздеу…','Нет данных':'Деректер жоқ','записей · стр.':'жазба · бет','Все регионы':'Барлық өңірлер',
+  // Map popup & tooltip
+  'Объектов:':'Нысандар:','Клик — фильтр':'Басу — сүзгі',
+  // Subcategory option values (drop-down spec-filters + donut/year legends)
+  'Законная':'Заңды','Незаконная':'Заңсыз','Не указан':'Көрсетілмеген',
+  'Историческая без изменений площади':'Ауданы өзгеріссіз тарихи','Историческая с изменениями площади':'Ауданы өзгерген тарихи',
+  'Появившиеся в этом году':'Биыл пайда болғандары',
+  'Твердые бытовые отходы (ТБО)':'Тұрмыстық қатты қалдықтар (ТҚҚ)','Другое':'Басқа',
+  'Полигон строительных отходов':'Құрылыс қалдықтарының полигоны','Полигон промышленных отходов':'Өнеркәсіп қалдықтарының полигоны',
+  'Объект строительства':'Құрылыс нысаны','ЗУ с нарушением границ':'Шекаралары бұзылған жер учаскесі','Выход за пределы территории':'Аумақтан тыс шығу',
+  // Filter labels
+  'Все':'Барлығы',
+};
+function _kgsT(s){
+  if(typeof curLang === 'undefined' || curLang !== 'kz') return s;
+  return KGS_KZ[s] || s;
+}
+
 let KGS_FACTS = [];
 let KGS_META = {};
 let _kgsLoaded = false, _kgsLoading = false;
@@ -5183,9 +5262,9 @@ function populateKgsYearRegion(){
   const years=[...new Set(scope.map(f=>f.year).filter(Boolean))].sort((a,b)=>b-a);
   const regions=[...new Set(scope.map(f=>f.region).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
   const y=document.getElementById('kgsFltYear');
-  if(y){ y.innerHTML='<option value="">Все</option>'+years.map(v=>`<option value="${v}">${v}</option>`).join(''); y.value=kgsFilters.year||''; }
+  if(y){ y.innerHTML='<option value="">'+_kgsT('Все')+'</option>'+years.map(v=>`<option value="${v}">${v}</option>`).join(''); y.value=kgsFilters.year||''; }
   const r=document.getElementById('kgsFltRegion');
-  if(r){ r.innerHTML='<option value="">Все регионы</option>'+regions.map(v=>`<option value="${_kgsEsc(v)}">${_kgsEsc(v)}</option>`).join(''); r.value=kgsFilters.region||''; }
+  if(r){ r.innerHTML='<option value="">'+_kgsT('Все регионы')+'</option>'+regions.map(v=>`<option value="${_kgsEsc(v)}">${_kgsEsc(tRegion(v))}</option>`).join(''); r.value=kgsFilters.region||''; }
 }
 
 function getFilteredKgsFacts(){
@@ -5227,21 +5306,21 @@ function renderKgsSpecificFilters(type){
   const scope=KGS_FACTS.filter(f=>f.type===type);
   const dis=(key)=>[...new Set(scope.map(f=>f[key]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru'));
   const sep='<span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>';
-  const mk=(label,key,opts)=>sep+`<span class="nbd-fltbar-sub">${label}</span><select onchange="_onKgsSpec('${key}',this.value)"><option value="">Все</option>`+opts.map(o=>`<option value="${_kgsEsc(o)}" ${kgsFilters[key]===o?'selected':''}>${_kgsEsc(o)}</option>`).join('')+'</select>';
+  const mk=(label,key,opts)=>sep+`<span class="nbd-fltbar-sub">${label}</span><select onchange="_onKgsSpec('${key}',this.value)"><option value="">${_kgsT('Все')}</option>`+opts.map(o=>`<option value="${_kgsEsc(o)}" ${kgsFilters[key]===o?'selected':''}>${_kgsEsc(_kgsT(o))}</option>`).join('')+'</select>';
   let h='';
-  if(type==='forest') h=mk('Законность','forestLegal',dis('subcategory'));
-  else if(type==='nedra') h=mk('Класс','nedraClass',dis('subcategory'));
-  else if(type==='waste') h=mk('Вид','wasteType',dis('subcategory'))+mk('Статус','wasteStatus',[...new Set(scope.map(f=>f.status).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')));
-  else if(type==='land_seizure') h=mk('Тип','seizureResult',dis('subcategory'));
+  if(type==='forest') h=mk(_kgsT('Законность'),'forestLegal',dis('subcategory'));
+  else if(type==='nedra') h=mk(_kgsT('Класс'),'nedraClass',dis('subcategory'));
+  else if(type==='waste') h=mk(_kgsT('Вид'),'wasteType',dis('subcategory'))+mk(_kgsT('Статус'),'wasteStatus',[...new Set(scope.map(f=>f.status).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')));
+  else if(type==='land_seizure') h=mk(_kgsT('Тип'),'seizureResult',dis('subcategory'));
   host.innerHTML=h;
 }
 
 function renderKgsCoverageNote(type){
   const el=document.getElementById('kgsCoverageNote'); if(!el) return;
-  if(type==='all'){ el.innerHTML='ℹ️ Данные космического мониторинга КГС по 4 типам нарушений (2018–2025). Единое временное измерение — год.'; return; }
+  if(type==='all'){ el.innerHTML='ℹ️ '+_kgsT('Данные космического мониторинга КГС по 4 типам нарушений (2018–2025). Единое временное измерение — год.'); return; }
   const m=KGS_META[type]||{};
-  const geo = m.cities ? `${m.cities} городов` : `${m.regions} регионов`;
-  el.innerHTML=`ℹ️ <b>Период:</b> ${m.period} · ${geo} · ${_kgsFmt(m.rows)} объектов. ${m.note||''}`;
+  const geo = m.cities ? `${m.cities} ${_kgsT('городов')}` : `${m.regions} ${_kgsT('регионов')}`;
+  el.innerHTML=`ℹ️ <b>${_kgsT('Период:')}</b> ${m.period} · ${geo} · ${_kgsFmt(m.rows)} ${_kgsT('объектов')}. ${_kgsT(m.note||'')}`;
 }
 
 function renderKgsHero(type, facts){
@@ -5252,28 +5331,28 @@ function renderKgsHero(type, facts){
   if(type==='forest'){
     const ill=facts.filter(f=>f.subcategory==='Незаконная'); const area=ill.reduce((s,f)=>s+(f.area||0),0);
     cls('nbd-alert-critical');
-    main.innerHTML=`🔴 <b>${_kgsFmt(ill.length)} незаконных рубок</b> · площадь ${area.toFixed(1)} га · ${facts.length?(ill.length/facts.length*100).toFixed(1):0}% от всех выявленных`;
-    det.innerHTML='Лесные рубки — космический мониторинг КГС'; badge.textContent='⚠️ Требует контроля';
+    main.innerHTML=`🔴 <b>${_kgsFmt(ill.length)} ${_kgsT('незаконных рубок')}</b> · ${_kgsT('площадь')} ${area.toFixed(1)} ${_kgsT('га')||'га'} · ${facts.length?(ill.length/facts.length*100).toFixed(1):0}% ${_kgsT('от всех выявленных')}`;
+    det.innerHTML=_kgsT('Лесные рубки — космический мониторинг КГС'); badge.textContent='⚠️ '+_kgsT('Требует контроля');
   } else if(type==='nedra'){
     const nw=facts.filter(f=>f.subcategory==='Появившиеся в этом году'); const area=nw.reduce((s,f)=>s+(f.area||0),0);
     cls('nbd-alert-warning');
-    main.innerHTML=`⚠️ <b>${_kgsFmt(nw.length)} новых карьеров</b> выявлено · площадь ${area.toFixed(1)} га`;
-    det.innerHTML='Горные работы и недропользование'; badge.textContent='⚠️ Требует контроля';
+    main.innerHTML=`⚠️ <b>${_kgsFmt(nw.length)} ${_kgsT('новых карьеров')}</b> ${_kgsT('выявлено')} · ${_kgsT('площадь')} ${area.toFixed(1)} ${_kgsT('га')||'га'}`;
+    det.innerHTML=_kgsT('Горные работы и недропользование'); badge.textContent='⚠️ '+_kgsT('Требует контроля');
   } else if(type==='waste'){
     const nu=facts.filter(f=>f.status==='Не утилизирован');
     cls('nbd-alert-critical');
-    main.innerHTML=`🔴 <b>${_kgsFmt(nu.length)} свалок не утилизировано</b> · ${facts.length?(nu.length/facts.length*100).toFixed(1):0}% от выявленных требуют действий`;
-    det.innerHTML='Несанкционированные свалки'; badge.textContent='⚠️ Требует действий';
+    main.innerHTML=`🔴 <b>${_kgsFmt(nu.length)} ${_kgsT('свалок не утилизировано')}</b> · ${facts.length?(nu.length/facts.length*100).toFixed(1):0}% ${_kgsT('от выявленных требуют действий')}`;
+    det.innerHTML=_kgsT('Несанкционированные свалки'); badge.textContent='⚠️ '+_kgsT('Требует действий');
   } else if(type==='land_seizure'){
     const y25=facts.filter(f=>f.year===2025).length, y24=facts.filter(f=>f.year===2024).length;
     const gr=y24?Math.round((y25-y24)/y24*100):0;
     cls('nbd-alert-warning');
-    main.innerHTML=`⚠️ <b>${_kgsFmt(y25)} самозахватов в 2025</b> · к 2024 (${_kgsFmt(y24)}) ${gr>0?'+':''}${gr}%`;
-    det.innerHTML='Самозахваты земель (привязка к городам)'; badge.textContent='⚠️ Требует контроля';
+    main.innerHTML=`⚠️ <b>${_kgsFmt(y25)} ${_kgsT('самозахватов в 2025')}</b> · ${_kgsT('к 2024')} (${_kgsFmt(y24)}) ${gr>0?'+':''}${gr}%`;
+    det.innerHTML=_kgsT('Самозахваты земель (привязка к городам)'); badge.textContent='⚠️ '+_kgsT('Требует контроля');
   } else {
     cls('nbd-alert-info');
-    main.innerHTML=`📊 <b>${_kgsFmt(facts.length)} нарушений</b> выявлено космическим мониторингом КГС`;
-    det.innerHTML='КГС — Қазақстан Ғарыш Сапары'; badge.textContent='Спутниковый мониторинг';
+    main.innerHTML=`📊 <b>${_kgsFmt(facts.length)} ${_kgsT('нарушений')}</b> ${_kgsT('выявлено космическим мониторингом КГС')}`;
+    det.innerHTML=_kgsT('КГС — Қазақстан Ғарыш Сапары'); badge.textContent=_kgsT('Спутниковый мониторинг');
   }
 }
 
@@ -5286,25 +5365,25 @@ function _kgsRenderKpis(type, facts){
   if(type==='forest'){
     const ill=facts.filter(x=>x.subcategory==='Незаконная'); const area=ill.reduce((s,x)=>s+(x.area||0),0);
     const lh=new Set(facts.map(x=>x.aux).filter(Boolean)).size;
-    h=_kgsKpi('Рубок всего',f(facts.length),'участков')+_kgsKpi('Из них незаконные',f(ill.length),'требует контроля','#dc2626')+
-      _kgsKpi('Площадь незаконных',area.toFixed(1)+' га','','#dc2626')+_kgsKpi('Лесхозов охвачено',f(lh),'');
+    h=_kgsKpi(_kgsT('Рубок всего'),f(facts.length),_kgsT('участков'))+_kgsKpi(_kgsT('Из них незаконные'),f(ill.length),_kgsT('требует контроля'),'#dc2626')+
+      _kgsKpi(_kgsT('Площадь незаконных'),area.toFixed(1)+' га','','#dc2626')+_kgsKpi(_kgsT('Лесхозов охвачено'),f(lh),'');
   } else if(type==='nedra'){
     const nw=facts.filter(x=>x.subcategory==='Появившиеся в этом году').length; const area=facts.reduce((s,x)=>s+(x.area||0),0);
-    h=_kgsKpi('Карьеров всего',f(facts.length),'')+_kgsKpi('Новых',f(nw),'появившиеся','#d97706')+
-      _kgsKpi('Исторических',f(facts.length-nw),'')+_kgsKpi('Суммарная площадь',f(Math.round(area))+' га','');
+    h=_kgsKpi(_kgsT('Карьеров всего'),f(facts.length),'')+_kgsKpi(_kgsT('Новых'),f(nw),_kgsT('появившиеся'),'#d97706')+
+      _kgsKpi(_kgsT('Исторических'),f(facts.length-nw),'')+_kgsKpi(_kgsT('Суммарная площадь'),f(Math.round(area))+' га','');
   } else if(type==='waste'){
     const util=facts.filter(x=>x.status==='Утилизирован').length, nu=facts.filter(x=>x.status==='Не утилизирован').length;
     const dec=util+nu, pct=dec?Math.round(util/dec*100):0;
-    h=_kgsKpi('Свалок всего',f(facts.length),'')+_kgsKpi('Утилизировано',f(util),'','#16a34a')+
-      _kgsKpi('Не утилизировано',f(nu),'','#dc2626')+_kgsKpi('% утилизации',pct+'%','от решённых');
+    h=_kgsKpi(_kgsT('Свалок всего'),f(facts.length),'')+_kgsKpi(_kgsT('Утилизировано'),f(util),'','#16a34a')+
+      _kgsKpi(_kgsT('Не утилизировано'),f(nu),'','#dc2626')+_kgsKpi(_kgsT('% утилизации'),pct+'%',_kgsT('от решённых'));
   } else if(type==='land_seizure'){
     const y25=facts.filter(x=>x.year===2025).length, y24=facts.filter(x=>x.year===2024).length;
     const cities=new Set(facts.map(x=>x.aux).filter(Boolean)).size;
-    h=_kgsKpi('Самозахватов всего',f(facts.length),'')+_kgsKpi('В 2025',f(y25),'','#d97706')+
-      _kgsKpi('В 2024',f(y24),'')+_kgsKpi('Городов охвачено',f(cities),'');
+    h=_kgsKpi(_kgsT('Самозахватов всего'),f(facts.length),'')+_kgsKpi(_kgsT('В 2025'),f(y25),'','#d97706')+
+      _kgsKpi(_kgsT('В 2024'),f(y24),'')+_kgsKpi(_kgsT('Городов охвачено'),f(cities),'');
   } else {
     h=KGS_TYPE_ORDER.map(t=>{ const cnt=facts.filter(x=>x.type===t).length, c=KGS_TYPES[t];
-      return `<div class="kpi" style="cursor:pointer" onclick="setKgsType('${t}')"><div class="kpi-lbl">${c.icon} ${c.label}</div><div class="kpi-val" style="color:${c.color}">${f(cnt)}</div><div class="kpi-d nu">${(KGS_META[t]||{}).period||''}</div></div>`;
+      return `<div class="kpi" style="cursor:pointer" onclick="setKgsType('${t}')"><div class="kpi-lbl">${c.icon} ${_kgsT(c.label)}</div><div class="kpi-val" style="color:${c.color}">${f(cnt)}</div><div class="kpi-d nu">${(KGS_META[t]||{}).period||''}</div></div>`;
     }).join('');
   }
   host.style.gridTemplateColumns='repeat(4,1fr)';
@@ -5317,10 +5396,10 @@ function renderKgsByRegion(facts){
   const rows=Object.entries(by).sort((a,b)=>b[1]-a[1]); const max=rows.length?rows[0][1]:1;
   const color=KGS_TYPES[kgsFilters.type].color;
   host.innerHTML=rows.map(([reg,cnt])=>`<div class="kgs-reg-row${kgsFilters.region===reg?' sel':''}" onclick="_kgsRegionClick('${_kgsApos(reg)}')">
-    <span style="flex:0 0 132px;font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_kgsEsc(reg)}</span>
+    <span style="flex:0 0 132px;font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_kgsEsc(tRegion(reg))}</span>
     <span class="kgs-reg-bar"><span style="width:${(cnt/max*100).toFixed(1)}%;background:${color}"></span></span>
     <span style="flex:0 0 auto;font-size:11px;font-weight:600;color:var(--text)">${_kgsFmt(cnt)}</span></div>`).join('')
-    || '<div style="font-size:11px;color:var(--text3);padding:8px">Нет данных</div>';
+    || '<div style="font-size:11px;color:var(--text3);padding:8px">'+_kgsT('Нет данных')+'</div>';
 }
 function _kgsRegionClick(reg){
   kgsFilters.region=(kgsFilters.region===reg)?null:reg;
@@ -5336,20 +5415,20 @@ function renderKgsYearChart(facts){
   const cnt=(yr,pred)=>facts.filter(f=>f.year===yr&&pred(f)).length;
   let datasets, stacked=false;
   if(type==='forest'){ stacked=true; datasets=[
-    {label:'Законные',data:years.map(y=>cnt(y,f=>f.subcategory==='Законная')),backgroundColor:'#2E7D32',stack:'s'},
-    {label:'Незаконные',data:years.map(y=>cnt(y,f=>f.subcategory==='Незаконная')),backgroundColor:'#dc2626',stack:'s'}]; }
+    {label:_kgsT('Законные'),data:years.map(y=>cnt(y,f=>f.subcategory==='Законная')),backgroundColor:'#2E7D32',stack:'s'},
+    {label:_kgsT('Незаконные'),data:years.map(y=>cnt(y,f=>f.subcategory==='Незаконная')),backgroundColor:'#dc2626',stack:'s'}]; }
   else if(type==='waste'){ stacked=true; datasets=[
-    {label:'Утилизировано',data:years.map(y=>cnt(y,f=>f.status==='Утилизирован')),backgroundColor:'#16a34a',stack:'s'},
-    {label:'Не утилизировано',data:years.map(y=>cnt(y,f=>f.status==='Не утилизирован')),backgroundColor:'#dc2626',stack:'s'},
-    {label:'Прочее',data:years.map(y=>cnt(y,f=>f.status!=='Утилизирован'&&f.status!=='Не утилизирован')),backgroundColor:'#cbd5e1',stack:'s'}]; }
-  else if(type==='all'){ stacked=true; datasets=KGS_TYPE_ORDER.map(t=>({label:KGS_TYPES[t].label,data:years.map(y=>cnt(y,f=>f.type===t)),backgroundColor:KGS_TYPES[t].color,stack:'s'})); }
-  else datasets=[{label:KGS_TYPES[type].label,data:years.map(y=>facts.filter(f=>f.year===y).length),backgroundColor:KGS_TYPES[type].color}];
+    {label:_kgsT('Утилизировано'),data:years.map(y=>cnt(y,f=>f.status==='Утилизирован')),backgroundColor:'#16a34a',stack:'s'},
+    {label:_kgsT('Не утилизировано'),data:years.map(y=>cnt(y,f=>f.status==='Не утилизирован')),backgroundColor:'#dc2626',stack:'s'},
+    {label:_kgsT('Прочее'),data:years.map(y=>cnt(y,f=>f.status!=='Утилизирован'&&f.status!=='Не утилизирован')),backgroundColor:'#cbd5e1',stack:'s'}]; }
+  else if(type==='all'){ stacked=true; datasets=KGS_TYPE_ORDER.map(t=>({label:_kgsT(KGS_TYPES[t].label),data:years.map(y=>cnt(y,f=>f.type===t)),backgroundColor:KGS_TYPES[t].color,stack:'s'})); }
+  else datasets=[{label:_kgsT(KGS_TYPES[type].label),data:years.map(y=>facts.filter(f=>f.year===y).length),backgroundColor:KGS_TYPES[type].color}];
   _kgsC.year=new Chart(ctx,{type:'bar',data:{labels:years,datasets},options:{
     responsive:true,maintainAspectRatio:false,
     plugins:{legend:{display:datasets.length>1,position:'bottom',labels:{font:{size:10},color:'#6b7280',boxWidth:10,padding:8}},
       datalabels:{display:!stacked,anchor:'end',align:'end',color:'#374151',font:{size:9,weight:'600'},formatter:v=>v>0?_kgsFmt(v):''}},
     scales:{x:{stacked,grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}},y:{stacked,grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:9},color:'#9ca3af'}}}}});
-  const t=document.getElementById('kgsYearTitle'); if(t) t.textContent='Динамика по годам'+(type==='all'?'':' · '+KGS_TYPES[type].label);
+  const t=document.getElementById('kgsYearTitle'); if(t) t.textContent=_kgsT('Динамика по годам')+(type==='all'?'':' · '+_kgsT(KGS_TYPES[type].label));
 }
 
 function renderKgsSubChart(type, facts){
@@ -5357,19 +5436,19 @@ function renderKgsSubChart(type, facts){
   if(_kgsC.sub){ _kgsC.sub.destroy(); _kgsC.sub=null; }
   let map={}, palette, titleTxt;
   if(type==='all'){ KGS_TYPE_ORDER.forEach(t=>{ map[KGS_TYPES[t].label]=facts.filter(f=>f.type===t).length; });
-    palette=KGS_TYPE_ORDER.map(t=>KGS_TYPES[t].color); titleTxt='Распределение по типам'; }
+    palette=KGS_TYPE_ORDER.map(t=>KGS_TYPES[t].color); titleTxt=_kgsT('Распределение по типам'); }
   else { facts.forEach(f=>{ const k=f.subcategory||'—'; map[k]=(map[k]||0)+1; });
     palette=['#1B7A3A','#dc2626','#d97706','#7c3aed','#0891B2','#16a34a','#9ca3af'];
-    titleTxt = type==='forest'?'Законные vs незаконные':type==='nedra'?'Класс карьеров':type==='waste'?'Виды отходов':'Тип нарушения'; }
+    titleTxt = _kgsT(type==='forest'?'Законные vs незаконные':type==='nedra'?'Класс карьеров':type==='waste'?'Виды отходов':'Тип нарушения'); }
   const entries=Object.entries(map).sort((a,b)=>b[1]-a[1]);
-  const labels=entries.map(e=>e[0]), data=entries.map(e=>e[1]), bg=labels.map((_,i)=>palette[i%palette.length]);
+  const labels=entries.map(e=>_kgsT(e[0])), data=entries.map(e=>e[1]), bg=labels.map((_,i)=>palette[i%palette.length]);
   _kgsC.sub=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:bg,borderWidth:2,borderColor:'#fff'}]},options:{
     responsive:true,maintainAspectRatio:false,cutout:'60%',
     plugins:{legend:{display:false},datalabels:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+_kgsFmt(c.raw)}}}}});
   const tEl=document.getElementById('kgsSubTitle'); if(tEl) tEl.textContent=titleTxt;
   const total=data.reduce((s,v)=>s+v,0)||1;
   const leg=document.getElementById('kgsSubLegend');
-  if(leg) leg.innerHTML=entries.map((e,i)=>`<div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="_kgsSubClick('${_kgsApos(e[0])}')"><span style="width:10px;height:10px;border-radius:2px;background:${bg[i]};flex-shrink:0"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_kgsEsc(e[0])}</span><b>${_kgsFmt(e[1])}</b> <span style="color:var(--text3)">(${(e[1]/total*100).toFixed(1)}%)</span></div>`).join('');
+  if(leg) leg.innerHTML=entries.map((e,i)=>`<div style="display:flex;align-items:center;gap:6px;cursor:pointer" onclick="_kgsSubClick('${_kgsApos(e[0])}')"><span style="width:10px;height:10px;border-radius:2px;background:${bg[i]};flex-shrink:0"></span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${_kgsEsc(_kgsT(e[0]))}</span><b>${_kgsFmt(e[1])}</b> <span style="color:var(--text3)">(${(e[1]/total*100).toFixed(1)}%)</span></div>`).join('');
 }
 function _kgsSubClick(val){
   const type=kgsFilters.type;
@@ -5391,7 +5470,7 @@ function renderKgsStatus(type, facts){
   const entries=Object.entries(by).sort((a,b)=>rank(a[0])-rank(b[0]));
   const total=facts.length||1;
   list.innerHTML=entries.map(([st,c])=>`<div class="kgs-status-row${kgsFilters.wasteStatus===st?' sel':''}" onclick="_kgsStatusClick('${_kgsApos(st)}')">
-    <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:${colors[st]||'#9ca3af'}"></span>${_kgsEsc(st)}</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:${colors[st]||'#9ca3af'}"></span>${_kgsEsc(_kgsT(st))}</span>
     <span><b>${_kgsFmt(c)}</b> <span style="color:var(--text3);font-size:10px">(${(c/total*100).toFixed(1)}%)</span></span></div>`).join('');
 }
 function _kgsStatusClick(st){ kgsFilters.wasteStatus=(kgsFilters.wasteStatus===st)?null:st; renderKgsSpecificFilters('waste'); rerenderKgs(); }
@@ -5399,14 +5478,14 @@ function _kgsStatusClick(st){ kgsFilters.wasteStatus=(kgsFilters.wasteStatus===s
 function renderKgsChips(){
   const host=document.getElementById('kgsChips'); if(!host) return;
   const F=kgsFilters; const chips=[];
-  if(F.type!=='all') chips.push(['Тип: '+KGS_TYPES[F.type].label,()=>{ F.type='all'; F.forestLegal=F.nedraClass=F.wasteType=F.wasteStatus=F.seizureResult=null; document.querySelectorAll('.kgs-type-btn').forEach(b=>b.classList.toggle('active',b.dataset.type==='all')); populateKgsYearRegion(); }]);
-  if(F.year) chips.push(['Год: '+F.year,()=>{F.year=null;}]);
-  if(F.region) chips.push(['Регион: '+F.region,()=>{F.region=null;}]);
-  if(F.forestLegal) chips.push(['Законность: '+F.forestLegal,()=>{F.forestLegal=null;}]);
-  if(F.nedraClass) chips.push(['Класс: '+F.nedraClass,()=>{F.nedraClass=null;}]);
-  if(F.wasteType) chips.push(['Вид: '+F.wasteType,()=>{F.wasteType=null;}]);
-  if(F.wasteStatus) chips.push(['Статус: '+F.wasteStatus,()=>{F.wasteStatus=null;}]);
-  if(F.seizureResult) chips.push(['Тип нар.: '+F.seizureResult,()=>{F.seizureResult=null;}]);
+  if(F.type!=='all') chips.push([_kgsT('Тип: ')+_kgsT(KGS_TYPES[F.type].label),()=>{ F.type='all'; F.forestLegal=F.nedraClass=F.wasteType=F.wasteStatus=F.seizureResult=null; document.querySelectorAll('.kgs-type-btn').forEach(b=>b.classList.toggle('active',b.dataset.type==='all')); populateKgsYearRegion(); }]);
+  if(F.year) chips.push([_kgsT('Год: ')+F.year,()=>{F.year=null;}]);
+  if(F.region) chips.push([_kgsT('Регион: ')+tRegion(F.region),()=>{F.region=null;}]);
+  if(F.forestLegal) chips.push([_kgsT('Законность: ')+_kgsT(F.forestLegal),()=>{F.forestLegal=null;}]);
+  if(F.nedraClass) chips.push([_kgsT('Класс: ')+_kgsT(F.nedraClass),()=>{F.nedraClass=null;}]);
+  if(F.wasteType) chips.push([_kgsT('Вид: ')+_kgsT(F.wasteType),()=>{F.wasteType=null;}]);
+  if(F.wasteStatus) chips.push([_kgsT('Статус: ')+_kgsT(F.wasteStatus),()=>{F.wasteStatus=null;}]);
+  if(F.seizureResult) chips.push([_kgsT('Тип нар.: ')+_kgsT(F.seizureResult),()=>{F.seizureResult=null;}]);
   window._kgsChipActions=chips.map(c=>c[1]);
   host.innerHTML=chips.map((c,i)=>`<span class="fchip">${_kgsEsc(c[0])}<span class="fchip-x" onclick="_kgsChipClear(${i})">✕</span></span>`).join('');
 }
@@ -5446,7 +5525,7 @@ function rerenderKgsMap(facts){
     const reg=layer._kgsReg||''; const cnt=by[reg]||0; const sel=kgsFilters.region===reg;
     layer.setStyle({fillColor: cnt?_kgsShade(color,cnt/max):'#f5f5f5', fillOpacity: cnt?0.7:0.15, weight: sel?3:1.2, color: sel?'#0d4d24':'#1B7A3A'});
     layer.unbindTooltip();
-    layer.bindTooltip(`<div style="font-weight:600">${_kgsEsc(reg)}</div><div>Объектов: ${_kgsFmt(cnt)}</div><hr style="margin:4px 0;opacity:.3"><div style="font-size:10px;color:#666">Клик — фильтр</div>`,{sticky:true});
+    layer.bindTooltip(`<div style="font-weight:600">${_kgsEsc(tRegion(reg))}</div><div>${_kgsT('Объектов:')} ${_kgsFmt(cnt)}</div><hr style="margin:4px 0;opacity:.3"><div style="font-size:10px;color:#666">${_kgsT('Клик — фильтр')}</div>`,{sticky:true});
   });
   if(_kgsPointsLayer){
     _kgsPointsLayer.clearLayers();
@@ -5464,11 +5543,11 @@ function kgsTogglePoints(on){
   else _kgsMap.removeLayer(_kgsPointsLayer);
 }
 function _kgsPopup(f){
-  const t=KGS_TYPES[f.type]; const L2=[`<b>${t.icon} ${t.label}</b>`,`Регион: ${_kgsEsc(f.region||'—')}`,`Год: ${f.year||'—'}`];
-  if(f.subcategory) L2.push(_kgsEsc(f.subcategory));
-  if(f.status) L2.push('Статус: '+_kgsEsc(f.status));
-  if(f.area) L2.push('Площадь: '+f.area+' га');
-  if(f.type==='land_seizure'&&f.aux) L2.push('Город: '+_kgsEsc(f.aux));
+  const t=KGS_TYPES[f.type]; const L2=[`<b>${t.icon} ${_kgsT(t.label)}</b>`,`${_kgsT('Регион')}: ${_kgsEsc(tRegion(f.region)||'—')}`,`${_kgsT('Год')}: ${f.year||'—'}`];
+  if(f.subcategory) L2.push(_kgsEsc(_kgsT(f.subcategory)));
+  if(f.status) L2.push(_kgsT('Статус')+': '+_kgsEsc(_kgsT(f.status)));
+  if(f.area) L2.push(_kgsT('Площадь, га').replace(/, га$/,'')+': '+f.area+' га');
+  if(f.type==='land_seizure'&&f.aux) L2.push(_kgsT('Город')+': '+_kgsEsc(f.aux));
   return L2.join('<br>');
 }
 
@@ -5480,17 +5559,19 @@ const KGS_TBL_COLS = {
 };
 function _kgsTblColsFor(type){ return type==='all' ? [['type','Тип'],['year','Год'],['region','Регион'],['subcategory','Категория'],['status','Статус'],['area','Площадь, га']] : KGS_TBL_COLS[type]; }
 function _kgsCell(f,key){
-  if(key==='type') return KGS_TYPES[f.type].icon+' '+KGS_TYPES[f.type].label;
+  if(key==='type') return KGS_TYPES[f.type].icon+' '+_kgsT(KGS_TYPES[f.type].label);
   const v=f[key]; if(v==null||v==='') return '—';
   if(key==='lat'||key==='lng') return (+v).toFixed(5);
   if(key==='area') return (+v).toFixed(3);
   if(key==='volume') return _kgsFmt(Math.round(v));
+  if(key==='region') return tRegion(v);
+  if(key==='subcategory' || key==='status') return _kgsT(v);
   return v;
 }
 function renderKgsTable(type, facts){
   _kgsTblState.cols=_kgsTblColsFor(type); _kgsTblState.allRows=facts;
   _kgsTblApply();
-  const t=document.getElementById('kgsTableTitle'); if(t) t.textContent='Детальный список · '+(type==='all'?'все типы':KGS_TYPES[type].label);
+  const t=document.getElementById('kgsTableTitle'); if(t) t.textContent=_kgsT('Детальный список · ')+(type==='all'?_kgsT('все типы'):_kgsT(KGS_TYPES[type].label));
 }
 function _kgsTblApply(){
   const st=_kgsTblState; let rows=st.allRows||[];
@@ -5502,12 +5583,12 @@ function _kgsTblApply(){
 }
 function _kgsTblRender(){
   const st=_kgsTblState; const head=document.getElementById('kgsTblHead'), body=document.getElementById('kgsTblBody'); if(!head||!body) return;
-  head.innerHTML='<tr>'+st.cols.map(c=>`<th onclick="kgsTblSort('${c[0]}')">${c[1]}${st.sort===c[0]?(st.dir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr>';
+  head.innerHTML='<tr>'+st.cols.map(c=>`<th onclick="kgsTblSort('${c[0]}')">${_kgsT(c[1])}${st.sort===c[0]?(st.dir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr>';
   const start=st.page*st.size, pageRows=st.rows.slice(start,start+st.size);
   body.innerHTML=pageRows.length?pageRows.map(f=>'<tr>'+st.cols.map(c=>{const v=_kgsCell(f,c[0]);return `<td title="${_kgsEsc(v)}">${_kgsEsc(v)}</td>`;}).join('')+'</tr>').join('')
-    :`<tr><td colspan="${st.cols.length}" style="text-align:center;color:var(--text3);padding:14px">Нет данных</td></tr>`;
+    :`<tr><td colspan="${st.cols.length}" style="text-align:center;color:var(--text3);padding:14px">${_kgsT('Нет данных')}</td></tr>`;
   const info=document.getElementById('kgsTblInfo'); const pages=Math.max(1,Math.ceil(st.rows.length/st.size));
-  if(info) info.textContent=`${_kgsFmt(st.rows.length)} записей · стр. ${st.page+1}/${pages}`;
+  if(info) info.textContent=`${_kgsFmt(st.rows.length)} ${_kgsT('записей · стр.')} ${st.page+1}/${pages}`;
   const pager=document.getElementById('kgsTblPager');
   if(pager) pager.innerHTML=`<button class="kgs-pg-btn" ${st.page<=0?'disabled':''} onclick="kgsTblPage(${st.page-1})">←</button><button class="kgs-pg-btn" ${st.page>=pages-1?'disabled':''} onclick="kgsTblPage(${st.page+1})">→</button>`;
 }
