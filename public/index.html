@@ -1037,9 +1037,13 @@ input[type=file]{display:none}
   <!-- subpanel: iKomek -->
   <div id="subpanel-ikomek" style="display:none">
 
+    <!-- Hero-alert: ВКО-аномалия (показывается когда доля ВКО ≥ 30% от выборки) -->
+    <div id="ikHeroAlert"
+         style="display:none;background:#fef3c7;border:1px solid #fbbf24;border-left:4px solid #d97706;border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:600;color:#92400e"></div>
+
     <!-- KPIs -->
     <div class="kpi-grid" style="margin-bottom:14px;grid-template-columns:repeat(4,1fr)">
-      <div class="kpi"><div class="kpi-lbl">Всего звонков</div><div class="kpi-val" id="ikKpiTotal">16 103</div><div class="kpi-d nu">с 01.04.2019</div></div>
+      <div class="kpi"><div class="kpi-lbl">Всего звонков</div><div class="kpi-val" id="ikKpiTotal">16 103</div><div class="kpi-d nu" id="ikKpiTotalSub">с 01.04.2019</div></div>
       <div class="kpi"><div class="kpi-lbl">Закрыто</div><div class="kpi-val" style="color:#16a34a" id="ikKpiClosed">99.3%</div><div class="kpi-d nu" id="ikKpiClosedAbs">из 16 000</div></div>
       <div class="kpi"><div class="kpi-lbl">Регион-лидер</div><div class="kpi-val" style="font-size:16px" id="ikKpiTopReg">ВКО</div><div class="kpi-d nu" id="ikKpiTopRegPct">77.6% всех звонков</div></div>
       <div class="kpi"><div class="kpi-lbl">Главная тематика</div><div class="kpi-val" style="font-size:13px;line-height:1.2" id="ikKpiTopTheme">Экология</div><div class="kpi-d nu" id="ikKpiTopThemePct">84.9% от всех</div></div>
@@ -1052,15 +1056,27 @@ input[type=file]{display:none}
         <div class="cw" style="height:200px"><canvas id="cIkChar2"></canvas></div>
       </div>
       <div class="card" style="flex:2">
-        <div class="card-title">Тренд звонков по месяцам</div>
+        <div class="card-title">Тренд по месяцам <span style="font-size:10px;font-weight:400;color:var(--text3)">— звонки и жалобы</span></div>
         <div class="cw" style="height:200px"><canvas id="cIkMonthly"></canvas></div>
       </div>
     </div>
 
-    <!-- По регионам -->
+    <!-- По регионам (clickable: клик ставит gReg) -->
     <div class="card" style="margin-bottom:14px;padding:12px">
-      <div class="card-title">Распределение по регионам</div>
+      <div class="card-title">Распределение по регионам <span style="font-size:10px;font-weight:400;color:var(--text3)">— клик ставит фильтр</span></div>
       <div class="cw" style="height:160px"><canvas id="cIkRegion"></canvas></div>
+    </div>
+
+    <!-- Статусы + Категории (новые donut'ы) -->
+    <div class="r2" style="margin-bottom:14px">
+      <div class="card" style="flex:1">
+        <div class="card-title">Статусы звонков</div>
+        <div class="cw" style="height:200px"><canvas id="cIkStatus"></canvas></div>
+      </div>
+      <div class="card" style="flex:1">
+        <div class="card-title">Категории <span style="font-size:10px;font-weight:400;color:var(--text3)">— Обращение / Жалоба / Благодарность</span></div>
+        <div class="cw" style="height:200px"><canvas id="cIkCat"></canvas></div>
+      </div>
     </div>
 
   </div><!-- /subpanel-ikomek -->
@@ -2715,7 +2731,6 @@ function renderApplicantDemo(){
 }
 
 let _cMonthlyChart=null, _cYearDynChart=null;
-let _ikomekMainInited = false;
 
 function switchMainSubTab(id, btn) {
   document.querySelectorAll('#panel-main .subtabs .subtab').forEach(b=>b.classList.remove('active'));
@@ -2725,88 +2740,189 @@ function switchMainSubTab(id, btn) {
     const el=document.getElementById(elId);
     if(el) el.style.display = (k===id) ? '' : 'none';
   });
-  if(id==='ikomek' && !_ikomekMainInited){ renderIkomekMainTab(); _ikomekMainInited=true; }
-  // Ре-рендер при открытии — canvas получает корректный размер только видимым
+  // iKomek-подвкладка реактивна на смену фильтров через _rechartOnFilter().
+  // При открытии — ре-рендер: canvas получает корректный размер только видимым.
+  if(id==='ikomek') renderIkomekMainTab();
   if(id==='speed')   renderClosingSpeed();
   if(id==='profile') renderApplicantDemo();
 }
 
+// Per-call движок подвкладки iKomek: считает агрегаты из _IK под текущие
+// глобальные фильтры. KPI + hero-alert обновляются всегда (даже если панель
+// скрыта — счёт лёгкий). Чарты — только когда #subpanel-ikomek видимый
+// (Chart.js некорректно рендерится в display:none).
 function renderIkomekMainTab(){
-  const ik = _DATA?.summary?.ikomek;
-  if(!ik) return;
-
   const setEl=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  const ru=v=>v.toLocaleString('ru-RU');
+  const subpanel=document.getElementById('subpanel-ikomek');
+  const isVisible = subpanel && subpanel.offsetParent !== null;
 
-  // KPIs
-  const closed = (ik.by_status.find(([s])=>s==='Закрыто')||[,0])[1];
-  const closedPct = ik.total>0 ? (closed/ik.total*100).toFixed(1) : 0;
-  const topReg = Object.entries(ik.by_region).sort((a,b)=>b[1]-a[1])[0] || ['—',0];
-  const topChar = ik.by_character[0] || ['—',0];
-  const topCharPct = ik.total>0 ? (topChar[1]/ik.total*100).toFixed(1) : 0;
-  const regShort = topReg[0].replace('Восточно-Казахстанская область','ВКО').replace(' область','').replace('область ','').replace('город ','г. ').trim();
+  // Fallback пока _IK не загрузился — старые baseline-агрегаты
+  if(!_IK){
+    const ik = _DATA?.summary?.ikomek;
+    if(!ik) return;
+    setEl('ikKpiTotal', ru(ik.total));
+    const closed = (ik.by_status.find(([s])=>s==='Закрыто')||[,0])[1];
+    setEl('ikKpiClosed', ik.total>0 ? (closed/ik.total*100).toFixed(1)+'%' : '—');
+    setEl('ikKpiClosedAbs', 'из '+ru(closed));
+    const topReg = Object.entries(ik.by_region).sort((a,b)=>b[1]-a[1])[0] || ['—',0];
+    const regShort = topReg[0].replace('Восточно-Казахстанская область','ВКО').replace(' область','').replace('область ','').replace('город ','г. ').trim();
+    setEl('ikKpiTopReg', regShort);
+    setEl('ikKpiTopRegPct', ik.total>0 ? (topReg[1]/ik.total*100).toFixed(1)+'% всех звонков' : '—');
+    const topChar = ik.by_character[0] || ['—',0];
+    setEl('ikKpiTopTheme', topChar[0]);
+    setEl('ikKpiTopThemePct', ik.total>0 ? (topChar[1]/ik.total*100).toFixed(1)+'% от всех' : '—');
+    return;
+  }
 
-  setEl('ikKpiTotal', ik.total.toLocaleString('ru-RU'));
-  setEl('ikKpiClosed', closedPct+'%');
-  setEl('ikKpiClosedAbs', 'из '+closed.toLocaleString('ru-RU'));
-  setEl('ikKpiTopReg', regShort);
-  setEl('ikKpiTopRegPct', (topReg[1]/ik.total*100).toFixed(1)+'% всех звонков');
-  setEl('ikKpiTopTheme', topChar[0].replace('Экология и природные ресурсы','Экология и прир. рес.').replace('Организация и проведение государственной экологической экспертизы','Экол. экспертиза'));
-  setEl('ikKpiTopThemePct', topCharPct+'% от всех');
+  const r = _ikComputeFiltered(true);
+  if(!r) return;
+  const filtersActive = (typeof engineFilterActive==='function') && engineFilterActive();
 
-  const _ch={id:'_ikCH',afterDraw(chart){
-    if(!chart.tooltip._active?.length) return;
-    const c=chart.ctx, x=chart.tooltip._active[0].element.x, t=chart.scales.y.top, b=chart.scales.y.bottom;
-    c.save();c.beginPath();c.moveTo(x,t);c.lineTo(x,b);c.lineWidth=1;c.strokeStyle='rgba(156,163,175,0.5)';c.setLineDash([4,4]);c.stroke();c.restore();
-  }};
+  // ── KPI ──
+  setEl('ikKpiTotal', ru(r.total));
+  setEl('ikKpiTotalSub', filtersActive ? 'по выбранным фильтрам' : 'с 01.04.2019');
+
+  const stClosedI = _IK.statuses.indexOf('Закрыто');
+  const closed = (stClosedI>=0 && r.byStatus) ? r.byStatus[stClosedI] : 0;
+  setEl('ikKpiClosed', r.total>0 ? (closed/r.total*100).toFixed(1)+'%' : '—');
+  setEl('ikKpiClosedAbs', 'из '+ru(closed));
+
+  let topRegI=-1, topRegV=0;
+  if(r.byReg) for(let i=0;i<r.byReg.length;i++) if(r.byReg[i]>topRegV){topRegV=r.byReg[i]; topRegI=i;}
+  setEl('ikKpiTopReg', topRegI>=0 ? _IK.regions[topRegI] : '—');
+  setEl('ikKpiTopRegPct', r.total>0 && topRegV>0 ? ((topRegV/r.total*100).toFixed(1)+'% всех звонков') : '—');
+
+  let topChI=-1, topChV=0;
+  if(r.byChar) for(let i=0;i<r.byChar.length;i++) if(r.byChar[i]>topChV){topChV=r.byChar[i]; topChI=i;}
+  setEl('ikKpiTopTheme', topChI>=0 ? _IK.chars[topChI] : '—');
+  setEl('ikKpiTopThemePct', r.total>0 && topChV>0 ? ((topChV/r.total*100).toFixed(1)+'% от всех') : '—');
+
+  // ── Hero-alert: ВКО доля ──
+  const heroEl = document.getElementById('ikHeroAlert');
+  if(heroEl){
+    const vkoI = _IK.regions.indexOf('ВКО');
+    const vkoV = (vkoI>=0 && r.byReg) ? r.byReg[vkoI] : 0;
+    const vkoPct = r.total>0 ? +(vkoV/r.total*100).toFixed(1) : 0;
+    const curReg = document.getElementById('gReg')?.value || 'all';
+    // Показываем когда: фильтр региона не выставлен на не-ВКО + ВКО доля ≥30% + есть звонки
+    if(curReg==='all' && vkoV>0 && vkoPct>=30){
+      heroEl.style.display='';
+      heroEl.innerHTML = `▲ ВКО — ${ru(vkoV)} звонков (${vkoPct}% от ${ru(r.total)}) <span style="color:#78350f;font-weight:400;font-size:11px">— экстремальная концентрация по выборке</span>`;
+    } else if(curReg==='ВКО' && vkoV>0){
+      heroEl.style.display='';
+      heroEl.innerHTML = `▲ Фильтр по ВКО · ${ru(vkoV)} звонков <span style="color:#78350f;font-weight:400;font-size:11px">— регион аномально лидирует в общей выборке</span>`;
+    } else {
+      heroEl.style.display='none';
+    }
+  }
+
+  // Если панель скрыта — KPI/hero обновили, чарты пропускаем (Chart.js плохо
+  // рисует в display:none; ре-рендер случится при открытии вкладки)
+  if(!isVisible) return;
 
   const _tip={backgroundColor:'#fff',borderColor:'rgba(0,0,0,0.10)',borderWidth:1,titleColor:'#111827',bodyColor:'#374151',titleFont:{size:12,weight:'600'},bodyFont:{size:11},padding:10,cornerRadius:6};
 
-  // Chart 1: Характер обращений (horizontal bar)
+  // Chart 1: Характер обращений (horizontal bar) — _IK.chars[i] × r.byChar[i]
   const charCtx=document.getElementById('cIkChar2');
-  if(charCtx){
-    const ex=Chart.getChart(charCtx); if(ex)ex.destroy();
-    const shorten=n=>n.replace('Экология и природные ресурсы','Экология и прир. рес.')
-                      .replace('Организация и проведение государственной экологической экспертизы','Экол. экспертиза')
-                      .replace('Благоустройство и ЖКХ','Благоустр. и ЖКХ');
-    const cData=ik.by_character.map(([n,v])=>[shorten(n),v]);
+  if(charCtx && r.byChar){
+    const ex=Chart.getChart(charCtx); if(ex) ex.destroy();
+    const cData=_IK.chars.map((n,i)=>[n, r.byChar[i]]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
     const cols=['#059669','#6366f1','#f59e0b','#ef4444','#8b5cf6','#0891b2'];
-    new Chart(charCtx,{type:'bar',data:{labels:cData.map(([n])=>n),datasets:[{data:cData.map(([,v])=>v),backgroundColor:cols,borderRadius:4}]},
-      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{..._tip,callbacks:{label:c=>`${c.raw.toLocaleString('ru-RU')} звонков`}}},
-        scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>v>=1000?(v/1000).toFixed(0)+'к':v}},
-                y:{grid:{display:false},ticks:{font:{size:9},color:'#6b7280'}}}}});
+    if(cData.length){
+      new Chart(charCtx,{type:'bar',data:{labels:cData.map(([n])=>n),datasets:[{data:cData.map(([,v])=>v),backgroundColor:cols,borderRadius:4}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{display:false},tooltip:{..._tip,callbacks:{label:c=>`${ru(c.raw)} звонков`}}},
+          scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>v>=1000?(v/1000).toFixed(0)+'к':v}},
+                  y:{grid:{display:false},ticks:{font:{size:9},color:'#6b7280'}}}}});
+    }
   }
 
-  // Chart 2: Тренд по месяцам
+  // Chart 2: Тренд по месяцам — 2 линии (Звонки + Жалобы)
   const monCtx=document.getElementById('cIkMonthly');
-  if(monCtx){
-    const ex=Chart.getChart(monCtx); if(ex)ex.destroy();
+  if(monCtx && r.monthly){
+    const ex=Chart.getChart(monCtx); if(ex) ex.destroy();
     const MO=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
-    const sorted=[...ik.monthly].sort((a,b)=>a.year!==b.year?a.year.localeCompare(b.year):a.month-b.month);
-    const mL=sorted.map(m=>`${MO[m.month-1]} ${String(m.year).slice(2)}`);
-    const mV=sorted.map(m=>m.total);
-    new Chart(monCtx,{type:'line',plugins:[_ch],
-      data:{labels:mL,datasets:[{label:'Звонков',data:mV,borderColor:'#d97706',backgroundColor:'transparent',
-        borderWidth:2,fill:false,tension:0.3,pointRadius:sorted.length>30?2:4,
-        pointBackgroundColor:'#fff',pointBorderColor:'#d97706',pointBorderWidth:2,pointHoverRadius:6}]},
-      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-        plugins:{legend:{display:false},tooltip:{..._tip,callbacks:{title:([t])=>mL[t.dataIndex]?.toUpperCase(),label:c=>`Звонков: ${c.raw.toLocaleString('ru-RU')}`}}},
-        scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af',maxRotation:0,maxTicksLimit:16}},
-                y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:9},color:'#9ca3af'}}}}});
+    const keys=[...r.monthly.keys()].sort((a,b)=>a-b);
+    const mL = keys.map(k=>{const y=(k/100)|0, m=k%100; return `${MO[m-1]} ${String(y).slice(2)}`;});
+    const mT = keys.map(k=>r.monthly.get(k).t);
+    const mJ = keys.map(k=>r.monthly.get(k).j);
+    if(keys.length){
+      new Chart(monCtx,{type:'line',
+        data:{labels:mL,datasets:[
+          {label:'Звонков', data:mT, borderColor:'#d97706', backgroundColor:'transparent', borderWidth:2, fill:false, tension:0.3,
+           pointRadius:keys.length>30?2:4, pointBackgroundColor:'#fff', pointBorderColor:'#d97706', pointBorderWidth:2, pointHoverRadius:6},
+          {label:'Жалобы', data:mJ, borderColor:'#dc2626', backgroundColor:'transparent', borderWidth:2, fill:false, tension:0.3, borderDash:[5,3],
+           pointRadius:keys.length>30?2:3, pointBackgroundColor:'#fff', pointBorderColor:'#dc2626', pointBorderWidth:2, pointHoverRadius:5}
+        ]},
+        options:{responsive:true,maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+          plugins:{legend:{display:true,position:'top',labels:{font:{size:10},boxWidth:12,boxHeight:4,padding:6,usePointStyle:true,pointStyle:'line'}},
+                   tooltip:{..._tip, callbacks:{title:([t])=>mL[t.dataIndex]?.toUpperCase(), label:c=>`${c.dataset.label}: ${ru(c.raw)}`}}},
+          scales:{x:{grid:{display:false},ticks:{font:{size:9},color:'#9ca3af',maxRotation:0,maxTicksLimit:16}},
+                  y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:9},color:'#9ca3af'}}}}});
+    }
   }
 
-  // Chart 3: По регионам
+  // Chart 3: По регионам — vertical bar + клик ставит gReg + каскад
   const regCtx=document.getElementById('cIkRegion');
-  if(regCtx){
-    const ex=Chart.getChart(regCtx); if(ex)ex.destroy();
-    const rData=Object.entries(ik.by_region).sort((a,b)=>b[1]-a[1]);
-    const rShort=n=>n.replace('Восточно-Казахстанская область','ВКО').replace(' область','').replace('область ','').replace('город ','г. ').trim();
-    const cols2=['#059669','#6366f1','#f59e0b','#ef4444','#8b5cf6'];
-    new Chart(regCtx,{type:'bar',data:{labels:rData.map(([n])=>rShort(n)),datasets:[{data:rData.map(([,v])=>v),backgroundColor:cols2,borderRadius:5}]},
-      options:{responsive:true,maintainAspectRatio:false,
-        plugins:{legend:{display:false},tooltip:{..._tip,callbacks:{label:c=>`${c.raw.toLocaleString('ru-RU')} звонков`}}},
-        scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#6b7280'}},
-                y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>v>=1000?(v/1000).toFixed(0)+'к':v}}}}});
+  if(regCtx && r.byReg){
+    const ex=Chart.getChart(regCtx); if(ex) ex.destroy();
+    const rData=_IK.regions.map((n,i)=>[n, r.byReg[i]]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+    const curReg = document.getElementById('gReg')?.value || 'all';
+    const cols2 = rData.map(([n])=> n===curReg ? '#f97316' : '#059669');
+    if(rData.length){
+      new Chart(regCtx,{type:'bar',
+        data:{labels:rData.map(([n])=>n), datasets:[{data:rData.map(([,v])=>v), backgroundColor:cols2, borderRadius:5}]},
+        options:{responsive:true,maintainAspectRatio:false,
+          onHover:(e,els)=>{ if(e?.native?.target) e.native.target.style.cursor=els.length?'pointer':'default'; },
+          onClick:(e,els)=>{
+            if(!els.length) return;
+            const regName = rData[els[0].index]?.[0]; if(!regName) return;
+            const sel = document.getElementById('gReg'); if(!sel) return;
+            // Toggle: повторный клик → снять фильтр
+            if(sel.value===regName){ sel.value='all'; }
+            else {
+              if(![...sel.options].some(o=>o.value===regName)){
+                const o=document.createElement('option'); o.value=regName; o.textContent=regName; sel.appendChild(o);
+              }
+              sel.value=regName;
+            }
+            if(typeof onGlobalFilter==='function') onGlobalFilter();
+          },
+          plugins:{legend:{display:false},tooltip:{..._tip,callbacks:{label:c=>`${ru(c.raw)} звонков`}}},
+          scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#6b7280'}},
+                  y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>v>=1000?(v/1000).toFixed(0)+'к':v}}}}});
+    }
+  }
+
+  // Chart 4 (NEW): Статусы — donut
+  const stCtx=document.getElementById('cIkStatus');
+  if(stCtx && r.byStatus){
+    const ex=Chart.getChart(stCtx); if(ex) ex.destroy();
+    const sData=_IK.statuses.map((n,i)=>[n, r.byStatus[i]]).filter(([,v])=>v>0);
+    const stCols = sData.map(([n])=> n==='Закрыто' ? '#16a34a' : (n==='В работе' ? '#d97706' : '#94a3b8'));
+    if(sData.length){
+      new Chart(stCtx,{type:'doughnut',
+        data:{labels:sData.map(([n])=>n), datasets:[{data:sData.map(([,v])=>v), backgroundColor:stCols, borderColor:'#fff', borderWidth:2}]},
+        options:{responsive:true,maintainAspectRatio:false, cutout:'62%',
+          plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,padding:6}},
+                   tooltip:{..._tip,callbacks:{label:c=>{const pct=r.total>0?(c.raw/r.total*100).toFixed(1):0; return `${c.label}: ${ru(c.raw)} (${pct}%)`;}}}}}});
+    }
+  }
+
+  // Chart 5 (NEW): Категории — donut (Обращение / Жалоба / Благодарность)
+  const catCtx=document.getElementById('cIkCat');
+  if(catCtx && r.byCat){
+    const ex=Chart.getChart(catCtx); if(ex) ex.destroy();
+    const cData=_IK.cats.map((n,i)=>[n, r.byCat[i]]).filter(([,v])=>v>0);
+    const catCols = cData.map(([n])=> n==='Жалоба' ? '#dc2626' : (n==='Благодарность' ? '#16a34a' : '#0891b2'));
+    if(cData.length){
+      new Chart(catCtx,{type:'doughnut',
+        data:{labels:cData.map(([n])=>n), datasets:[{data:cData.map(([,v])=>v), backgroundColor:catCols, borderColor:'#fff', borderWidth:2}]},
+        options:{responsive:true,maintainAspectRatio:false, cutout:'62%',
+          plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,padding:6}},
+                   tooltip:{..._tip,callbacks:{label:c=>{const pct=r.total>0?(c.raw/r.total*100).toFixed(1):0; return `${c.label}: ${ru(c.raw)} (${pct}%)`;}}}}}});
+    }
   }
 }
 
@@ -3055,7 +3171,7 @@ function renderMainCharts() {
     }).catch(e=>console.warn('taza_compact load failed:',e.message));
     fetch('/data/appeals_compact.json').then(r=>r.json()).then(ac=>{
       _AC=ac;
-      if(engineFilterActive()) applyTimeEngine();
+      try { if(engineFilterActive()) applyTimeEngine(); } catch(_){}
       if(document.getElementById('panel-hearings')?.classList.contains('active')
          && typeof _socInit==='function') _socInit();
     }).catch(e=>console.warn('appeals_compact load failed:',e.message));
@@ -3138,8 +3254,9 @@ function _ikRegionIdx(name){
   const i = _IK.regions.indexOf(name);
   return (i>=0) ? i : -1;                                  // -1 = регион выбран, но нет в iKomek (≠ ВКО/Караганд/…)
 }
-// Считает звонки под текущим набором фильтров. Возвращает общий total + by-разделы.
-function _ikComputeFiltered(){
+// Считает звонки под текущим набором фильтров. С withAggs=true дополнительно
+// возвращает byReg/byChar/byCat/byStatus/monthly — всё за один проход (~16k строк).
+function _ikComputeFiltered(withAggs){
   if(!_IK) return null;
   const D=_IK.data, W=_IK.w, N=_IK.n;
   const yF=document.getElementById('gYear')?.value||'all';
@@ -3153,21 +3270,36 @@ function _ikComputeFiltered(){
   const dfInt = toYmd(dfStr), dtInt = toYmd(dtStr) || 99999999;
   const ri = _ikRegionIdx(reg);
   if(reg!=='all' && ri===-1){
-    // Регион выбран, но iKomek не покрывает его → честно: 0
-    return {total:0, regionUnknown:true};
+    return {total:0, regionUnknown:true, byReg:null, byChar:null, byCat:null, byStatus:null, monthly:null};
   }
+  const nR=_IK.regions.length, nC=_IK.cats.length, nCh=_IK.chars.length, nS=_IK.statuses.length;
+  const byReg    = withAggs ? new Int32Array(nR)  : null;
+  const byChar   = withAggs ? new Int32Array(nCh) : null;
+  const byCat    = withAggs ? new Int32Array(nC)  : null;
+  const byStatus = withAggs ? new Int32Array(nS)  : null;
+  const monthly  = withAggs ? new Map()           : null;
+  const compIdx  = withAggs ? _IK.cats.indexOf('Жалоба') : -1;
   let total=0;
   for(let i=0;i<N;i++){
     const o=i*W, ymd=D[o];
-    if(yN>=0){ const yy=(ymd/10000)|0; if(yy!==yN) continue; }
-    if(mN>=0){ const mm=((ymd/100)|0)%100; if(mm!==mN) continue; }
-    if(dN>=0){ const dd=ymd%100; if(dd!==dN) continue; }
+    const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100, dd=ymd%100;
+    if(yN>=0 && yy!==yN) continue;
+    if(mN>=0 && mm!==mN) continue;
+    if(dN>=0 && dd!==dN) continue;
     if(dfStr && ymd<dfInt) continue;
     if(dtStr && ymd>dtInt) continue;
-    if(ri>=0 && D[o+1]!==ri) continue;
+    const rIdx=D[o+1];
+    if(ri>=0 && rIdx!==ri) continue;
     total++;
+    if(withAggs){
+      const cIdx=D[o+2], chIdx=D[o+3], sIdx=D[o+4];
+      byReg[rIdx]++; byChar[chIdx]++; byCat[cIdx]++; byStatus[sIdx]++;
+      const k=yy*100+mm;
+      let m=monthly.get(k); if(!m){ m={t:0,j:0}; monthly.set(k,m); }
+      m.t++; if(cIdx===compIdx) m.j++;
+    }
   }
-  return {total, regionUnknown:false};
+  return {total, regionUnknown:false, byReg, byChar, byCat, byStatus, monthly};
 }
 
 // Обновляет карточку #kpiIkom. Приоритет:
@@ -5866,8 +5998,8 @@ function _rechartOnFilter(){
   const iss=document.getElementById('gIssueF')?.value||'all';
   const sub=document.getElementById('gSubF')?.value||'all';
 
-  // iKomek-блок реагирует на смену региона (если данные уже отрендерены)
-  if(_ikomekMainInited && typeof renderIkomekMainTab==='function'){
+  // iKomek-подвкладка — KPI/hero обновляем всегда; чарты сами рендерятся только когда панель видима
+  if(typeof renderIkomekMainTab==='function'){
     try { renderIkomekMainTab(); } catch(e){}
   }
   // Динамика (объединённый чарт) — пересчёт под фильтр
@@ -6055,7 +6187,8 @@ function _rechartOnFilter(){
     const selType=document.getElementById('gType')?.value||'all';
     _chartType.data.datasets[0].backgroundColor=typeLabels.map((l,i)=>{
       if(selType==='all') return _PIE_COLORS[i%_PIE_COLORS.length];
-      return l===selType||l.startsWith(selType)?'#f97316':'rgba(150,150,150,0.3)';
+      const ls = typeof l === 'string' ? l : String(l ?? '');
+      return ls===selType||ls.startsWith(selType)?'#f97316':'rgba(150,150,150,0.3)';
     });
     _chartType.update();
   }
@@ -7563,11 +7696,14 @@ function resetGlobalFilter(){
   });
   const at=document.getElementById('appTypeFilter');if(at)at.value='';
   _doCascadeMid('gCatF','gIssueF','gSubF');
-  filterAppTable();
-  loadChunkForFilters();
-  applyFilter();
-  applyGlobalFiltersToCharts();
-  updateFilterChips();
+  const _gR = fn => { try { fn(); } catch(_){} };
+  _gR(()=>filterAppTable());
+  _gR(()=>loadChunkForFilters());
+  _gR(()=>applyFilter());
+  _gR(()=>applyGlobalFiltersToCharts());
+  _gR(()=>updateFilterChips());
+  _gR(()=>{ if(typeof applyTimeEngine==='function' && typeof engineFilterActive==='function' && !engineFilterActive()) {/*baseline already applied*/} });
+  _gR(()=>_updateIkomekKpi && _updateIkomekKpi());
   // свернуть доп. фильтры
   const adv=document.getElementById('fbarAdvanced');
   if(adv) adv.style.display='none';
@@ -9208,7 +9344,9 @@ const APPEAL_OPT={indexAxis:'y',responsive:true,maintainAspectRatio:false,plugin
 function applyAppealFilter(){
   const region=(document.getElementById('appealsRegion')?.value)||(document.getElementById('gReg')?.value)||'all';
   if(!c12Chart)return;
-  c12Chart.destroy();
+  const c12El=document.getElementById('c12');
+  if(!c12El) return;
+  c12Chart.destroy(); c12Chart=null;
   if(c13Chart){c13Chart.destroy();c13Chart=null;}
   const t1=document.getElementById('c12Title');
   const t2=document.getElementById('c13Title');
