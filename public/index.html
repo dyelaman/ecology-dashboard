@@ -871,7 +871,7 @@ input[type=file]{display:none}
       <div class="cw" style="height:220px"><canvas id="c3"></canvas></div>
     </div>
     <div class="card" style="padding:12px">
-      <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.2px;margin-bottom:6px">ПОДКАТЕГОРИЯ</div>
+      <div style="font-size:10px;font-weight:700;color:var(--text2);letter-spacing:.2px;margin-bottom:6px" id="cAppSubCatTitle">ПОДКАТЕГОРИЯ</div>
       <div class="cw" style="height:220px"><canvas id="cAppSubCat"></canvas></div>
     </div>
     <div class="card" style="padding:12px">
@@ -3101,8 +3101,8 @@ function renderMainCharts() {
   const typeData = types || [['Жалоба',121],['Заявление',89],['Запрос',34],['Предложение',18],['Сообщение',6]];
   _chartType = _pieChart('cAppType', typeData, 'gType');
 
-  // Подкатегория — группировка по issue (doughnut)
-  if (a && (a.top_issues||[]).length) _pieChart('cAppSubCat', a.top_issues, 'gIssueF', ['gSubF']);
+  // Подкатегория — _AC.subs (gSubF). Характер вопроса — _AC.issues (gIssueF, через _renderCAppSub).
+  if (a && (a.top_subissues||[]).length) _pieChart('cAppSubCat', a.top_subissues, 'gSubF');
   if (_chartSub) { _chartSub.destroy(); _chartSub = null; }
   _renderCAppSub();
 
@@ -5760,111 +5760,46 @@ function _fitRegionCanvas(id,n){
 
 let c12Chart=null,c13Chart=null,cRegLateChart=null;
 
-// ── Drill-down chart для c3 ───────────────────────────────────────────────
+// ── Donut «Категория» (c3) — всегда показывает категории. Drill-down на
+// подкатегории и характер происходит не внутри c3, а в соседних donut'ах
+// cAppSubCat/cAppSub через applyTimeEngine (per-call re-aggregation).
 function _renderC3(){
   if(_chartCat){_chartCat.destroy();_chartCat=null;}
   const el=document.getElementById('c3'); if(!el)return;
   const _ex=Chart.getChart(el); if(_ex)_ex.destroy();
-  const trunc=(s,n)=>s&&s.length>n?s.substring(0,n)+'…':(s||'');
-  const cat=document.getElementById('gCatF')?.value||'all';
-  const iss=document.getElementById('gIssueF')?.value||'all';
   const reg=document.getElementById('gReg')?.value||'all';
-  const bc=document.getElementById('c3Breadcrumb');
+  const type=document.getElementById('gType')?.value||'all';
+  const year=document.getElementById('gYear')?.value||'all';
+  const bc=document.getElementById('c3Breadcrumb'); if(bc) bc.innerHTML='';
   const title=document.getElementById('c3Title');
-  let data=[], color='#0891B2', clickFn;
 
-  if(cat==='all'){
-    const type=document.getElementById('gType')?.value||'all';
-    const year=document.getElementById('gYear')?.value||'all';
-    if(type!=='all'&&_TYPE_CROSS?.[type]){
-      // Категории для выбранного типа (+ региона если выбран)
-      const src=_TYPE_CROSS[type];
-      let cats, lbl='КАТЕГОРИЯ · '+type;
-      if(reg!=='all'&&src.by_region?.[reg]?.categories?.length){
-        cats=src.by_region[reg].categories;
-        lbl='КАТЕГОРИЯ · '+type+' · '+reg;
-      } else {
-        cats=src.categories||[];
-      }
-      data=cats.slice(0,8);
-      if(bc)bc.innerHTML='';
-      if(title)title.textContent=lbl;
-    } else if(year!=='all'&&_YEAR_CROSS?.[year]){
-      // Категории для выбранного года (+ регион через _REGION_ISSUES если нужно)
-      const src=_YEAR_CROSS[year];
-      let cats=src.categories||[], lbl='КАТЕГОРИЯ · '+year;
-      if(reg!=='all'&&_REGION_ISSUES?.[reg]?.categories?.length){
-        cats=_REGION_ISSUES[reg].categories;
-        lbl='КАТЕГОРИЯ · '+year+' · '+reg;
-      }
-      data=cats.slice(0,8);
-      if(bc)bc.innerHTML='';
-      if(title)title.textContent=lbl;
-    } else if(reg!=='all'&&_CROSS){
-      // Категории для выбранного региона
-      data=Object.entries(_CROSS)
-        .map(([n,cd])=>[n,_gDupActive?Math.round((cd.by_region?.[reg]?.total||0)*((cd.dup||0)/(cd.total||1))):(cd.by_region?.[reg]?.total||0)])
-        .filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,8);
-      if(bc)bc.innerHTML='';
-      if(title)title.textContent='КАТЕГОРИЯ · '+reg;
-    } else if(_gDupActive&&_CROSS){
-      data=Object.entries(_CROSS).map(([n,cd])=>[n,cd.dup||0]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,8);
-      if(bc)bc.innerHTML='';
-      if(title)title.textContent='КАТЕГОРИЯ · Повторные';
-    } else {
-      data=((_DATA?.summary.appeals.categories)||[]).slice(0,8);
-      if(bc)bc.innerHTML='';
-      if(title)title.textContent='КАТЕГОРИЯ';
-    }
-    clickFn=(e,els)=>{
-      if(!els.length)return;
-      const v=data[els[0].index]?.[0]; if(!v)return;
-      const el=document.getElementById('gCatF');
-      if(el){el.value=v;cascadeIssueFilter();onGlobalFilter();}
-    };
-  } else if(iss==='all'){
-    color='#0891B2';
-    const regC3=document.getElementById('gReg')?.value||'all';
-    const typeC3=document.getElementById('gType')?.value||'all';
-    // Приоритет: type+cat (by_cat) > reg > global
-    if(typeC3!=='all'&&_TYPE_CROSS?.[typeC3]?.by_cat?.[cat]?.issues?.length){
-      data=_TYPE_CROSS[typeC3].by_cat[cat].issues.slice(0,10);
-      if(title)title.textContent=regC3!=='all'?'ВОПРОС · '+typeC3.slice(0,14)+' · '+regC3:'ВОПРОС · '+typeC3.slice(0,22);
-    } else if(regC3!=='all'&&_CROSS?.[cat]?.by_region?.[regC3]?.issues?.length){
-      data=_CROSS[cat].by_region[regC3].issues.map(([n,c])=>[n,c]).slice(0,10);
-      if(title)title.textContent='ВОПРОС · '+regC3;
-    } else {
-      data=(_CROSS?.[cat]?.issues||[]).map(([n,c])=>[n,c]).slice(0,10);
-      if(title)title.textContent='ВОПРОС (ХАРАКТЕР)';
-    }
-    if(bc)bc.innerHTML=`<span onclick="document.getElementById('gCatF').value='all';cascadeIssueFilter();onGlobalFilter()" style="color:var(--green);cursor:pointer;font-size:9px">← Все категории</span>`;
-    clickFn=(e,els)=>{
-      if(!els.length)return;
-      const v=data[els[0].index]?.[0]; if(!v)return;
-      const el=document.getElementById('gIssueF');
-      if(el){el.value=v;cascadeSubFilter();onGlobalFilter();}
-    };
+  // Источник данных для baseline (engine при активных фильтрах перепишет поверх):
+  // приоритет — Тип > Год > Регион > Повторные > всё.
+  let data, lbl='КАТЕГОРИЯ';
+  if(type!=='all' && _TYPE_CROSS?.[type]){
+    const src=_TYPE_CROSS[type];
+    if(reg!=='all' && src.by_region?.[reg]?.categories?.length){
+      data=src.by_region[reg].categories; lbl='КАТЕГОРИЯ · '+type+' · '+reg;
+    } else { data=src.categories||[]; lbl='КАТЕГОРИЯ · '+type; }
+  } else if(year!=='all' && _YEAR_CROSS?.[year]){
+    const src=_YEAR_CROSS[year];
+    if(reg!=='all' && _REGION_ISSUES?.[reg]?.categories?.length){
+      data=_REGION_ISSUES[reg].categories; lbl='КАТЕГОРИЯ · '+year+' · '+reg;
+    } else { data=src.categories||[]; lbl='КАТЕГОРИЯ · '+year; }
+  } else if(reg!=='all' && _CROSS){
+    data=Object.entries(_CROSS)
+      .map(([n,cd])=>[n,_gDupActive?Math.round((cd.by_region?.[reg]?.total||0)*((cd.dup||0)/(cd.total||1))):(cd.by_region?.[reg]?.total||0)])
+      .filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+    lbl='КАТЕГОРИЯ · '+reg;
+  } else if(_gDupActive && _CROSS){
+    data=Object.entries(_CROSS).map(([n,cd])=>[n,cd.dup||0]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+    lbl='КАТЕГОРИЯ · Повторные';
   } else {
-    const key=`${cat}||${iss}`;
-    const regSub=document.getElementById('gReg')?.value||'all';
-    // Если регион выбран и есть региональные данные — использовать их
-    if(regSub!=='all'&&_ISSUE_CROSS?.[key]?.by_region?.[regSub]?.subs?.length){
-      data=_ISSUE_CROSS[key].by_region[regSub].subs.map(([n,c])=>[n,c]).slice(0,10);
-    } else {
-      data=(_ISSUE_CROSS?.[key]?.subs||[]).map(([n,c])=>[n,c]).slice(0,10);
-    }
-    color='#16a34a';
-    const si=iss.length>22?iss.slice(0,21)+'…':iss;
-    if(bc)bc.innerHTML=`<span onclick="document.getElementById('gCatF').value='all';cascadeIssueFilter();onGlobalFilter()" style="color:var(--green);cursor:pointer;font-size:9px">← Все</span> <span onclick="document.getElementById('gIssueF').value='all';cascadeSubFilter();onGlobalFilter()" style="color:var(--green);cursor:pointer;font-size:9px"> · ← ${si}</span>`;
-    if(title)title.textContent=regSub!=='all'?`ПОДКАТЕГОРИЯ · ${regSub}`:'ПОДКАТЕГОРИЯ';
-    clickFn=(e,els)=>{
-      if(!els.length)return;
-      const v=data[els[0].index]?.[0]; if(!v)return;
-      const el=document.getElementById('gSubF');
-      if(el){el.value=v;onGlobalFilter();}
-    };
+    data=((_DATA?.summary.appeals.categories)||[]);
   }
-  if(!data.length)return;
+  if(title) title.textContent=lbl;
+  data=data.slice(0,8);
+  if(!data.length) return;
   const piesD=_topNWithOther(data,7);
   _chartCat=new Chart(el,{
     type:'doughnut',
@@ -5872,8 +5807,12 @@ function _renderC3(){
     options:_pieOptions((e,els)=>{
       if(!els.length) return;
       const v=piesD[els[0].index]?.[0]; if(!v||v==='Прочее') return;
-      const origIdx=data.findIndex(d=>d[0]===v);
-      if(origIdx>=0) clickFn(e,[{index:origIdx}]);
+      const cEl=document.getElementById('gCatF'); if(!cEl) return;
+      // Toggle: повторный клик → снять фильтр
+      if(cEl.value===v){ cEl.value='all'; }
+      else { if(![...cEl.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;cEl.appendChild(o);} cEl.value=v; }
+      if(typeof cascadeIssueFilter==='function') cascadeIssueFilter();
+      onGlobalFilter();
     })
   });
 }
@@ -5882,63 +5821,37 @@ function _renderC3(){
 function _renderCAppSub(){
   if(_chartSub){_chartSub.destroy();_chartSub=null;}
   const el=document.getElementById('cAppSub'); if(!el)return;
-  const trunc=(s,n)=>s&&s.length>n?s.substring(0,n)+'…':(s||'');
   const cat=document.getElementById('gCatF')?.value||'all';
-  const iss=document.getElementById('gIssueF')?.value||'all';
+  const reg=document.getElementById('gReg')?.value||'all';
   const type=document.getElementById('gType')?.value||'all';
   const titleEl=document.getElementById('cAppSubTitle');
-  let data=[], targetFilter='gSubF', nextCascade=null;
+  if(titleEl) titleEl.textContent='ХАРАКТЕР ВОПРОСА';
 
-  if(iss!=='all'){
-    const key=`${cat}||${iss}`;
-    const regApp=document.getElementById('gReg')?.value||'all';
-    if(regApp!=='all'&&_ISSUE_CROSS?.[key]?.by_region?.[regApp]?.subs?.length){
-      data=_ISSUE_CROSS[key].by_region[regApp].subs.map(([n,c])=>[n,c]).slice(0,8);
-      if(titleEl)titleEl.textContent='ПОДКАТЕГОРИЯ · '+regApp;
+  // Источник данных для baseline (engine при активных фильтрах перепишет
+  // через _engSetChart('cAppSub', issues, ..., 'gIssueF')). Приоритет:
+  // Категория > Тип > Регион > всё.
+  let data;
+  if(cat!=='all' && _CROSS?.[cat]){
+    if(reg!=='all' && _CROSS[cat].by_region?.[reg]?.issues?.length){
+      data=_CROSS[cat].by_region[reg].issues;
+    } else if(type!=='all' && _TYPE_CROSS?.[type]?.by_cat?.[cat]?.issues?.length){
+      data=_TYPE_CROSS[type].by_cat[cat].issues;
     } else {
-      data=(_ISSUE_CROSS?.[key]?.subs||[]).map(([n,c])=>[n,c]).slice(0,8);
-      if(titleEl)titleEl.textContent='ПОДКАТЕГОРИЯ';
+      data=(_CROSS[cat].issues||[]).map(([n,c])=>[n,c]);
     }
-    targetFilter='gSubF';
-  } else if(cat!=='all'){
-    const regAS=document.getElementById('gReg')?.value||'all';
-    const typeAS=document.getElementById('gType')?.value||'all';
-    if(typeAS!=='all'&&_TYPE_CROSS?.[typeAS]?.by_cat?.[cat]?.issues?.length){
-      data=_TYPE_CROSS[typeAS].by_cat[cat].issues.slice(0,8);
-      if(titleEl)titleEl.textContent=regAS!=='all'?'ВОПРОС · '+typeAS.slice(0,14)+' · '+regAS:'ВОПРОС · '+typeAS.slice(0,22);
-    } else if(regAS!=='all'&&_CROSS?.[cat]?.by_region?.[regAS]?.issues?.length){
-      data=_CROSS[cat].by_region[regAS].issues.slice(0,8);
-      if(titleEl)titleEl.textContent='ВОПРОС · '+cat.slice(0,22)+' · '+regAS;
+  } else if(type!=='all' && _TYPE_CROSS?.[type]){
+    if(reg!=='all' && _TYPE_CROSS[type].by_region?.[reg]?.top_issues?.length){
+      data=_TYPE_CROSS[type].by_region[reg].top_issues;
     } else {
-      data=(_CROSS?.[cat]?.issues||[]).map(([n,c])=>[n,c]).slice(0,8);
-      if(titleEl)titleEl.textContent='ВОПРОС В КАТЕГОРИИ';
+      data=_TYPE_CROSS[type].top_issues||[];
     }
-    targetFilter='gIssueF'; nextCascade='sub';
-  } else if(type!=='all'&&_TYPE_CROSS?.[type]){
-    const reg2=document.getElementById('gReg')?.value||'all';
-    if(reg2!=='all'&&_TYPE_CROSS[type].by_region?.[reg2]?.top_issues?.length){
-      // Вопросы: тип + регион
-      data=_TYPE_CROSS[type].by_region[reg2].top_issues.slice(0,8);
-      if(titleEl)titleEl.textContent='ВОПРОСЫ · '+type+' · '+reg2;
-    } else {
-      data=(_TYPE_CROSS[type].top_issues||[]).slice(0,8);
-      if(titleEl)titleEl.textContent='ВОПРОСЫ · '+type;
-    }
-    targetFilter='gIssueF'; nextCascade='sub';
+  } else if(reg!=='all' && _REGION_ISSUES?.[reg]?.top_issues?.length){
+    data=_REGION_ISSUES[reg].top_issues;
   } else {
-    const reg2=document.getElementById('gReg')?.value||'all';
-    if(reg2!=='all'&&_REGION_ISSUES?.[reg2]?.top_issues?.length){
-      // Вопросы: только регион
-      data=_REGION_ISSUES[reg2].top_issues.slice(0,8);
-      if(titleEl)titleEl.textContent='ВОПРОСЫ · '+reg2;
-      targetFilter='gIssueF'; nextCascade='sub';
-    } else {
-      data=(_DATA?.summary.appeals.top_subissues||[]).slice(0,8);
-      if(titleEl)titleEl.textContent='ХАРАКТЕР ВОПРОСА';
-      targetFilter='gSubF';
-    }
+    data=_DATA?.summary.appeals.top_issues||[];
   }
-  if(!data.length)return;
+  data=(data||[]).slice(0,8);
+  if(!data.length) return;
   const piesS=_topNWithOther(data,7);
   _chartSub=new Chart(el,{
     type:'doughnut',
@@ -5946,8 +5859,11 @@ function _renderCAppSub(){
     options:_pieOptions((e,els)=>{
       if(!els.length) return;
       const v=piesS[els[0].index]?.[0]; if(!v||v==='Прочее') return;
-      const fEl=document.getElementById(targetFilter);
-      if(fEl){fEl.value=v; if(nextCascade==='sub')cascadeSubFilter(); onGlobalFilter();}
+      const fEl=document.getElementById('gIssueF'); if(!fEl) return;
+      if(fEl.value===v){ fEl.value='all'; }
+      else { if(![...fEl.options].some(o=>o.value===v)){const o=document.createElement('option');o.value=v;o.textContent=v;fEl.appendChild(o);} fEl.value=v; }
+      if(typeof cascadeSubFilter==='function') cascadeSubFilter();
+      onGlobalFilter();
     })
   });
 }
@@ -6013,15 +5929,13 @@ function _rechartOnFilter(){
   // Closing speed — update for active filters
   renderClosingSpeed();
 
-  // cAppSubCat (ПОДКАТЕГОРИЯ): обновить при смене типа/года/региона
+  // cAppSubCat (Подкатегория = _AC.subs): re-render при смене типа/года/региона.
+  // applyTimeEngine при активных фильтрах перерисует поверх — это путь для
+  // случая когда engine не активен (нет AC.data на стороне фильтров).
   (function(){
     const type=document.getElementById('gType')?.value||'all';
-    const year=document.getElementById('gYear')?.value||'all';
     const regS=document.getElementById('gReg')?.value||'all';
     const ctx=document.getElementById('cAppSubCat'); if(!ctx)return;
-    const ex=Chart.getChart(ctx); if(ex)ex.destroy();
-    const trunc=(s,n)=>s&&s.length>n?s.substring(0,n)+'…':(s||'');
-    const colors=['#0891B2','#16a34a','#d97706','#7c3aed','#dc2626','#f97316','#0d9488','#6b7280'];
     let srcData;
     if(type!=='all'&&_TYPE_CROSS?.[type]){
       if(regS!=='all'&&_TYPE_CROSS[type].by_region?.[regS]?.top_subissues?.length){
@@ -6036,7 +5950,8 @@ function _rechartOnFilter(){
     }
     const d=srcData.slice(0,8);
     if(!d.length)return;
-    _pieChart('cAppSubCat', d, 'gIssueF', ['gSubF']);
+    const ex=Chart.getChart(ctx); if(ex)ex.destroy();
+    _pieChart('cAppSubCat', d, 'gSubF');
   })();
 
   // c12: адаптируется под контекст фильтров
@@ -7258,11 +7173,12 @@ function applyTimeEngine(){
   _engSetChart('cRegLate', latePairs, 0, 'gReg');
   _fitRegionCanvas('c12', regPairs.length);
   _fitRegionCanvas('cRegLate', latePairs.length);
-  // 4 чарта аналитики (doughnut, топ-7 + Прочее) — иерархия Тип → Категория → Подкатегория → Характер
+  // 4 чарта аналитики (doughnut, топ-7 + Прочее) — иерархия Тип → Категория → Подкатегория(subs) → Характер вопроса(issues).
+  // ВАЖНО: пользовательская маркировка — «Подкатегория» = _AC.subs (gSubF), «Характер вопроса» = _AC.issues (gIssueF).
   _engSetChart('cAppType',   _topNWithOther(pairsOf(typTot,_AC.types),7),  0, 'gType');
   _engSetChart('c3',         _topNWithOther(pairsOf(catTot,_AC.cats),7),   0, 'gCatF',  ['gIssueF','gSubF']);
-  _engSetChart('cAppSubCat', _topNWithOther(pairsOf(issTot,_AC.issues),7), 0, 'gIssueF',['gSubF']);
-  _engSetChart('cAppSub',    _topNWithOther(pairsOf(subTot,_AC.subs),7),   0, 'gSubF');
+  _engSetChart('cAppSubCat', _topNWithOther(pairsOf(subTot,_AC.subs),7),   0, 'gSubF');
+  _engSetChart('cAppSub',    _topNWithOther(pairsOf(issTot,_AC.issues),7), 0, 'gIssueF',['gSubF']);
 
   // Исполнители
   const pl=document.getElementById('envPlants');
@@ -7702,8 +7618,12 @@ function resetGlobalFilter(){
   _gR(()=>applyFilter());
   _gR(()=>applyGlobalFiltersToCharts());
   _gR(()=>updateFilterChips());
-  _gR(()=>{ if(typeof applyTimeEngine==='function' && typeof engineFilterActive==='function' && !engineFilterActive()) {/*baseline already applied*/} });
+  // 4 donut'а Аналитики (cAppType/c3/cAppSubCat/cAppSub) — engine после reset
+  // не активен, но donut'ы могут остаться с прошлой отфильтрованной выборкой.
+  // Перерисовываем явно через baseline-renderMainCharts.
+  _gR(()=>{ if(typeof renderMainCharts==='function' && !ACTIVE_REGION) renderMainCharts(); });
   _gR(()=>_updateIkomekKpi && _updateIkomekKpi());
+  _gR(()=>{ if(typeof renderIkomekMainTab==='function') renderIkomekMainTab(); });
   // свернуть доп. фильтры
   const adv=document.getElementById('fbarAdvanced');
   if(adv) adv.style.display='none';
