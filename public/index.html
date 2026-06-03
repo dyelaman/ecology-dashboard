@@ -1110,15 +1110,7 @@ input[type=file]{display:none}
 
   <!-- КАРТА НБД СОС -->
   <div class="card" style="padding:10px;margin-bottom:14px">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.3px" data-i18n="nbd.block.map">Карта объектов НБД СОС</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
-          <input type="checkbox" id="nbdLyrPek" checked style="width:11px;height:11px;accent-color:#ef4444" onchange="toggleNbdLayer('pek',this.checked)">
-          <span style="width:7px;height:7px;border-radius:50%;background:#ef4444"></span>ПЭК объекты
-        </label>
-      </div>
-    </div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.3px;margin-bottom:8px" data-i18n="nbd.block.map">Карта объектов НБД СОС</div>
     <div id="mapNbd" style="height:420px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border)"></div>
   </div>
 
@@ -6318,7 +6310,7 @@ const KAZHYDROMET_MAIN=[
 ];
 let mapMainInst=null, geoLayerMain=null, hydroLayerMain=null, pekLayerMain=null, emergLayerMain=null;
 let wasteLayerMain=null, landLayerMain=null, nedraLayerMain=null, fireLayerMain=null;
-let mapNbdInst=null, nbdPekLayer=null, nbdEmergLayer=null, nbdFireLayer=null;
+let mapNbdInst=null, nbdEmergLayer=null, nbdFireLayer=null;
 let mapKgsInst=null, kgsMapWaste=null, kgsMapLand=null, kgsMapNedra=null;
 let _KGS_MAP=null;
 
@@ -8305,15 +8297,6 @@ function initNbdMap(){
     if(NBD_FACTS.length) _renderNbdChoropleth(null, null);
   }).catch(e=>console.warn('NBD geojson load failed:', e.message));
 
-  // ПЭК объекты — слой поверх хороплета
-  nbdPekLayer=L.layerGroup().addTo(mapNbdInst);
-  fetch('/data/pek_objects.json').then(r=>r.json()).then(data=>{
-    _PEK_OBJECTS=data.objects||[];
-    _renderPekLayer(data, nbdPekLayer);
-    const cb=document.getElementById('nbdLyrPek');
-    if(cb&&!cb.checked) mapNbdInst.removeLayer(nbdPekLayer);
-  }).catch(e=>console.warn('NBD PEK load failed:',e.message));
-
   setTimeout(()=>mapNbdInst.invalidateSize(),400);
 }
 
@@ -8359,10 +8342,6 @@ function _restyleNbdChoro(){
   // Без пересборки тултипов — только цвет/обводка по текущим данным.
   if(!_nbdChoroLayer || !NBD_FACTS.length) return;
   _renderNbdChoropleth(null, null);
-}
-
-function toggleNbdLayer(type,on){
-  if(type==='pek') nbdPekLayer && (on?mapNbdInst.addLayer(nbdPekLayer):mapNbdInst.removeLayer(nbdPekLayer));
 }
 
 // ── КАРТА КГС ─────────────────────────────────────────────────────────────────
