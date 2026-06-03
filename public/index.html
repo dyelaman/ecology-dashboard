@@ -2394,11 +2394,14 @@ function setLang(lang){
   document.querySelectorAll('.lang-btn').forEach(b=>b.classList.toggle('act', b.dataset.lang===lang));
   // 5. Region-селекты: option-метки через tRegion (для kz). Сами option.value НЕ трогаем —
   //    они в RU и используются как ключи в фильтрах. Меняем только видимый textContent.
+  //    Sentinel-опции пропускаем по двум маркерам: пустой value ИЛИ value==='all'
+  //    (в #globalFbar у «Все регионы»/«Все типы»/«Все статусы» value="all").
   try {
     ['gReg','tzReg','nbdFltRegion','socFltRegion','kgsFltRegion'].forEach(id=>{
       const sel = document.getElementById(id); if(!sel) return;
       Array.from(sel.options).forEach(o=>{
-        if(!o.value) return; // skip «Все»/«Все регионы» (без value)
+        if(!o.value || o.value === 'all') return;     // skip sentinel
+        if(REGION_KZ[o.value] === undefined) return;  // не региона — не трогаем (доп. safety)
         o.textContent = tRegion(o.value);
       });
     });
