@@ -3009,31 +3009,23 @@ function renderMainCharts() {
     const preview = await pRes.json();
     const kgs = kgsRes.ok ? await kgsRes.json() : null;
     _DATA = { summary, preview };
-    console.log('[init] M0: _DATA ready');
-    // Каждый sync-вызов в свой try-catch + маркер, чтобы единичный сбой
-    // НЕ обрывал инициализацию (раньше один throw блокировал populateFilters → пустые селекты).
-    const _step = (n, name, fn) => {
-      try { console.log('[init] M'+n+': '+name+' start'); fn(); console.log('[init] M'+n+': '+name+' OK'); }
-      catch(e) { console.error('[init] M'+n+' FAILED in '+name+':', e && e.message, e && e.stack); }
-    };
-    _step(1, 'byRegion → REAL_ECO', ()=>{
-      const byRegion = summary.appeals.by_region;
-      Object.keys(byRegion).forEach(r => { REAL_ECO[r] = byRegion[r]; });
-    });
-    _step(2, 'applyRealKPIs', ()=>applyRealKPIs());
-    _step(3, '_YEAR_CROSS assign', ()=>{ if(summary.appeals.by_year_cross) _YEAR_CROSS = summary.appeals.by_year_cross; });
-    _step(4, 'renderMainCharts', ()=>renderMainCharts());
-    _step(5, 'renderTimeDynamics', ()=>renderTimeDynamics());
-    _step(6, '_scheduleMainDL', ()=>{ if(typeof _scheduleMainDL==='function') _scheduleMainDL(); });
-    _step(7, 'initAppTable (preview)', ()=>{
-      if (preview.length) { window._APP_REAL = preview; initAppTable(); }
-    });
-    _step(8, '_DATA_KGS assign', ()=>{ if (kgs) { _DATA_KGS = kgs; } });
+    // Каждый sync-вызов в индивидуальном try-catch: единичный сбой не
+    // обрывает остаток init (исторически renderHearingsTab падал и
+    // блокировал populateFilters → селекты gType/gCatF/gIssueF/gSubF пустые).
+    const _try = fn => { try { fn(); } catch(_){} };
+    _try(()=>{ const byRegion = summary.appeals.by_region; Object.keys(byRegion).forEach(r => { REAL_ECO[r] = byRegion[r]; }); });
+    _try(()=>applyRealKPIs());
+    _try(()=>{ if(summary.appeals.by_year_cross) _YEAR_CROSS = summary.appeals.by_year_cross; });
+    _try(()=>renderMainCharts());
+    _try(()=>renderTimeDynamics());
+    _try(()=>{ if(typeof _scheduleMainDL==='function') _scheduleMainDL(); });
+    _try(()=>{ if (preview.length) { window._APP_REAL = preview; initAppTable(); } });
+    _try(()=>{ if (kgs) { _DATA_KGS = kgs; } });
     let kgsMap = null, tzData = null;
-    try { kgsMap = kgsMapRes.ok ? await kgsMapRes.json() : null; } catch(e){ console.error('[init] M9 FAILED kgsMap json:', e.message); }
-    _step(10, '_KGS_MAP assign', ()=>{ if (kgsMap) _KGS_MAP = kgsMap; });
-    try { tzData = tzRes.ok ? await tzRes.json() : null; } catch(e){ console.error('[init] M11 FAILED tzData json:', e.message); }
-    _step(12, 'tzData hydrate', ()=>{
+    try { kgsMap = kgsMapRes.ok ? await kgsMapRes.json() : null; } catch(_){}
+    _try(()=>{ if (kgsMap) _KGS_MAP = kgsMap; });
+    try { tzData = tzRes.ok ? await tzRes.json() : null; } catch(_){}
+    _try(()=>{
       if (tzData) {
         window._DATA_TAZA = tzData; _tzInited = false;
         const tzEl = document.getElementById('kpiTaza');
@@ -3061,13 +3053,16 @@ function renderMainCharts() {
       if(document.getElementById('panel-hearings')?.classList.contains('active')
          && typeof _socInit==='function') _socInit();
     }).catch(e=>console.warn('appeals_compact load failed:',e.message));
-    _step(13, 'populate gDay 1-31', ()=>{
+    _try(()=>{
       const gd=document.getElementById('gDay');
       if(gd) for(let d=1;d<=31;d++){const o=document.createElement('option');o.value=String(d);o.textContent=String(d);gd.appendChild(o);}
     });
-    _step(14, 'renderHearingsTab', ()=>renderHearingsTab(summary.appeals));
-    _step(15, '_buildMinTree', ()=>_buildMinTree());
-    _step(16, 'populateFilters (gType/gCatF/gIssueF/gSubF + ЦГО/МИО + datalist)', ()=>(function populateFilters(a){
+    // renderHearingsTab(summary.appeals) — УДАЛЁН: все 13 элементов (#tensionTitle,
+    // #tensionBadge, #cIkChar, #ikRegBars, и т.д.) вырезаны из markup при
+    // соц-рефакторинге. Текущая «Социальное напряжение» работает через
+    // rerenderSocial() / _socRender* с другими ID (#socAlert, #socIndex, …).
+    _try(()=>_buildMinTree());
+    _try(()=>(function populateFilters(a){
       const addOpts=(id,items,valFn,lblFn)=>{
         const el=document.getElementById(id); if(!el) return;
         items.forEach(it=>{const o=document.createElement('option');o.value=valFn(it);o.textContent=lblFn(it);el.appendChild(o);});
