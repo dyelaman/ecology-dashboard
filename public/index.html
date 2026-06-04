@@ -565,6 +565,9 @@ tr:hover td{background:var(--surface2)}
 .t-air{background:#e0f2fe;color:#075985}.t-waste{background:#dcfce7;color:#166534}
 .t-taza{background:#d1fae5;color:#065f46}.t-urban{background:#fef3c7;color:#92400e}
 .t-incident{background:#fee2e2;color:#991b1b}.t-policy{background:#ede9fe;color:#5b21b6}
+.t-water{background:#dbeafe;color:#1e40af}.t-forest{background:#bbf7d0;color:#14532d}
+.t-nature{background:#ecfccb;color:#3f6212}.t-industry{background:#fed7aa;color:#9a3412}
+.t-climate{background:#fce7f3;color:#9d174d}
 .t-reg{background:var(--surface2);color:var(--text2)}.t-new{background:#fee2e2;color:#991b1b;font-size:9px}
 .n-head{font-size:12px;font-weight:600;margin-bottom:3px;line-height:1.4}
 .n-text{font-size:11px;color:var(--text2);line-height:1.5}
@@ -9154,7 +9157,11 @@ const CACHE_KEY='eco_news_v6', TTL=2*60*60*1000;
 // snapshot. _saveNewsArchive() пишет в localStorage[ARCH_KEY]; merge-dedup
 // в _mergeNewsArchive — старые записи (с уже-устоявшимися датами) не
 // перезаписываются свежими дубликатами.
-const ARCH_KEY = 'eco_news_archive_v1';
+// v2: после ужесточения эко-фильтра v2 (stop-patterns + 11 тегов с весами)
+// старый архив v1 содержит шум (Иглесиас, седаны, парящие солисты) — отбрасываем
+const ARCH_KEY = 'eco_news_archive_v2';
+// Diagnostic counters — сбрасываются в начале fetchNews, печатаются в конце
+const _newsDiag = { raw:0, ecoFiltered:0, dedup:0, tags:{} };
 const ARCH_MAX_DAYS  = 30;
 const ARCH_MAX_ITEMS = 5000;
 const ARCH_REFETCH_MIN = 15;  // если самая свежая в архиве старше N минут — фоновый refetch
@@ -9234,7 +9241,8 @@ function _logNewsArchiveState(){
 }
 // Источники с гарантированно эко-релевантным потоком (фильтр isEcoRelevant пропускаем)
 const NEWS_SKIP_ECO_FILTER = new Set(['TG МЭПР']);
-const TAG_META={air:{l:'Воздух',c:'t-air'},waste:{l:'Отходы',c:'t-waste'},taza:{l:'Таза КЗ',c:'t-taza'},urban:{l:'Благоустройство',c:'t-urban'},incident:{l:'Инцидент',c:'t-incident'},policy:{l:'Политика',c:'t-policy'}};
+// TAG_META объявлен ниже, сразу после TAG_DEFS (TDZ требует чтоб TAG_DEFS уже был evaluated)
+let TAG_META = {};
 let allNews=[],newsInit=false,isLoading=false;
 // Live-проверка через api/proxy от 2026-06-04 показала: 6 из 11 старых
 // RSS отдают 0 (Tengrinews/Kapital/24.kz/Primeminister отдают HTML главной
@@ -9278,15 +9286,128 @@ if(document.readyState === 'loading'){
   _renderSrcRow();
 }
 
-const ECO_KEYWORDS=['эколог','выброс','загрязнен','отход','воздух','таза','taza','мэпр','природ','атмосфер','радиац','токсич','мусор','свалк','переработ','озон','климат','co2','парниковый','нефт','пэк','инцидент','чс'];
-const TAG_RULES=[
-  {tag:'air',words:['воздух','выброс','атмосфер','загрязнен','смог','пыль','co2','озон']},
-  {tag:'waste',words:['отход','мусор','свалк','полигон','захоронен','переработ','токсич']},
-  {tag:'taza',words:['таза','taza','благоустройств','уборк','субботник']},
-  {tag:'urban',words:['город','благоустройств','парк','зелен']},
-  {tag:'incident',words:['авари','инцидент','разлив','утечк','катастроф','чс','чрезвычайн']},
-  {tag:'policy',words:['закон','постановлен','министр','мэпр','программ','стратег','штраф']}
+// ═══ Эко-фильтр v2: bigram/контекст + стоп-паттерны + 9 теги c весами ═══
+// Раньше: одно слово в тексте проходило фильтр → попадали «парящий солист»,
+// Иглесиас и седан Hongqi. Теперь:
+// • Hard-reject: явные шумовые паттерны (концерты, спорт, поздравления)
+// • Скоринг: strong-маркеры (специфические фразы) +3 в title / +2 в body,
+//   context-маркеры (общие слова) +2/+1. Тег ставится при score≥2.
+// • Eco-relevant = сумма всех тегов ≥ 3 (т.е. одна strong-фраза в заголовке
+//   ИЛИ один strong + один context в теле).
+
+const NEWS_STOP_PATTERNS = [
+  // Шоубиз / культура / спорт
+  'иглесиас','опер.','оперн','солист','концерт','премьер фильма','кинопремьер',
+  'хоккей','футбол','теннис','олимпиад','спортсмен','марафон','забег',
+  'актёр','актер ','певец','певиц','музыкант','композитор','дирижер','дирижёр',
+  'кинопрокат','премьер.','премьера ','фестивал','выставк картин',
+  // Автомобили / товары
+  'hongqi','седан','хэтчбек','внедорожник','автомобиль производ',
+  // Праздники / поздравления / детские конкурсы (без эко-контекста)
+  'день флага','день республики','день рождени','юбилей','свадьб',
+  'детский конкурс рисунк','школьный конкурс рисунк','конкурс рисунков',
+  'облака фантаз',
+  // Политика (не еко)
+  'трамп','байден','выборы президент','инаугурац',
 ];
+
+// Тематические правила. strong = специфические фразы (вес +3/+2),
+// context = общие слова (+2/+1). Tag активируется при score >= 2.
+const TAG_DEFS = [
+  { key:'taza',     label:'Таза КЗ',         cls:'t-taza',
+    strong:['таза казахстан','таза қазақстан','taza qazaqstan','taza kazakhstan','tazaqaz','тазақаз'],
+    context:[] },
+  { key:'air',      label:'Воздух',          cls:'t-air',
+    strong:['качество воздуха','загрязнен воздух','загрязнение воздух','чист воздух','грязн воздух',
+            'смог','aqi','выброс в атмосфер','выброс в воздух','нму','неблагоприятн метеоусловия',
+            'атмосферн воздух','казгидромет','выброс предприят'],
+    context:['воздух','атмосфер','озон','co2','выброс'] },
+  { key:'water',    label:'Вода',            cls:'t-water',
+    // Корни рек/морей в усечённой форме — ловят и «Каспий» и «Каспия», «Арал» и «Арала»
+    strong:['питьев вод','питьевая вод','сточн вод','загрязнен вод','загрязнение вод',
+            'каспи','балхаш','арал','иртыш',
+            'реки и озёр','реки и озер','водн ресурс','водохран',
+            'паводок','наводнен','водоём','водоем','качество воды'],
+    context:['река','озеро','гидро','залив'] },
+  { key:'waste',    label:'Отходы',          cls:'t-waste',
+    strong:['твёрдые бытов отход','тбо','несанкционирован свалк','полигон отход','захоронен отход',
+            'переработк отход','утилизац отход','мусорн полигон','мусоросжига','раздельн сбор',
+            'токсичн отход','опасн отход','свалк мусор'],
+    context:['отход','мусор','свалк','утилизац','переработк'] },
+  { key:'forest',   label:'Лес',             cls:'t-forest',
+    // Лесные пожары — много форм; перечисляем явные биграммы + усечённые корни
+    strong:['лесн пожар','лесной пожар','лесные пожар','лесных пожар','лесопожар',
+            'вырубк лес','незаконн вырубк','лесн фонд','лесхоз','лесной хозяйств',
+            'природный заказник','браконьер'],
+    context:['лес ','лесов','деревьев','саженц','лесовосстан'] },
+  { key:'nature',   label:'Природа',         cls:'t-nature',
+    strong:['заповедник','национальн парк','краснокниж','биоразнообраз','эндемик','сайгак',
+            'тюлен','снежн барс','природоохран','недропользован','браконьер'],
+    context:['флор','фаун','экосистем','недр'] },
+  { key:'industry', label:'Промышленность',  cls:'t-industry',
+    strong:['промышленн выброс','выброс завод','выброс предприят','пэк ','эколог контрол','аэс ',
+            'тэц','цементн завод','металлургическ','нефтеперераб','горно-обогатит'],
+    context:['завод','промпредприят','промышленн','нефт','уголь','шахт'] },
+  { key:'climate',  label:'Климат',          cls:'t-climate',
+    strong:['изменен климата','климатическ изменен','парников газ','углеродн след','углеродн нейтрал',
+            'засуха','глобальн потеплен','озонов слой','декарбонизац'],
+    context:['климат','засух','паводок','засуш'] },
+  { key:'urban',    label:'Благоустройство', cls:'t-urban',
+    strong:['благоустройств город','озеленен город','городск парк','зелён зон','зелёный каркас',
+            'высадка деревьев','посадка деревьев','общественн пространств'],
+    context:['благоустройств','сквер'] },
+  { key:'policy',   label:'Политика',        cls:'t-policy',
+    strong:['министр экологии','мэпр','экологическ закон','экологическ норматив','эколог штраф',
+            'эколог экспертиз','эколог разрешен','природоохранн прокурор','экологическ кодекс'],
+    context:['министерств','постановлен','законопроект','штраф','реглам'] },
+  { key:'incident', label:'Инцидент',        cls:'t-incident',
+    strong:['разлив нефт','эколог катастроф','эколог авари','химическ выброс','аварийн выброс',
+            'превышен пдк','утечк нефт','утечк газ'],
+    context:['авари','утечк','инцидент','чрезвычайн','чс '] },
+];
+
+// Заполняем TAG_META (объявлен выше как let — заполнить можно из любого места после TAG_DEFS)
+TAG_META = Object.fromEntries(TAG_DEFS.map(d => [d.key, {l:d.label, c:d.cls}]));
+
+// Анализ одной новости: возвращает {score, tags, rejected}. tags — массив key'ев тегов.
+function _ecoAnalyze(head, text){
+  const h = (head||'').toLowerCase();
+  const t = (text||'').toLowerCase();
+  const full = h + ' ' + t;
+
+  // Hard-reject по стоп-паттернам
+  for(const stop of NEWS_STOP_PATTERNS){
+    if(full.includes(stop)) return { score:0, tags:[], rejected:'stop:'+stop };
+  }
+
+  // Спецслучай Таза — фраза, не отдельные слова
+  let tazaMatch = false;
+  if(/таза\s*(казахстан|қазақстан|казакстан|кз)/i.test(full)
+     || /taza\s*(kazakhstan|qazaqstan|qazakhstan|kz)/i.test(full)
+     || full.includes('tazaqaz') || full.includes('тазақаз')){ tazaMatch = true; }
+
+  const tagScores = {};
+  for(const def of TAG_DEFS){
+    let s = 0;
+    if(def.key === 'taza'){
+      s = tazaMatch ? 3 : 0;
+    } else {
+      for(const w of def.strong||[]){
+        if(h.includes(w)) s += 3;
+        else if(t.includes(w)) s += 2;
+      }
+      for(const w of def.context||[]){
+        if(h.includes(w)) s += 2;
+        else if(t.includes(w)) s += 1;
+      }
+    }
+    if(s > 0) tagScores[def.key] = s;
+  }
+
+  const totalScore = Object.values(tagScores).reduce((a,b)=>a+b, 0);
+  const tags = Object.entries(tagScores).filter(([,s]) => s >= 2).map(([k]) => k);
+  return { score: totalScore, tags };
+}
 const REG_RULES=[
   {name:'Астана',          keys:['астана']},
   {name:'Алматы',          keys:['алматы','алматинск']},
@@ -9338,25 +9459,20 @@ function isTazaRelated(text){
   if(low.includes('тазақаз')) return true;
   return false;
 }
-// Эко-релевантность для Telegram-постов / расширенного RSS
-const ECO_STRICT_KW = ['эколог','мэпр','выброс','загрязнен','отход','атмосфер',
-  'радиац','токсич','свалк','переработ','парников','нефт','уголь','тюлен',
-  'каспий','балхаш','арал','браконьер','вырубк','лес','почв','воздух',
-  'климат','озон','co2','смог','нму','казгидромет','благоустройств'];
-function isEcoRelevant(text){
+// Эко-релевантность теперь через _ecoAnalyze (score-based + stop-patterns).
+// Сигнатуры сохранены (text) для backward-compat вызовов из старого кода —
+// если head не передан, режем text на первые 80 символов как fallback "заголовка".
+// ECO_STRICT_KW и старый список устаревшего фильтра — больше не нужны.
+function isEcoRelevant(text, head){
   if(!text) return false;
-  if(isTazaRelated(text)) return true;
-  const low = text.toLowerCase();
-  return ECO_STRICT_KW.some(kw=>low.includes(kw));
+  const h = head !== undefined ? head : String(text).slice(0, 80);
+  return _ecoAnalyze(h, text).score >= 3;
 }
-function detectTags(text){
-  const low=text.toLowerCase();
-  const tags=[];
-  if(isTazaRelated(text)) tags.push('taza');
-  for(const rule of TAG_RULES){
-    if(rule.words.some(w=>low.includes(w))) tags.push(rule.tag);
-  }
-  return tags.length ? [...new Set(tags)] : ['policy'];
+function detectTags(text, head){
+  if(!text) return [];
+  const h = head !== undefined ? head : String(text).slice(0, 80);
+  const tags = _ecoAnalyze(h, text).tags;
+  return tags.length ? tags : ['policy'];
 }
 function detectRegion(text){
   const low=text.toLowerCase();
@@ -9375,23 +9491,21 @@ function parseRssXml(xml,sourceName){
     const doc=parser.parseFromString(xml,'text/xml');
     const entries=doc.querySelectorAll('item');
     entries.forEach(item=>{
+      _newsDiag.raw++;
       const title=(item.querySelector('title')?.textContent||'').trim();
       const desc=(item.querySelector('description')?.textContent||'').replace(/<[^>]+>/g,'').trim();
       const link=(item.querySelector('link')?.textContent||'').trim();
       const pubDate=item.querySelector('pubDate')?.textContent||'';
+      // Эко-релевантность через _ecoAnalyze (title весомее, чем body)
+      const a = _ecoAnalyze(title, desc);
+      if(a.score < 3) return;
+      _newsDiag.ecoFiltered++;
       const fullText = title + ' ' + desc;
-      // Эко-релевантность: либо «Таза Казахстан» во всех вариантах, либо ECO_STRICT_KW,
-      // либо ≥2 общих эко-ключей
-      const lowFull = fullText.toLowerCase();
-      const isEco = isEcoRelevant(fullText)
-        || ECO_KEYWORDS.filter(kw=>lowFull.includes(kw)).length>=2;
-      if(!isEco) return;
-      const tags=detectTags(fullText);
       const region=detectRegion(fullText);
-      const impact=detectImpact(fullText,tags);
+      const impact=detectImpact(fullText, a.tags);
       items.push({date:parseRssDate(pubDate), ts:_newsTs(pubDate), src:sourceName,head:title,
         text:desc.substring(0,150)+(desc.length>150?'...':''),
-        link,tags,region,impact,delta:null,isNew:true});
+        link,tags:a.tags,region,impact,delta:null,isNew:true});
     });
   } catch(e){ console.warn('RSS parse error:',sourceName,e); }
   return items;
@@ -9410,13 +9524,21 @@ function parseTelegramHTML(html, sourceName){
       if(!textEl) return;
       const fullText = textEl.textContent.trim();
       if(!fullText) return;
-      // Фильтр по эко-релевантности (для тематически-чистых каналов — пропускаем)
-      if(!NEWS_SKIP_ECO_FILTER.has(sourceName) && !isEcoRelevant(fullText)) return;
+      _newsDiag.raw++;
+      const head = fullText.split(/[.!?\n]/)[0].slice(0, 110).trim();
+      const body = fullText.slice(head.length);
+      // Тематические каналы — пропускаем эко-фильтр, но всё равно прогоняем
+      // через стоп-паттерны и считаем теги.
+      const a = _ecoAnalyze(head, body);
+      const skipFilter = NEWS_SKIP_ECO_FILTER.has(sourceName);
+      if(!skipFilter && a.score < 3) return;
+      // Hard-reject стоп-паттернов работает даже для тематических (МЭПР шум фильтруем)
+      if(a.rejected && a.rejected.startsWith('stop:')) return;
+      _newsDiag.ecoFiltered++;
       const pubDate = dateEl ? dateEl.getAttribute('datetime') : '';
       const link = linkEl ? linkEl.getAttribute('href') : '';
-      const head = fullText.split(/[.!?\n]/)[0].slice(0, 110).trim();
       const text = fullText.slice(0, 200) + (fullText.length > 200 ? '…' : '');
-      const tags = detectTags(fullText);
+      const tags = a.tags.length ? a.tags : (skipFilter ? ['policy'] : []);
       const region = detectRegion(fullText);
       items.push({
         date: parseRssDate(pubDate), ts: _newsTs(pubDate),
@@ -9444,6 +9566,7 @@ function parseKazhydrometHTML(html, sourceName){
       const a = card.querySelector('a.news-name');
       const title = a ? a.textContent.trim() : '';
       if(!title) return;
+      _newsDiag.raw++;
       let link = a.getAttribute('href') || '';
       if(link && !link.startsWith('http')){
         link = 'https://www.kazhydromet.kz' + (link.startsWith('/') ? link : '/' + link);
@@ -9454,10 +9577,14 @@ function parseKazhydrometHTML(html, sourceName){
       const md = dateStr.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
       if(md) iso = new Date(Date.UTC(+md[3], +md[2]-1, +md[1])).toISOString();
       const desc = (card.querySelector('.news-desc')?.textContent || '').trim();
+      // Эко-фильтр НЕ применяем (Казгидромет тематически весь эко), но стоп-паттерны
+      // и тегирование через _ecoAnalyze
+      const analysis = _ecoAnalyze(title, desc);
+      if(analysis.rejected && analysis.rejected.startsWith('stop:')) return;
+      _newsDiag.ecoFiltered++;
+      const tags = analysis.tags.length ? analysis.tags : ['air']; // дефолт air для Казгидромета
+      if(!tags.includes('air') && !tags.includes('climate')) tags.push('air');
       const fullText = title + (desc ? ' ' + desc : '');
-      // Эко-фильтр НЕ применяем — Казгидромет тематически весь экологичен.
-      const tags = detectTags(fullText);
-      if(!tags.includes('air') && !tags.includes('taza')) tags.push('air');
       const region = detectRegion(fullText);
       const text = (desc || title).slice(0, 200) + ((desc || title).length > 200 ? '…' : '');
       items.push({
@@ -9496,6 +9623,9 @@ async function fetchNews(){
   setStatus('loading','Загружаю RSS-ленты...');
   setProg(5); renderSkel();
 
+  // Сбросить diagnostic counters перед обходом источников
+  _newsDiag.raw = 0; _newsDiag.ecoFiltered = 0; _newsDiag.dedup = 0; _newsDiag.tags = {};
+
   // 1) Параллельный fetch всех источников
   const allItems = [];
   const step = 90 / RSS_SOURCES.length;
@@ -9524,6 +9654,14 @@ async function fetchNews(){
     document.getElementById('newsList').innerHTML = '<div class="empty">Нет данных. Нажмите «Обновить сейчас».</div>';
   } else {
     // 3) MERGE c архивом + dedup по link/(src+head) + фильтр >30 дней + лимит 5000
+    _newsDiag.dedup = fresh.length;
+    fresh.forEach(n => (n.tags||[]).forEach(t => _newsDiag.tags[t] = (_newsDiag.tags[t]||0)+1));
+    console.log('[news filter]', {
+      raw: _newsDiag.raw,
+      ecoFiltered: _newsDiag.ecoFiltered,
+      dedup: _newsDiag.dedup,
+      tags: _newsDiag.tags
+    });
     allNews = _mergeNewsArchive(allNews, fresh);
     _saveNewsArchive(allNews);
     _logNewsArchiveState();
