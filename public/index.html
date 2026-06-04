@@ -3036,9 +3036,19 @@ function renderAppealsDyn(){
       pointRadius:totals.length>40?2:4, pointBackgroundColor:'#fff', pointBorderColor:'#1B7A3A', pointBorderWidth:2,
       pointHoverRadius:6, pointHoverBackgroundColor:'#1B7A3A',
       datalabels:{
-        display: ctx=>totals.length<=24 && ctx.dataset.data[ctx.dataIndex]>0,
+        // Год — всегда (≤10 точек); Месяц — всегда (≤60); День — каждую N-ю чтобы не слипалось
+        display: ctx=>{
+          if(ctx.dataset.data[ctx.dataIndex]<=0) return false;
+          const len=ctx.dataset.data.length;
+          if(_appealsDynGran==='day' && len>62){
+            // показываем каждую step-ю точку (≈ 30 подписей видимы)
+            const step=Math.ceil(len/30);
+            return ctx.dataIndex%step===0;
+          }
+          return true;
+        },
         align:'top', anchor:'end',
-        formatter:v=>v.toLocaleString('ru-RU'),
+        formatter:v=> v>=1000 ? (v/1000).toFixed(v>=10000?0:1)+'к' : v.toLocaleString('ru-RU'),
         font:{size:9, weight:'600'}, color:'#1B7A3A',
       }
     });
@@ -3051,9 +3061,17 @@ function renderAppealsDyn(){
       pointRadius:lates.length>40?2:4, pointBackgroundColor:'#fff', pointBorderColor:'#E53935', pointBorderWidth:2,
       pointHoverRadius:6, pointHoverBackgroundColor:'#E53935',
       datalabels:{
-        display: ctx=>lates.length<=24 && ctx.dataset.data[ctx.dataIndex]>0,
+        display: ctx=>{
+          if(ctx.dataset.data[ctx.dataIndex]<=0) return false;
+          const len=ctx.dataset.data.length;
+          if(_appealsDynGran==='day' && len>62){
+            const step=Math.ceil(len/30);
+            return ctx.dataIndex%step===0;
+          }
+          return true;
+        },
         align:'bottom', anchor:'start',
-        formatter:v=>v.toLocaleString('ru-RU'),
+        formatter:v=> v>=1000 ? (v/1000).toFixed(v>=10000?0:1)+'к' : v.toLocaleString('ru-RU'),
         font:{size:9, weight:'600'}, color:'#E53935',
       }
     });
@@ -5785,6 +5803,18 @@ function _fitRegionCanvas(id,n){
 
 let c12Chart=null,c13Chart=null,cRegLateChart=null;
 
+// Datalabels для горизонтальных бар-чартов «Количество обращений» / «Просрочено».
+// Показывает значение справа от бара. Сокращает >1000 → «12.3к», >10000 → «12к».
+function _regBarDataLabels(color){
+  return {
+    display: ctx => (ctx.dataset.data[ctx.dataIndex]||0) > 0,
+    align: 'end', anchor: 'end',
+    formatter: v => v>=1000 ? (v/1000).toFixed(v>=10000?0:1)+'к' : v.toLocaleString('ru-RU'),
+    font: {size:9, weight:'600'}, color: color || '#374151',
+    padding: {left:4}, clamp: true,
+  };
+}
+
 // ── Donut «Категория» (c3) — всегда показывает категории. Drill-down на
 // подкатегории и характер происходит не внутри c3, а в соседних donut'ах
 // cAppSubCat/cAppSub через applyTimeEngine (per-call re-aggregation).
@@ -6046,8 +6076,8 @@ function _rechartOnFilter(){
     if(cRegLateChart)cRegLateChart.destroy();
     cRegLateChart=new Chart(el,{type:'bar',data:{
       labels:lateData.map(d=>d.name),
-      datasets:[{label:'Просрочено',data:lateData.map(d=>d.late),backgroundColor:colors,borderRadius:3}]
-    },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      datasets:[{label:'Просрочено',data:lateData.map(d=>d.late),backgroundColor:colors,borderRadius:3,datalabels:_regBarDataLabels('#991B1B')}]
+    },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:36}},plugins:{legend:{display:false}},
       onHover:(e,els)=>{ if(e?.native?.target) e.native.target.style.cursor=els.length?'pointer':'default'; },
       onClick:(e,els)=>{
         if(!els.length) return;
@@ -6277,8 +6307,8 @@ function renderRegLateChart(){
   if(cRegLateChart) cRegLateChart.destroy();
   cRegLateChart=new Chart(el,{type:'bar',data:{
     labels:data.map(d=>d.name),
-    datasets:[{label:'Просрочено',data:data.map(d=>d.late),backgroundColor:'#E53935',borderRadius:3}]
-  },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+    datasets:[{label:'Просрочено',data:data.map(d=>d.late),backgroundColor:'#E53935',borderRadius:3,datalabels:_regBarDataLabels('#991B1B')}]
+  },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:36}},plugins:{legend:{display:false}},
     scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},
             y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}}}});
   _fitRegionCanvas('cRegLate',data.length);
@@ -6342,7 +6372,7 @@ setTimeout(()=>{
 
   // Обращения — реальные данные
   const topR=Object.entries(REAL_ECO).sort((a,b)=>b[1].total-a[1].total);
-  c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;if(typeof _mToggle==='function'){_mToggle('gReg', reg); onGlobalFilter();}}}});
+  c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3,datalabels:_regBarDataLabels('#0E7490')}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:40}},plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;if(typeof _mToggle==='function'){_mToggle('gReg', reg); onGlobalFilter();}}}});
   _fitRegionCanvas('c12',topR.length);
   const allIssues={};Object.values(ecoSrc).forEach(d=>d.issues&&Object.entries(d.issues).forEach(([k,v])=>allIssues[k]=(allIssues[k]||0)+v));
   const ti2=Object.entries(allIssues).sort((a,b)=>b[1]-a[1]).slice(0,6);
@@ -9632,7 +9662,7 @@ function applyAppealFilter(){
   const t2=document.getElementById('c13Title');
   if(region==='all'){
     const topR=Object.entries(REAL_ECO).sort((a,b)=>b[1].total-a[1].total);
-    c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3}]},options:Object.assign({},APPEAL_OPT,{scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;if(typeof _mToggle==='function'){_mToggle('gReg', reg); onGlobalFilter();}}})});
+    c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(([n])=>n),datasets:[{label:'Обращений',data:topR.map(([,d])=>d.total),backgroundColor:'#0891B2',borderRadius:3,datalabels:_regBarDataLabels('#0E7490')}]},options:Object.assign({},APPEAL_OPT,{layout:{padding:{right:40}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},onClick:(e,els)=>{if(!els.length)return;const reg=topR[els[0].index]?.[0];if(!reg)return;if(typeof _mToggle==='function'){_mToggle('gReg', reg); onGlobalFilter();}}})});
     _fitRegionCanvas('c12',topR.length);
     const ai={};Object.values(REAL_ECO).forEach(d=>Object.entries(d.issues).forEach(([k,v])=>ai[k]=(ai[k]||0)+v));
     const ti=Object.entries(ai).sort((a,b)=>b[1]-a[1]).slice(0,6);
@@ -9641,7 +9671,7 @@ function applyAppealFilter(){
     if(t2)t2.textContent='Темы обращений (Экология)';
   } else {
     const d=REAL_ECO[region]||{done:0,work:0,late:0,latedone:0,issues:{}};
-    c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:['Исполнено','В работе','Просрочено','С просрочкой'],datasets:[{data:[d.done||0,d.work||0,d.late||0,d.latedone||0],backgroundColor:['#16A34A','#0891B2','#DC2626','#D97706'],borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}}}}});
+    c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:['Исполнено','В работе','Просрочено','С просрочкой'],datasets:[{data:[d.done||0,d.work||0,d.late||0,d.latedone||0],backgroundColor:['#16A34A','#0891B2','#DC2626','#D97706'],borderRadius:3,datalabels:{display:ctx=>ctx.dataset.data[ctx.dataIndex]>0,align:'end',anchor:'end',formatter:v=>v.toLocaleString('ru-RU'),font:{size:10,weight:'600'},color:'#374151'}}]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:20}},plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}}}}});
     _fitRegionCanvas('c12',5);
     const topics=Object.entries(d.issues||{}).sort((a,b)=>b[1]-a[1]).slice(0,6);
     c13Chart=mkC('c13','bar',topics.map(([n])=>n),[{label:'Обращений',data:topics.map(([,v])=>v),backgroundColor:'#16A34A',borderRadius:3}],{indexAxis:'y',scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af'}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els,chart)=>{if(!els.length)return;const v=topics[els[0].index]?.[0]||chart.data.labels[els[0].index];const el=document.getElementById('gSubF');if(el){el.value=v;onGlobalFilter();}}});
