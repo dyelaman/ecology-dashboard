@@ -6477,7 +6477,13 @@ setTimeout(()=>{
 },200);
 setTimeout(()=>initMainMap(),500);
 // Фоновая загрузка новостей для ленты на главной
-setTimeout(()=>{const c=loadCache();if(c&&c.news&&c.news.length){allNews=c.news;renderMainNewsFeed();}else{fetchNews();}},800);
+setTimeout(()=>{
+  // Стартовый bootstrap главной — ставим архив в allNews до открытия вкладки Новости.
+  // initNews() сам разрулит фоновый refetch если архив устарел.
+  const arch = (typeof _loadNewsArchive==='function') ? _loadNewsArchive() : null;
+  if(arch && arch.n && arch.n.length){ allNews = arch.n; renderMainNewsFeed(); }
+  else { fetchNews(); }
+}, 800);
 
 // ── MAIN PAGE CHOROPLETH MAP ──
 const KAZ_GEO_URL='/border_regions.geojson';
@@ -9142,6 +9148,90 @@ function initLeafletMap(){
 
 // ── NEWS ──
 const CACHE_KEY='eco_news_v6', TTL=2*60*60*1000;
+
+// ═══ Архив новостей за 30 дней ═══════════════════════════════════════════
+// Источник истины для ленты + последующей аналитики. Накопительный, не
+// snapshot. _saveNewsArchive() пишет в localStorage[ARCH_KEY]; merge-dedup
+// в _mergeNewsArchive — старые записи (с уже-устоявшимися датами) не
+// перезаписываются свежими дубликатами.
+const ARCH_KEY = 'eco_news_archive_v1';
+const ARCH_MAX_DAYS  = 30;
+const ARCH_MAX_ITEMS = 5000;
+const ARCH_REFETCH_MIN = 15;  // если самая свежая в архиве старше N минут — фоновый refetch
+
+// Нормализация даты в Unix ms. Источники отдают:
+// • RSS: RFC 822 / RFC 2822 (`Wed, 04 Jun 2026 12:00:00 GMT`)
+// • TG preview: ISO 8601 в `<time datetime="...">` (точная дата)
+// • Казгидромет: ISO (распарсенный из dd.mm.yyyy)
+// Date конструктор всё это разбирает. Fallback на now() — последний шанс.
+function _newsTs(dateStr){
+  if(!dateStr) return Date.now();
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? Date.now() : d.getTime();
+}
+
+// Ключ для дедупа: link (если непустой/осмысленный) → src + первые 80 символов
+// заголовка. Это устойчиво к повторной публикации с разными UTM-параметрами
+// (link меняется) только если у обоих url разные, что приемлемо для метрик.
+function _newsItemKey(n){
+  const link = (n.link||'').trim();
+  if(link && link.length > 8 && link !== '#') return link;
+  return (n.src||'?') + '|' + (n.head||'').substring(0,80).toLowerCase();
+}
+
+function _mergeNewsArchive(prev, fresh){
+  const cutoff = Date.now() - ARCH_MAX_DAYS*24*60*60*1000;
+  const byKey = new Map();
+  // Старые записи побеждают — у них честная исходная дата, не «обновлено сейчас»
+  for(const n of (prev||[])){
+    if(!n || (n.ts||0) < cutoff) continue;
+    byKey.set(_newsItemKey(n), n);
+  }
+  for(const n of (fresh||[])){
+    if(!n || (n.ts||0) < cutoff) continue;
+    const key = _newsItemKey(n);
+    if(!byKey.has(key)) byKey.set(key, n);
+  }
+  // По убыванию даты + hard limit
+  const merged = [...byKey.values()].sort((a,b)=>(b.ts||0)-(a.ts||0));
+  return merged.length > ARCH_MAX_ITEMS ? merged.slice(0, ARCH_MAX_ITEMS) : merged;
+}
+
+function _saveNewsArchive(arr){
+  const payload = JSON.stringify({ts:Date.now(), v:1, n:arr});
+  try { localStorage.setItem(ARCH_KEY, payload); return true; }
+  catch(_) {
+    // QuotaExceeded → урезаем до 1500 свежайших
+    try {
+      const trimmed = arr.slice(0, 1500);
+      localStorage.setItem(ARCH_KEY, JSON.stringify({ts:Date.now(), v:1, n:trimmed}));
+      return true;
+    } catch(e2){ console.warn('news archive save failed:', e2.message); return false; }
+  }
+}
+
+function _loadNewsArchive(){
+  try {
+    const raw = localStorage.getItem(ARCH_KEY);
+    if(!raw) return null;
+    const d = JSON.parse(raw);
+    if(!d || !Array.isArray(d.n)) return null;
+    // Очистка старого при чтении (на случай если страницу не открывали неделю)
+    const cutoff = Date.now() - ARCH_MAX_DAYS*24*60*60*1000;
+    const fresh = d.n.filter(n => n && (n.ts||0) >= cutoff);
+    return { ts: d.ts || 0, n: fresh };
+  } catch(_) { return null; }
+}
+
+function _logNewsArchiveState(){
+  try {
+    const total = allNews.length;
+    const newest = allNews[0]?.date || '—';
+    const oldest = allNews[total-1]?.date || '—';
+    const kb = Math.round(JSON.stringify(allNews).length / 1024);
+    console.log('[news archive]', { total, newest, oldest, storageSize_kb: kb });
+  } catch(_){}
+}
 // Источники с гарантированно эко-релевантным потоком (фильтр isEcoRelevant пропускаем)
 const NEWS_SKIP_ECO_FILTER = new Set(['TG МЭПР']);
 const TAG_META={air:{l:'Воздух',c:'t-air'},waste:{l:'Отходы',c:'t-waste'},taza:{l:'Таза КЗ',c:'t-taza'},urban:{l:'Благоустройство',c:'t-urban'},incident:{l:'Инцидент',c:'t-incident'},policy:{l:'Политика',c:'t-policy'}};
@@ -9299,7 +9389,7 @@ function parseRssXml(xml,sourceName){
       const tags=detectTags(fullText);
       const region=detectRegion(fullText);
       const impact=detectImpact(fullText,tags);
-      items.push({date:parseRssDate(pubDate),src:sourceName,head:title,
+      items.push({date:parseRssDate(pubDate), ts:_newsTs(pubDate), src:sourceName,head:title,
         text:desc.substring(0,150)+(desc.length>150?'...':''),
         link,tags,region,impact,delta:null,isNew:true});
     });
@@ -9329,7 +9419,7 @@ function parseTelegramHTML(html, sourceName){
       const tags = detectTags(fullText);
       const region = detectRegion(fullText);
       items.push({
-        date: parseRssDate(pubDate),
+        date: parseRssDate(pubDate), ts: _newsTs(pubDate),
         src: sourceName,
         head: head || fullText.slice(0, 60),
         text, link,
@@ -9371,7 +9461,8 @@ function parseKazhydrometHTML(html, sourceName){
       const region = detectRegion(fullText);
       const text = (desc || title).slice(0, 200) + ((desc || title).length > 200 ? '…' : '');
       items.push({
-        date: iso, src: sourceName, head: title, text, link,
+        date: iso, ts: _newsTs(iso),
+        src: sourceName, head: title, text, link,
         tags, region,
         impact: detectImpact(fullText, tags),
         delta: null, isNew: true,
@@ -9397,8 +9488,66 @@ async function fetchOneRss(source){
     return [];
   }
 }
-async function fetchNews(){if(isLoading)return;isLoading=true;const btn=document.getElementById('btnR');btn.disabled=true;btn.textContent='Обновляется...';setStatus('loading','Загружаю RSS-ленты...');setProg(5);renderSkel();const allItems=[];const step=90/RSS_SOURCES.length;for(let i=0;i<RSS_SOURCES.length;i++){const src=RSS_SOURCES[i];setStatus('loading','Загружаю '+src.name+' ('+( i+1)+'/'+RSS_SOURCES.length+')');const items=await fetchOneRss(src);allItems.push(...items);setProg(5+Math.round(step*(i+1)));}allItems.sort((a,b)=>{const o={high:0,med:1,low:2};if(o[a.impact]!==o[b.impact])return o[a.impact]-o[b.impact];return 0;});const seen=new Set();const unique=allItems.filter(n=>{const key=n.head.substring(0,40).toLowerCase();if(seen.has(key))return false;seen.add(key);return true;});const alerts=unique.filter(n=>n.impact==='high');setProg(100);setTimeout(()=>setProg(0,false),500);if(unique.length===0){setStatus('err','Не удалось загрузить новости.');document.getElementById('newsList').innerHTML='<div class="empty">Нет данных. Нажмите «Обновить сейчас».</div>';}else{saveCache({news:unique,alerts});allNews=unique;applyFilter();renderMainNewsFeed();markSrc(true);setStatus('live','Загружено '+unique.length+' новостей из '+RSS_SOURCES.length+' источников',Date.now());if(alerts.length)showAlert(alerts[0].head);}isLoading=false;btn.disabled=false;btn.textContent='Обновить сейчас';}
-function triggerRefresh(){localStorage.removeItem(CACHE_KEY);fetchNews();fetchSocial();}
+async function fetchNews(){
+  if(isLoading) return;
+  isLoading = true;
+  const btn = document.getElementById('btnR');
+  btn.disabled = true; btn.textContent = 'Обновляется...';
+  setStatus('loading','Загружаю RSS-ленты...');
+  setProg(5); renderSkel();
+
+  // 1) Параллельный fetch всех источников
+  const allItems = [];
+  const step = 90 / RSS_SOURCES.length;
+  for(let i=0; i<RSS_SOURCES.length; i++){
+    const src = RSS_SOURCES[i];
+    setStatus('loading', 'Загружаю '+src.name+' ('+(i+1)+'/'+RSS_SOURCES.length+')');
+    const items = await fetchOneRss(src);
+    allItems.push(...items);
+    setProg(5 + Math.round(step*(i+1)));
+  }
+
+  // 2) Сортируем по impact, дедуп по 40-символьному префиксу заголовка (внутри СНАПШОТА)
+  allItems.sort((a,b)=>{const o={high:0,med:1,low:2};if(o[a.impact]!==o[b.impact]) return o[a.impact]-o[b.impact]; return 0;});
+  const seen = new Set();
+  const fresh = allItems.filter(n => {
+    const key = (n.head||'').substring(0,40).toLowerCase();
+    if(seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+  const alerts = fresh.filter(n => n.impact==='high');
+
+  setProg(100); setTimeout(()=>setProg(0,false), 500);
+
+  if(fresh.length === 0 && (!allNews || allNews.length === 0)){
+    setStatus('err','Не удалось загрузить новости.');
+    document.getElementById('newsList').innerHTML = '<div class="empty">Нет данных. Нажмите «Обновить сейчас».</div>';
+  } else {
+    // 3) MERGE c архивом + dedup по link/(src+head) + фильтр >30 дней + лимит 5000
+    allNews = _mergeNewsArchive(allNews, fresh);
+    _saveNewsArchive(allNews);
+    _logNewsArchiveState();
+
+    applyFilter();
+    renderMainNewsFeed();
+    markSrc(true);
+    setStatus('live',
+      'Архив: '+allNews.length+' новостей · +' +fresh.length+ ' свежих из ' +RSS_SOURCES.length+ ' источников',
+      Date.now()
+    );
+    if(alerts.length) showAlert(alerts[0].head);
+  }
+
+  isLoading = false;
+  btn.disabled = false;
+  btn.textContent = 'Обновить сейчас';
+}
+function triggerRefresh(){
+  // Сбрасываем только TTL-cache; архив (ARCH_KEY) сохраняем, fetchNews сам подмержит
+  try { localStorage.removeItem(CACHE_KEY); } catch(_){}
+  fetchNews();
+  fetchSocial();
+}
 
 // ── SOCIAL MEDIA ──
 const SOCIAL_CHANNELS=['kozachkow','tengrinews'];
@@ -9999,7 +10148,27 @@ ${buildAICtx()}`;
   inp.focus();
 }
 
-async function initNews(){newsInit=true;setStatus('loading','Проверка кеша...');const c=loadCache();if(c&&c.news&&c.news.length>0){allNews=c.news;applyFilter();renderMainNewsFeed();markSrc(true);const age=Math.round((Date.now()-c.ts)/60000);setStatus('live','Из кеша ('+age+' мин.) · '+c.news.length+' новостей',c.ts);if(c.alerts&&c.alerts.length)showAlert(c.alerts[0].head||c.alerts[0].text);if(Date.now()-c.ts>30*60*1000)setTimeout(fetchNews,2000);}else{setStatus('live','Загружаю новости...');fetchNews();}fetchSocial();}
+async function initNews(){
+  newsInit = true;
+  setStatus('loading', 'Восстанавливаем архив...');
+  const arch = _loadNewsArchive();
+  if(arch && arch.n && arch.n.length > 0){
+    allNews = arch.n;
+    applyFilter();
+    renderMainNewsFeed();
+    markSrc(true);
+    _logNewsArchiveState();
+    const newestTs = arch.n[0]?.ts || 0;
+    const ageMin = Math.round((Date.now() - newestTs) / 60000);
+    setStatus('live', 'Архив: '+allNews.length+' новостей · последняя ' +ageMin+ ' мин. назад', newestTs);
+    // Самая свежая старше ARCH_REFETCH_MIN — фоновый refetch
+    if(ageMin > ARCH_REFETCH_MIN) setTimeout(fetchNews, 2000);
+  } else {
+    setStatus('live', 'Загружаю новости...');
+    fetchNews();
+  }
+  fetchSocial();
+}
 
 // ── СОЦИАЛЬНОЕ НАПРЯЖЕНИЕ: индекс недовольства бездействием ─────────────────
 const socFilters = { yearMonth:null, dateFrom:null, dateTo:null, region:null, level:null, source:null };
