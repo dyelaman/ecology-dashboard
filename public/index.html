@@ -6037,12 +6037,23 @@ function _rechartOnFilter(){
       lateData=Object.entries(regSrc).map(([n,d])=>({name:n,late:d.late||0})).filter(d=>d.late>0).sort((a,b)=>b.late-a.late);
     }
     if(!lateData.length)return;
-    const colors=lateData.map(d=>d.name===reg?'#FB8C00':'#E53935');
+    // Multi-select gReg: подсветка выбранных оранжевым, остальное приглушено
+    const regSel = (typeof _mActive==='function' && _mActive('gReg')) ? _mSel.gReg : null;
+    const colors=lateData.map(d => regSel
+      ? (regSel.has(d.name) ? '#FB8C00' : 'rgba(229,57,53,0.30)')
+      : (d.name===reg ? '#FB8C00' : '#E53935'));
     if(cRegLateChart)cRegLateChart.destroy();
     cRegLateChart=new Chart(el,{type:'bar',data:{
       labels:lateData.map(d=>d.name),
       datasets:[{label:'Просрочено',data:lateData.map(d=>d.late),backgroundColor:colors,borderRadius:3}]
     },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      onHover:(e,els)=>{ if(e?.native?.target) e.native.target.style.cursor=els.length?'pointer':'default'; },
+      onClick:(e,els)=>{
+        if(!els.length) return;
+        const nm = lateData[els[0].index]?.name;
+        if(!nm) return;
+        if(typeof _mToggle==='function'){ _mToggle('gReg', nm); onGlobalFilter(); }
+      },
       scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},
               y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}}}});
     _fitRegionCanvas('cRegLate',lateData.length);
@@ -7210,13 +7221,52 @@ function _envOrgClick(name){
   _applyMinSelection();
 }
 
+// Клик на бейдж министерства в строке исполнителя — toggle _minSelKeys.
+// stopPropagation чтобы не сработал клик по самой строке (_envOrgClick).
+function _envMinClick(key, ev){
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  if(!key) return;
+  if(_minSelKeys.has(key)) _minSelKeys.delete(key);
+  else _minSelKeys.add(key);
+  // Синхронизация чекбоксов в дереве (если открыто)
+  const cb = document.querySelector(`[data-min-cb="${key}"]`);
+  if(cb) cb.checked = _minSelKeys.has(key);
+  _applyMinSelection();
+}
+
+function _orgMinKey(name){
+  // Найти key министерства для конкретного исполнителя (для onclick на пилле)
+  if(_AC && _AC.orgs && _AC.org_ministry && _AC.ministries){
+    const idx=_AC.orgs.indexOf(name);
+    if(idx>=0){
+      const mi=_AC.org_ministry[idx];
+      if(mi!=null && _AC.ministries[mi]) return _AC.ministries[mi].key;
+    }
+  }
+  const obym = _DATA?.summary?.appeals?.orgs_by_ministry || {};
+  for(const key of Object.keys(obym)){
+    if((obym[key]||[]).some(([nm])=>nm===name)) return key;
+  }
+  return '';
+}
+
 function _envPlantsRow(name, cnt){
   const enc = String(name).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const safe = String(name).replace(/"/g,'&quot;');
   const ml = _orgMinLabel(name);
+  const mk = _orgMinKey(name);
   const shortName=s=>{s=String(s).replace(/^(Коммунальное государственное учреждение|Государственное учреждение|Республиканское государственное учреждение|Акционерное общество|Товарищество с ограниченной ответственностью|Государственное коммунальное предприятие на праве хозяйственного ведения)\s*/i,'');return s.length>50?s.slice(0,50)+'…':s;};
-  const pill = ml ? `<span style="font-size:8px;color:#0891B2;background:rgba(8,145,178,0.10);border-radius:8px;padding:1px 6px;font-weight:600;white-space:nowrap;letter-spacing:.2px">${ml}</span>` : '';
-  return `<div onclick="_envOrgClick('${enc}')" style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${safe}">${shortName(name)}</span><span style="font-size:10px;color:var(--text2);white-space:nowrap">${(cnt||0).toLocaleString('ru-RU')}</span>${pill}</div>`;
+  const orgSel = _orgTreeSel.has(name);
+  const minSel = mk && _minSelKeys.has(mk);
+  const rowBg = orgSel ? 'background:#f0fdf4;border-left:3px solid #16a34a;padding-left:6px;' : '';
+  const rowColor = orgSel ? 'color:#15803d;font-weight:600;' : '';
+  const pillBg = minSel ? '#16a34a' : 'rgba(8,145,178,0.10)';
+  const pillColor = minSel ? '#fff' : '#0891B2';
+  const pillStyle = `font-size:8px;color:${pillColor};background:${pillBg};border-radius:8px;padding:1px 6px;font-weight:600;white-space:nowrap;letter-spacing:.2px;cursor:pointer;transition:all .15s`;
+  const pill = ml ? (mk
+    ? `<span onclick="_envMinClick('${mk.replace(/'/g,"\\'")}',event)" style="${pillStyle}" title="Фильтр по госоргану: ${ml}">${ml}${minSel?' ✓':''}</span>`
+    : `<span style="${pillStyle.replace('cursor:pointer;','')}">${ml}</span>`) : '';
+  return `<div onclick="_envOrgClick('${enc}')" style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:0.5px solid var(--border);cursor:pointer;transition:background .1s;${rowBg}${rowColor}" onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='${orgSel?'#f0fdf4':''}'"><span style="font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1" title="${safe}">${orgSel?'✓ ':''}${shortName(name)}</span><span style="font-size:10px;color:var(--text2);white-space:nowrap">${(cnt||0).toLocaleString('ru-RU')}</span>${pill}</div>`;
 }
 
 function _chipRemoveMin(key){
@@ -7418,6 +7468,25 @@ function applyTimeEngine(){
   _engSetChart('cRegLate', latePairs, 0, 'gReg');
   _fitRegionCanvas('c12', regPairs.length);
   _fitRegionCanvas('cRegLate', latePairs.length);
+  // Multi-region highlight на барах: выделить выбранные, приглушить остальные
+  (function(){
+    const regSel = _mActive('gReg') ? _mSel.gReg : null;
+    const hi = (chId, baseColor, hiColor) => {
+      const cv = document.getElementById(chId); if(!cv) return;
+      const ch = Chart.getChart(cv); if(!ch?.data?.datasets?.[0]) return;
+      const labels = ch.data.labels || [];
+      if(regSel){
+        ch.data.datasets[0].backgroundColor = labels.map(l => regSel.has(l) ? hiColor : (baseColor + '55'));
+      } else {
+        ch.data.datasets[0].backgroundColor = baseColor;
+      }
+      ch.update('none');
+    };
+    hi('c12',      '#0891B2', '#FB8C00');
+    // cRegLate уже инстанциирован отдельно в _rechartOnFilter с per-bar colors;
+    // engine-путь обычно не используется (там свой _engSetChart). Подсветим тут.
+    hi('cRegLate', '#E53935', '#FB8C00');
+  })();
   // 4 чарта аналитики (doughnut, топ-7 + Прочее) — иерархия Тип → Категория → Подкатегория(subs) → Характер вопроса(issues).
   // ВАЖНО: пользовательская маркировка — «Подкатегория» = _AC.subs (gSubF), «Характер вопроса» = _AC.issues (gIssueF).
   _engSetChart('cAppType',   _topNWithOther(pairsOf(typTot,_AC.types),7),  0, 'gType');
@@ -7433,17 +7502,24 @@ function applyTimeEngine(){
       || '<div style="font-size:11px;color:var(--text3)">Нет данных по фильтрам</div>';
   }
 
-  // Хороплет карты + тултипы
+  // Хороплет карты + тултипы. Multi-select gReg: подсветка выбранных регионов.
   if(geoLayerMain){
     const src={};
     _AC.regions.forEach((nm,i)=>{src[nm]={total:regTot[i],closed:regClosed[i],late:regLate[i]};});
     const maxVal=Math.max(...Object.values(src).map(d=>d.total),1);
+    const regSelected = _mActive('gReg') ? _mSel.gReg : null;
     geoLayerMain.setStyle(f=>{
       const ecoKey=GEO_TO_ECO[f.properties.name_ru];
       const d=ecoKey&&src[ecoKey];
       if(ACTIVE_REGION){
         const isActive=ecoKey===ACTIVE_REGION;
         return{fillColor:isActive?'#16a34a':'#334155',weight:isActive?2.5:0.5,color:isActive?'#14532d':'#94a3b8',fillOpacity:isActive?0.18:0.06,opacity:1};
+      }
+      if(regSelected){
+        // Подсветка выбранных через multi-select gReg
+        const isSel = ecoKey && regSelected.has(ecoKey);
+        if(isSel) return{fillColor:choroplethColor(d?.total,maxVal),weight:2.5,color:'#15803d',fillOpacity:0.92,opacity:1};
+        return{fillColor:'#cbd5e1',weight:0.8,color:'#ffffff',fillOpacity:0.35,opacity:1};
       }
       return{fillColor:choroplethColor(d?.total,maxVal),weight:1,color:'#ffffff',fillOpacity:0.82,opacity:1};
     });
@@ -7931,7 +8007,13 @@ function initMainMap(){
               geoLayerMain.resetStyle(e.target);
               resetSidebarRegion();
             },
-            click:()=>{if(ecoKey)openRegionNews(ecoKey);}
+            click:()=>{
+              if(!ecoKey) return;
+              // Multi-select toggle: добавить/убрать регион из фильтра.
+              // Остаёмся на вкладке Обращения. (Для перехода в новости — кнопка
+              // на тултипе или другой UI — не автоматически.)
+              if(typeof _mToggle==='function'){ _mToggle('gReg', ecoKey); onGlobalFilter(); }
+            }
           });
           layer.bindTooltip(_richRegionTooltip(ecoKey,displayName),{sticky:true,maxWidth:260,className:''});
         }
