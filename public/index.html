@@ -62,6 +62,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .fbar-reset{font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;margin-left:auto}
 .fbar-reset:hover{color:var(--red);border-color:var(--red)}
 /* Multi-select dropdown (см. _msMount в JS) */
+select[data-ms-mounted="1"]{display:none !important}
 .ms-host{position:relative;display:inline-block;vertical-align:middle}
 .ms-btn{font-size:11px;padding:5px 22px 5px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;font-weight:500;font-family:inherit;text-align:left;width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative}
 .ms-btn::after{content:'▾';position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--text3)}
@@ -6996,6 +6997,19 @@ function _msMountAll(){
 document.addEventListener('click', () => {
   document.querySelectorAll('.ms-pop.open').forEach(p => p.classList.remove('open'));
 });
+// Ранний mount — gReg/gStatus имеют опции прямо в разметке, нет нужды
+// ждать populateFilters. Для gType/gCatF/gIssueF/gSubF и т.п. — _msRenderList
+// читает sel.options заново при каждом открытии popover, поэтому маунт ДО
+// заливки опций безопасен. populateFilters в любом случае вызовет _msMountAll
+// повторно, но idempotent guard через dataset.msMounted это обработает.
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _msMountAll, {once:true});
+} else {
+  _msMountAll();
+}
+// Подстраховка: если DOM ещё в процессе сборки или скрипт уехал — повторить
+setTimeout(_msMountAll, 50);
+setTimeout(_msMountAll, 500);
 
 function timeFilterActive(){
   const m=document.getElementById('gMonth')?.value||'all';
@@ -7954,10 +7968,14 @@ function resetGlobalFilter(){
   _gR(()=>applyFilter());
   _gR(()=>applyGlobalFiltersToCharts());
   _gR(()=>updateFilterChips());
-  // 4 donut'а Аналитики (cAppType/c3/cAppSubCat/cAppSub) — engine после reset
-  // не активен, но donut'ы могут остаться с прошлой отфильтрованной выборкой.
-  // Перерисовываем явно через baseline-renderMainCharts.
+  // 4 donut'а Аналитики (cAppType/c3/cAppSubCat/cAppSub) — baseline render
   _gR(()=>{ if(typeof renderMainCharts==='function' && !ACTIVE_REGION) renderMainCharts(); });
+  // Принудительный полный rerender через applyTimeEngine — он single-pass
+  // обновит KPI/donuts/bars/map/dynamics из _AC.data с пустыми фильтрами
+  // (т.е. baseline). Без этого карта/c12/cRegLate/cMonthly могут остаться
+  // с прошлой отфильтрованной выборкой (engine не запускается через
+  // onGlobalFilter после reset, т.к. engineFilterActive=false).
+  _gR(()=>{ if(_AC && typeof applyTimeEngine==='function') applyTimeEngine(); });
   _gR(()=>_updateIkomekKpi && _updateIkomekKpi());
   _gR(()=>{ if(typeof renderIkomekMainTab==='function') renderIkomekMainTab(); });
   // свернуть доп. фильтры
