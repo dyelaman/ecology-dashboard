@@ -1828,9 +1828,7 @@ input[type=file]{display:none}
     <button class="btn-r" id="btnR" onclick="triggerRefresh()" data-i18n="btn_refresh">Обновить сейчас</button>
   </div>
   <div class="pbar" id="pbar"><div class="pfill" id="pfill" style="width:0%"></div></div>
-  <div class="src-row" id="srcRow">
-    <span class="sc">Tengrinews.kz</span><span class="sc">Kapital.kz</span><span class="sc">24.kz</span><span class="sc">Kursiv.kz</span><span class="sc">Primeminister.kz</span><span class="sc">Lsm.kz</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Tengrinews</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Акорда</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG Борт №1</span><span class="sc" style="background:#e0f4fd;color:#0369a1;border-color:#bae6fd">TG МЭПР</span><span class="sc" style="background:#dcfce7;color:#15803d;border-color:#86efac">Казгидромет</span>
-  </div>
+  <div class="src-row" id="srcRow"><!-- автозаполняется из RSS_SOURCES (см. _renderSrcRow) --></div>
   <!-- фильтры перенесены в глобальную панель -->
   <div class="card" style="margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
@@ -9148,22 +9146,48 @@ const CACHE_KEY='eco_news_v6', TTL=2*60*60*1000;
 const NEWS_SKIP_ECO_FILTER = new Set(['TG МЭПР']);
 const TAG_META={air:{l:'Воздух',c:'t-air'},waste:{l:'Отходы',c:'t-waste'},taza:{l:'Таза КЗ',c:'t-taza'},urban:{l:'Благоустройство',c:'t-urban'},incident:{l:'Инцидент',c:'t-incident'},policy:{l:'Политика',c:'t-policy'}};
 let allNews=[],newsInit=false,isLoading=false;
+// Live-проверка через api/proxy от 2026-06-04 показала: 6 из 11 старых
+// RSS отдают 0 (Tengrinews/Kapital/24.kz/Primeminister отдают HTML главной
+// или 404, Kursiv/LSM сменили путь). Список сокращён и переработан:
+//   • Kursiv: kursiv.kz/feed → kz.kursiv.media/rss (рабочий)
+//   • LSM: lsm.kz/feed → lsm.kz/rss (рабочий)
+//   • Tengrinews: RSS убран (есть рабочий TG-канал, см. ниже)
+//   • Kapital: RSS заменён на @kapital_news (~20 постов)
+//   • 24.kz: RSS заменён на @khabar24 (~17 постов)
+//   • Primeminister: удалён (нет ни RSS ни TG-канала с потоком)
 const RSS_SOURCES=[
   // Веб-СМИ (RSS)
-  {name:'Tengrinews.kz',    url:'https://tengrinews.kz/feed/',    type:'rss'},
-  {name:'Kapital.kz',       url:'https://kapital.kz/rss',         type:'rss'},
-  {name:'24.kz',            url:'https://24.kz/rss',              type:'rss'},
-  {name:'Kursiv.kz',        url:'https://kursiv.kz/feed',         type:'rss'},
-  {name:'Primeminister.kz', url:'https://primeminister.kz/rss',   type:'rss'},
-  {name:'Lsm.kz',           url:'https://lsm.kz/feed',            type:'rss'},
+  {name:'Kursiv.kz',        url:'https://kz.kursiv.media/rss',           type:'rss'},
+  {name:'Lsm.kz',           url:'https://lsm.kz/rss',                    type:'rss'},
   // Telegram (HTML preview через t.me/s/)
-  {name:'TG Tengrinews',    url:'https://t.me/s/tengrinews',      type:'telegram'},
-  {name:'TG Акорда',        url:'https://t.me/s/aqorda_resmi',    type:'telegram'},
-  {name:'TG Борт №1',       url:'https://t.me/s/bort_01',         type:'telegram'},
-  {name:'TG МЭПР',          url:'https://t.me/s/EcologyofQazaqstan', type:'telegram'},
+  {name:'TG Tengrinews',    url:'https://t.me/s/tengrinews',             type:'telegram'},
+  {name:'TG Акорда',        url:'https://t.me/s/aqorda_resmi',           type:'telegram'},
+  {name:'TG Борт №1',       url:'https://t.me/s/bort_01',                type:'telegram'},
+  {name:'TG МЭПР',          url:'https://t.me/s/EcologyofQazaqstan',     type:'telegram'},
+  {name:'TG Kapital',       url:'https://t.me/s/kapital_news',           type:'telegram'},
+  {name:'TG Khabar 24',     url:'https://t.me/s/khabar24',               type:'telegram'},
   // Казгидромет — HTML-парсинг (страница новостей сервер-рендерится)
   {name:'Казгидромет',      url:'https://www.kazhydromet.kz/ru/news/news_main', type:'html_kazhydromet'},
 ];
+// Рендер бейджей источников в шапке новостей — авто из RSS_SOURCES чтобы
+// число и список были правдой (не статика которая может разойтись).
+function _renderSrcRow(){
+  const el = document.getElementById('srcRow');
+  if(!el) return;
+  const colorByType = t =>
+    t==='telegram' ? 'background:#e0f4fd;color:#0369a1;border-color:#bae6fd' :
+    t==='html_kazhydromet' ? 'background:#dcfce7;color:#15803d;border-color:#86efac' :
+    '';
+  el.innerHTML = RSS_SOURCES.map(s =>
+    `<span class="sc" style="${colorByType(s.type)}">${s.name}</span>`
+  ).join('');
+}
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', _renderSrcRow, {once:true});
+} else {
+  _renderSrcRow();
+}
+
 const ECO_KEYWORDS=['эколог','выброс','загрязнен','отход','воздух','таза','taza','мэпр','природ','атмосфер','радиац','токсич','мусор','свалк','переработ','озон','климат','co2','парниковый','нефт','пэк','инцидент','чс'];
 const TAG_RULES=[
   {tag:'air',words:['воздух','выброс','атмосфер','загрязнен','смог','пыль','co2','озон']},
