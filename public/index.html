@@ -2819,20 +2819,32 @@ function renderIkomekMainTab(){
   setEl('ikKpiTopTheme', topChI>=0 ? _IK.chars[topChI] : '—');
   setEl('ikKpiTopThemePct', r.total>0 && topChV>0 ? ((topChV/r.total*100).toFixed(1)+'% от всех') : '—');
 
-  // ── Hero-alert: ВКО доля ──
+  // ── Hero-alert: ВКО доля. Gradient: >50% красный, 30-50% оранжевый, иначе скрыт.
+  // Если ВКО уже явно в _mSel.gReg — текст другой (не аномалия, а выбран сам).
   const heroEl = document.getElementById('ikHeroAlert');
   if(heroEl){
     const vkoI = _IK.regions.indexOf('ВКО');
     const vkoV = (vkoI>=0 && r.byReg) ? r.byReg[vkoI] : 0;
     const vkoPct = r.total>0 ? +(vkoV/r.total*100).toFixed(1) : 0;
-    const curReg = document.getElementById('gReg')?.value || 'all';
-    // Показываем когда: фильтр региона не выставлен на не-ВКО + ВКО доля ≥30% + есть звонки
-    if(curReg==='all' && vkoV>0 && vkoPct>=30){
+    const regSel = (typeof _mSel!=='undefined' && _mSel.gReg) ? _mSel.gReg : null;
+    const vkoExplicit = regSel && (regSel.has('ВКО') || [...regSel].some(n => /восточно-казах/i.test(n)));
+    const setHero = (bg, border, color, html) => {
       heroEl.style.display='';
-      heroEl.innerHTML = `▲ ВКО — ${ru(vkoV)} звонков (${vkoPct}% от ${ru(r.total)}) <span style="color:#78350f;font-weight:400;font-size:11px">— экстремальная концентрация по выборке</span>`;
-    } else if(curReg==='ВКО' && vkoV>0){
-      heroEl.style.display='';
-      heroEl.innerHTML = `▲ Фильтр по ВКО · ${ru(vkoV)} звонков <span style="color:#78350f;font-weight:400;font-size:11px">— регион аномально лидирует в общей выборке</span>`;
+      heroEl.style.background = bg;
+      heroEl.style.borderColor = border;
+      heroEl.style.borderLeftColor = border;
+      heroEl.style.color = color;
+      heroEl.innerHTML = html;
+    };
+    if(vkoExplicit && vkoV>0){
+      setHero('#fef3c7', '#d97706', '#92400e',
+        `▲ Фильтр по ВКО · ${ru(vkoV)} звонков <span style="color:#78350f;font-weight:400;font-size:11px">— регион аномально лидирует в общей выборке</span>`);
+    } else if(vkoV>0 && vkoPct>=50){
+      setHero('#fee2e2', '#dc2626', '#991b1b',
+        `▲ ВКО — ${ru(vkoV)} звонков (${vkoPct}% от ${ru(r.total)}) <span style="font-weight:400;font-size:11px;color:#7f1d1d">— экстремальная концентрация: больше половины всей выборки</span>`);
+    } else if(vkoV>0 && vkoPct>=30){
+      setHero('#fef3c7', '#d97706', '#92400e',
+        `▲ ВКО — ${ru(vkoV)} звонков (${vkoPct}% от ${ru(r.total)}) <span style="font-weight:400;font-size:11px;color:#78350f">— высокая концентрация по выборке</span>`);
     } else {
       heroEl.style.display='none';
     }
@@ -2844,15 +2856,25 @@ function renderIkomekMainTab(){
 
   const _tip={backgroundColor:'#fff',borderColor:'rgba(0,0,0,0.10)',borderWidth:1,titleColor:'#111827',bodyColor:'#374151',titleFont:{size:12,weight:'600'},bodyFont:{size:11},padding:10,cornerRadius:6};
 
-  // Chart 1: Характер обращений (horizontal bar) — _IK.chars[i] × r.byChar[i]
+  // Chart 1: Характер обращений (horizontal bar) — _IK.chars[i] × r.byChar[i].
+  // Клик → toggle в _ikCharSel (локальный iKomek-фильтр). Подсветка активных.
   const charCtx=document.getElementById('cIkChar2');
   if(charCtx && r.byChar){
     const ex=Chart.getChart(charCtx); if(ex) ex.destroy();
     const cData=_IK.chars.map((n,i)=>[n, r.byChar[i]]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-    const cols=['#059669','#6366f1','#f59e0b','#ef4444','#8b5cf6','#0891b2'];
+    const basePal=['#059669','#6366f1','#f59e0b','#ef4444','#8b5cf6','#0891b2'];
+    const cols = cData.map(([n], i) => _ikCharSel.has(n) ? '#f97316' : basePal[i%basePal.length]);
     if(cData.length){
-      new Chart(charCtx,{type:'bar',data:{labels:cData.map(([n])=>n),datasets:[{data:cData.map(([,v])=>v),backgroundColor:cols,borderRadius:4}]},
-        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      new Chart(charCtx,{type:'bar',data:{labels:cData.map(([n])=>n),datasets:[{data:cData.map(([,v])=>v),backgroundColor:cols,borderRadius:4,datalabels:_regBarDataLabels('#374151')}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false, layout:{padding:{right:36}},
+          onHover:(e,els)=>{ if(e?.native?.target) e.native.target.style.cursor=els.length?'pointer':'default'; },
+          onClick:(e,els)=>{
+            if(!els.length) return;
+            const nm = cData[els[0].index]?.[0]; if(!nm) return;
+            if(_ikCharSel.has(nm)) _ikCharSel.delete(nm);
+            else _ikCharSel.add(nm);
+            renderIkomekMainTab();
+          },
           plugins:{legend:{display:false},tooltip:{..._tip,callbacks:{label:c=>`${ru(c.raw)} звонков`}}},
           scales:{x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:9},color:'#9ca3af',callback:v=>v>=1000?(v/1000).toFixed(0)+'к':v}},
                   y:{grid:{display:false},ticks:{font:{size:9},color:'#6b7280'}}}}});
@@ -2884,13 +2906,16 @@ function renderIkomekMainTab(){
     }
   }
 
-  // Chart 3: По регионам — vertical bar + клик ставит gReg + каскад
+  // Chart 3: По регионам — vertical bar + click toggle через multi-select _mSel.gReg.
   const regCtx=document.getElementById('cIkRegion');
   if(regCtx && r.byReg){
     const ex=Chart.getChart(regCtx); if(ex) ex.destroy();
     const rData=_IK.regions.map((n,i)=>[n, r.byReg[i]]).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-    const curReg = document.getElementById('gReg')?.value || 'all';
-    const cols2 = rData.map(([n])=> n===curReg ? '#f97316' : '#059669');
+    const regSelSet = (typeof _mSel!=='undefined' && _mSel.gReg) ? _mSel.gReg : null;
+    const cols2 = rData.map(([n])=>{
+      const isSel = regSelSet && (regSelSet.has(n) || [...regSelSet].some(rn => _ikMatchRegion(rn)===n));
+      return isSel ? '#f97316' : '#059669';
+    });
     if(rData.length){
       new Chart(regCtx,{type:'bar',
         data:{labels:rData.map(([n])=>n), datasets:[{data:rData.map(([,v])=>v), backgroundColor:cols2, borderRadius:5}]},
@@ -2899,16 +2924,7 @@ function renderIkomekMainTab(){
           onClick:(e,els)=>{
             if(!els.length) return;
             const regName = rData[els[0].index]?.[0]; if(!regName) return;
-            const sel = document.getElementById('gReg'); if(!sel) return;
-            // Toggle: повторный клик → снять фильтр
-            if(sel.value===regName){ sel.value='all'; }
-            else {
-              if(![...sel.options].some(o=>o.value===regName)){
-                const o=document.createElement('option'); o.value=regName; o.textContent=regName; sel.appendChild(o);
-              }
-              sel.value=regName;
-            }
-            if(typeof onGlobalFilter==='function') onGlobalFilter();
+            if(typeof _mToggle==='function'){ _mToggle('gReg', regName); onGlobalFilter(); }
           },
           plugins:{legend:{display:false},tooltip:{..._tip,callbacks:{label:c=>`${ru(c.raw)} звонков`}}},
           scales:{x:{grid:{display:false},ticks:{font:{size:10},color:'#6b7280'}},
@@ -2931,16 +2947,29 @@ function renderIkomekMainTab(){
     }
   }
 
-  // Chart 5 (NEW): Категории — donut (Обращение / Жалоба / Благодарность)
+  // Chart 5 (NEW): Категории — donut (Обращение / Жалоба / Благодарность). Click → toggle _ikCatSel.
   const catCtx=document.getElementById('cIkCat');
   if(catCtx && r.byCat){
     const ex=Chart.getChart(catCtx); if(ex) ex.destroy();
     const cData=_IK.cats.map((n,i)=>[n, r.byCat[i]]).filter(([,v])=>v>0);
-    const catCols = cData.map(([n])=> n==='Жалоба' ? '#dc2626' : (n==='Благодарность' ? '#16a34a' : '#0891b2'));
+    const catCols = cData.map(([n])=>{
+      // Если есть активный _ikCatSel — приглушаем не-выбранные; иначе обычные цвета
+      const base = n==='Жалоба' ? '#dc2626' : (n==='Благодарность' ? '#16a34a' : '#0891b2');
+      if(_ikCatSel.size===0) return base;
+      return _ikCatSel.has(n) ? base : 'rgba(150,150,150,0.35)';
+    });
     if(cData.length){
       new Chart(catCtx,{type:'doughnut',
         data:{labels:cData.map(([n])=>n), datasets:[{data:cData.map(([,v])=>v), backgroundColor:catCols, borderColor:'#fff', borderWidth:2}]},
         options:{responsive:true,maintainAspectRatio:false, cutout:'62%',
+          onHover:(e,els)=>{ if(e?.native?.target) e.native.target.style.cursor=els.length?'pointer':'default'; },
+          onClick:(e,els)=>{
+            if(!els.length) return;
+            const nm = cData[els[0].index]?.[0]; if(!nm) return;
+            if(_ikCatSel.has(nm)) _ikCatSel.delete(nm);
+            else _ikCatSel.add(nm);
+            renderIkomekMainTab();
+          },
           plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:10,padding:6}},
                    tooltip:{..._tip,callbacks:{label:c=>{const pct=r.total>0?(c.raw/r.total*100).toFixed(1):0; return `${c.label}: ${ru(c.raw)} (${pct}%)`;}}}}}});
     }
@@ -3290,29 +3319,78 @@ async function _loadIkomek(){
 }
 // Region-name → iKomek idx. _IK.regions хранятся в коротких формах под #gReg
 // (см. process_ikomek.py REGION_NORM): «ВКО», «Карагандинская», «Астана», …
-function _ikRegionIdx(name){
-  if(!_IK || !name || name==='all') return -2;            // -2 = «без фильтра по региону»
-  const i = _IK.regions.indexOf(name);
-  return (i>=0) ? i : -1;                                  // -1 = регион выбран, но нет в iKomek (≠ ВКО/Караганд/…)
+// Локальные фильтры iKomek-подвкладки (не пробрасываются в _AC — character/category
+// в iKomek и в обращениях используют разные словари, прямого мэппинга нет).
+// Очищаются вместе с reset через resetGlobalFilter.
+const _ikCharSel = new Set();
+const _ikCatSel  = new Set();
+
+// Fuzzy-match имени региона между _AC и _IK.regions (короткие формы):
+// точное → без « область» → без «город » → известные алиасы (ВКО/ЗКО/СКО).
+function _ikMatchRegion(name){
+  if(!_IK || !name) return null;
+  if(_IK.regions.includes(name)) return name;
+  const noOblast = name.replace(/\s*область$/i, '').trim();
+  if(noOblast !== name && _IK.regions.includes(noOblast)) return noOblast;
+  const noCity = name.replace(/^город\s+/i, '').trim();
+  if(noCity !== name && _IK.regions.includes(noCity)) return noCity;
+  if(/восточно-казах/i.test(name) && _IK.regions.includes('ВКО')) return 'ВКО';
+  if(/западно-казах/i.test(name) && _IK.regions.includes('ЗКО')) return 'ЗКО';
+  if(/северо-казах/i.test(name) && _IK.regions.includes('СКО')) return 'СКО';
+  return null;
 }
+
 // Считает звонки под текущим набором фильтров. С withAggs=true дополнительно
 // возвращает byReg/byChar/byCat/byStatus/monthly — всё за один проход (~16k строк).
+// Multi-select aware: читает _mSel.gReg (Set), плюс локальные _ikCharSel/_ikCatSel.
 function _ikComputeFiltered(withAggs){
   if(!_IK) return null;
   const D=_IK.data, W=_IK.w, N=_IK.n;
   const yF=document.getElementById('gYear')?.value||'all';
   const mF=document.getElementById('gMonth')?.value||'all';
   const dF=document.getElementById('gDay')?.value||'all';
-  const reg=document.getElementById('gReg')?.value||'all';
-  const dfStr=document.getElementById('gDateFrom')?.value||'';     // flatpickr value: ISO YYYY-MM-DD
+  const dfStr=document.getElementById('gDateFrom')?.value||'';
   const dtStr=document.getElementById('gDateTo')?.value||'';
   const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF, dN=dF==='all'?-1:+dF;
   const toYmd = s => s ? +s.slice(0,10).replace(/-/g,'') : 0;
   const dfInt = toYmd(dfStr), dtInt = toYmd(dtStr) || 99999999;
-  const ri = _ikRegionIdx(reg);
-  if(reg!=='all' && ri===-1){
-    return {total:0, regionUnknown:true, byReg:null, byChar:null, byCat:null, byStatus:null, monthly:null};
+
+  // Multi-region: строим Uint8Array разрешённых индексов в _IK.regions.
+  // Сценарии:
+  //  - _mSel.gReg пуст → нет фильтра (allowedReg = null)
+  //  - _mSel.gReg имеет регионы которые ВСЕ не входят в _IK → result.total=0 + regionUnknown
+  //  - смешанная выборка → только пересечение
+  let allowedReg = null;
+  let regionUnknown = false;
+  const wantsReg = (typeof _mSel!=='undefined' && _mSel.gReg && _mSel.gReg.size>0) ? _mSel.gReg : null;
+  if(wantsReg){
+    allowedReg = new Uint8Array(_IK.regions.length);
+    let matched = 0;
+    for(const nm of wantsReg){
+      const m = _ikMatchRegion(nm);
+      if(m){
+        const i = _IK.regions.indexOf(m);
+        if(i>=0){ allowedReg[i] = 1; matched++; }
+      }
+    }
+    if(matched === 0){
+      // Ни один из выбранных регионов не покрыт iKomek
+      return {total:0, regionUnknown:true, byReg:null, byChar:null, byCat:null, byStatus:null, monthly:null};
+    }
   }
+
+  // Локальные iKomek-фильтры по character/category
+  const allowedChar = (_ikCharSel.size>0) ? (() => {
+    const a = new Uint8Array(_IK.chars.length);
+    for(const nm of _ikCharSel){ const i = _IK.chars.indexOf(nm); if(i>=0) a[i] = 1; }
+    return a;
+  })() : null;
+  const allowedCat = (_ikCatSel.size>0) ? (() => {
+    const a = new Uint8Array(_IK.cats.length);
+    for(const nm of _ikCatSel){ const i = _IK.cats.indexOf(nm); if(i>=0) a[i] = 1; }
+    return a;
+  })() : null;
+
   const nR=_IK.regions.length, nC=_IK.cats.length, nCh=_IK.chars.length, nS=_IK.statuses.length;
   const byReg    = withAggs ? new Int32Array(nR)  : null;
   const byChar   = withAggs ? new Int32Array(nCh) : null;
@@ -3329,18 +3407,28 @@ function _ikComputeFiltered(withAggs){
     if(dN>=0 && dd!==dN) continue;
     if(dfStr && ymd<dfInt) continue;
     if(dtStr && ymd>dtInt) continue;
-    const rIdx=D[o+1];
-    if(ri>=0 && rIdx!==ri) continue;
+    const rIdx=D[o+1], cIdx=D[o+2], chIdx=D[o+3], sIdx=D[o+4];
+    if(allowedReg  && !allowedReg[rIdx])  continue;
+    if(allowedChar && !allowedChar[chIdx]) continue;
+    if(allowedCat  && !allowedCat[cIdx])  continue;
     total++;
     if(withAggs){
-      const cIdx=D[o+2], chIdx=D[o+3], sIdx=D[o+4];
       byReg[rIdx]++; byChar[chIdx]++; byCat[cIdx]++; byStatus[sIdx]++;
       const k=yy*100+mm;
       let m=monthly.get(k); if(!m){ m={t:0,j:0}; monthly.set(k,m); }
       m.t++; if(cIdx===compIdx) m.j++;
     }
   }
-  return {total, regionUnknown:false, byReg, byChar, byCat, byStatus, monthly};
+  return {total, regionUnknown, byReg, byChar, byCat, byStatus, monthly};
+}
+
+// Старая single-select сигнатура — оставлена для _updateIkomekKpi и других
+// мест где явно нужен индекс региона (legacy single).
+function _ikRegionIdx(name){
+  if(!_IK || !name || name==='all') return -2;
+  const m = _ikMatchRegion(name);
+  if(!m) return -1;
+  return _IK.regions.indexOf(m);
 }
 
 // Обновляет карточку #kpiIkom. Приоритет:
@@ -7981,6 +8069,9 @@ function resetGlobalFilter(){
   });
   // Multi-select 8 фильтров — очищаем _mSel + автосинк подложек <select> + ms-кнопок
   if(typeof _mClearAll==='function') _mClearAll();
+  // Локальные iKomek-фильтры
+  if(typeof _ikCharSel!=='undefined') _ikCharSel.clear();
+  if(typeof _ikCatSel!=='undefined')  _ikCatSel.clear();
   const org=document.getElementById('gOrg'); if(org) org.value='';
   // сброс иерархического фильтра госорганов
   if(typeof _minSelKeys!=='undefined') _minSelKeys.clear();
