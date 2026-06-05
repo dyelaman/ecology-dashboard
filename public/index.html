@@ -1123,6 +1123,27 @@ input[type=file]{display:none}
     <!-- Дисклеймер о покрытии — меняется в зависимости от режима -->
     <div id="nbd2025CoverageNote" class="coverage-note coverage-info" style="display:none"></div>
 
+    <!-- ── ПОКРЫТИЕ МОНИТОРИНГА (из nbd_facts.json v2) ── -->
+    <div class="card" id="nbdCoverageCard" style="margin-bottom:12px;padding:12px 14px;display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <div>
+          <div class="card-title" style="margin:0;font-size:13px">📡 Покрытие мониторинга НБД СОС</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">Сколько организаций из реестра присылают замеры. «Молчащие» — нет данных за последние 6 месяцев.</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px" id="nbdCovKpi">
+        <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Подключено орг-ций</div><div class="kpi-val" id="nbdCovOrgsTotal" style="font-size:22px">—</div></div>
+        <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Активны</div><div class="kpi-val" id="nbdCovOrgsActive" style="font-size:22px;color:#16a34a">—</div><div class="kpi-d" id="nbdCovOrgsPct">— %</div></div>
+        <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Молчат</div><div class="kpi-val" id="nbdCovOrgsSilent" style="font-size:22px;color:#dc2626">—</div><div class="kpi-d" id="nbdCovOrgsSilentSub">— орг.</div></div>
+        <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Источников выбросов</div><div class="kpi-val" id="nbdCovSrcsActive" style="font-size:22px">—</div><div class="kpi-d" id="nbdCovSrcsSub">из — всего</div></div>
+      </div>
+      <!-- Свёрнутый список молчащих — раскрывается по клику -->
+      <details id="nbdCovDetails" style="margin-top:4px">
+        <summary style="cursor:pointer;font-size:11px;font-weight:600;color:#dc2626;padding:4px 0">▾ Показать молчащие организации</summary>
+        <div id="nbdCovSilentList" style="margin-top:6px;max-height:260px;overflow-y:auto;font-size:11px"></div>
+      </details>
+    </div>
+
     <!-- ── ФИЛЬТР-БАР НБД (живая кросс-фильтрация) ── -->
     <div class="nbd-fltbar">
       <span class="nbd-fltbar-lbl">📅 Период</span>
@@ -8371,11 +8392,58 @@ async function _loadNbdFacts(){
   try{
     const r = await fetch('/data/nbd_facts.json');
     const d = await r.json();
-    d.schema.forEach((n,i)=>{ NBD_SCHEMA[n]=i; });
+    (d.schema||[]).forEach((n,i)=>{ NBD_SCHEMA[n]=i; });
     NBD_FACTS = d.facts || [];
+    // v2: сохраняем расширенную структуру глобально для Coverage-блока и пр.
+    window._NBD_FACTS_V2 = d;
     _initNbdFilterUi();
+    _renderNbdCoverage();
     renderNbd2025();
   } catch(e){ console.warn('nbd_facts load failed:', e.message); }
+}
+
+// Рендер Coverage-карточки (блок 3.2 из спека). Читает window._NBD_FACTS_V2.coverage
+// и organizations/sources из новой структуры nbd_facts.json schema_v2.
+function _renderNbdCoverage(){
+  const d = window._NBD_FACTS_V2;
+  if(!d || !d.coverage || !d.organizations) return;
+  const card = document.getElementById('nbdCoverageCard');
+  if(!card) return;
+  const orgsTotal = d.organizations.length;
+  const orgsActive = d.organizations.filter(o => o.active).length;
+  const orgsSilent = orgsTotal - orgsActive;
+  const srcsTotal = (d.sources||[]).length;
+  const srcsActive = (d.sources||[]).filter(s => s.active).length;
+  const pct = orgsTotal>0 ? (orgsActive/orgsTotal*100).toFixed(1) : 0;
+  const setEl = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  setEl('nbdCovOrgsTotal',  orgsTotal);
+  setEl('nbdCovOrgsActive', orgsActive);
+  setEl('nbdCovOrgsPct',    pct + '% покрытие');
+  setEl('nbdCovOrgsSilent', orgsSilent);
+  setEl('nbdCovOrgsSilentSub', '6 мес. нет данных');
+  setEl('nbdCovSrcsActive', srcsActive);
+  setEl('nbdCovSrcsSub',    `из ${srcsTotal} в реестре`);
+  // Список молчащих
+  const listEl = document.getElementById('nbdCovSilentList');
+  if(listEl){
+    const silent = d.coverage.silent_orgs_all || [];
+    if(!silent.length){
+      listEl.innerHTML = '<div style="color:var(--text3);padding:8px">Молчащих организаций нет — все 81 присылают данные ✓</div>';
+    } else {
+      listEl.innerHTML = silent.map(o => {
+        const last = o.last_seen ? `последний замер ${o.last_seen}` : 'данных нет вообще';
+        const short = o.short && o.short !== o.name ? `<span style="color:var(--text3);font-size:10px"> (${o.short})</span>` : '';
+        return `<div style="padding:5px 8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+          <div style="flex:1">
+            <div style="color:var(--text)">${o.name}${short}</div>
+            <div style="font-size:10px;color:var(--text3)">${o.region || '—'}</div>
+          </div>
+          <div style="font-size:10px;color:#dc2626;white-space:nowrap">${last}</div>
+        </div>`;
+      }).join('');
+    }
+  }
+  card.style.display = '';
 }
 
 function getFilteredNbdFacts(){

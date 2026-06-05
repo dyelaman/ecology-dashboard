@@ -357,8 +357,63 @@ def main():
             'sources_active': len(active_s),
         }
 
-    # 7. Сборка nbd_facts.json (v2 schema)
+    # 7. Сборка nbd_facts.json (v2 schema + LEGACY top-level schema/facts для
+    #    обратной совместимости с _loadNbdFacts/getFilteredNbdFacts в UI).
+    #    Legacy facts — flat per-(env×month×region×org×substance), агрегирует
+    #    по всем sources (старый формат не знал про source).
+    LEGACY_SCHEMA = ['env','month','region','org','substance','measurements',
+                     'ratio_filled','exceed','conc_sum','conc_count',
+                     'ph_count','ph_out','gas_sum','gas_count']
+    legacy_facts_map = defaultdict(lambda: [0]*9)  # 9 числовых: meas,ratio,exc,csum,ccnt,phcnt,phout,gsum,gcnt
+    def push_legacy(env_name, rows, exceed_field):
+        for r in rows:
+            key = (env_name, r['month'], r['region'], r['org'], r['pollutant'])
+            v = legacy_facts_map[key]
+            n = r['n_measurements'] or 0
+            v[0] += n                                     # measurements
+            v[1] += n                                     # ratio_filled (proxy)
+            v[2] += r.get(exceed_field, 0) or 0           # exceed
+            ac = r.get('avg_concentration')
+            if ac is not None:
+                v[3] += ac * n                            # conc_sum (восстановлен)
+                v[4] += n                                 # conc_count
+            ap = r.get('avg_ph')
+            if ap is not None:
+                v[5] += n                                 # ph_count
+            v[6] += r.get('n_excess', 0) or 0             # ph_out (для water)
+            gf = r.get('sum_gas_flow') or 0
+            if gf:
+                v[7] += gf                                # gas_sum
+                v[8] += n                                 # gas_count
+    push_legacy('air',   air,   'n_excess')
+    push_legacy('water', water, 'n_excess')
+    push_legacy('fire',  fire,  'n_active')
+    legacy_facts = [
+        [k[0], k[1], k[2], k[3], k[4], v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8]]
+        for k, v in legacy_facts_map.items()
+    ]
+
     facts_out = {
+        # ── LEGACY (для существующего UI) ──
+        'schema': LEGACY_SCHEMA,
+        'facts': legacy_facts,
+        'metadata': {
+            'air': {'rows': air_meas, 'orgs': len({r['org'] for r in air}),
+                    'regions': len({r['region'] for r in air}),
+                    'period': f"{min([r['month'] for r in air] or ['']) or '—'} → {max([r['month'] for r in air] or ['']) or '—'}",
+                    'coverage_note': 'Плановые замеры стационарных источников промпредприятий'},
+            'water':{'rows': wat_meas, 'orgs': len({r['org'] for r in water}),
+                    'regions': len({r['region'] for r in water}),
+                    'period': f"{min([r['month'] for r in water] or ['']) or '—'} → {max([r['month'] for r in water] or ['']) or '—'}",
+                    'coverage_note': 'Сточные воды крупных промпредприятий'},
+            'fire': {'rows': fir_meas, 'orgs': len({r['org'] for r in fire}),
+                    'regions': len({r['region'] for r in fire}),
+                    'period': f"{min([r['month'] for r in fire] or ['']) or '—'} → {max([r['month'] for r in fire] or ['']) or '—'}",
+                    'coverage_note': 'Факельные выбросы'},
+            'sources_n': len(sources), 'orgs_n': len(orgs),
+            'date_filter': '2025-01-01 → 2026-12-31',
+        },
+        # ── НОВОЕ v2 ──
         '_meta': {
             'generated': datetime.now().isoformat(timespec='seconds'),
             'schema_version': 2,
