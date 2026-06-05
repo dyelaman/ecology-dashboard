@@ -1,433 +1,466 @@
 """
-Агрегация выгрузок НБД СОС (период 2025-01-01 → 2026-12-31):
-  - ecology_air_emissions_2025.csv   (4.9 ГБ, 22.3 млн строк)
-  - ecology_fire_emissions_2025.csv  (343 МБ,  1.3 млн строк)
-  - ecology_water_emissions_2025.csv (243 МБ,    923 К строк)
-  - ecology_emission_sources.csv     (справочник)
-  - ecology_organizations.csv        (справочник)
+process_nbd_2025.py — v2 (после 2026-06-05).
 
-Поточное чтение через csv.DictReader, агрегаты в памяти, на выходе один
-JSON public/data/nbd_2025.json.
+Раньше скрипт читал raw 4.8 ГБ ecology_air_emissions_2025.csv и агрегировал
+в памяти за ~10 минут. Теперь ClickHouse возвращает готовые
+month×region×org×source×pollutant агрегаты, что упрощает pipeline до
+секунд и расширяет аналитику.
 
-Очистка данных:
-  · фильтр тестовой орг «Тест АСМ» и аналогичных служебных записей
-  · нормализация опечатки «Восточно-Казхастанская» → «Восточно-Казахстанская»
-  · отсечение мусорных дат (вне 2025-01-01…2026-12-31)
-  · справочники тоже чистятся от TEST/ТЕСТ записей
+Источники (все в "НБД СОС актуальное/"):
+  • mepr_nbdsos_air_emissions_aggr_1.csv    (2.5 МБ, 11 394 строки)
+  • mepr_nbdsos_water_emissions_aggr.csv    (152 КБ, 544 строки)
+  • mepr_nbdsos_fire_emissions_aggr.csv     (148 КБ, 626 строк)
+  • ecology_organizations.csv               (справочник: 83 строки)
+  • ecology_emission_sources.csv            (справочник: 243 строки)
 
-Структура nbd_2025.json:
-  air/fire/water:
-    top_substances:[{name,total,measurements,exceed}]  · top-25
-    top_orgs:      [{name,total,measurements,exceed}]  · top-30
-    top_regions:   [{name,total,measurements,exceed}]
-    monthly:       [{ym,total,measurements,exceed}]
-  air.exceed_stats: {total_rows, ratio_filled, exceed_count,
-                     pct_of_all, pct_of_measured, ratio_coverage_pct}
-  air.exceed: {by_org[], by_region[], by_substance[], monthly[]}
-  water.ph:  {n, avg, out_of_range_n, out_of_range_pct, monthly[]}
-  metadata:  {air,water,fire: {rows, regions, orgs, period, coverage_note}}
+Разделитель в агрегатах и справочниках — точка с запятой (;).
+
+Выход:
+  • public/data/nbd_facts.json — НОВАЯ расширенная структура v2:
+      _meta, organizations[], sources[], air/water/fire (facts+aggregates+incidents),
+      coverage (by_region, silent_orgs_all)
+  • public/data/nbd_2025.json  — ЛЕГАСИ-формат для существующего UI
+      (top_substances, top_orgs, top_regions, monthly per env + metadata).
+
+Очистка:
+  • Тестовые орг/источники (имя содержит «тест» или «test»)
+  • Нормализация регионов (опечатка «Восточно-Казхастанская», «г. Алматы»→«Алматы» и т.д.)
 """
-import csv, json, os, sys, time
+import csv, json, os, sys
 from collections import defaultdict
 from datetime import datetime
 
+# ── Пути ──────────────────────────────────────────────────────────────────
 SRC = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/НБД СОС актуальное"
-AIR   = f"{SRC}/ecology_air_emissions_2025.csv"
-FIRE  = f"{SRC}/ecology_fire_emissions_2025.csv"
-WATER = f"{SRC}/ecology_water_emissions_2025.csv"
-SRCS  = f"{SRC}/ecology_emission_sources.csv"
-ORGS  = f"{SRC}/ecology_organizations.csv"
+AIR_AGGR   = f"{SRC}/mepr_nbdsos_air_emissions_aggr_1.csv"
+WATER_AGGR = f"{SRC}/mepr_nbdsos_water_emissions_aggr.csv"
+FIRE_AGGR  = f"{SRC}/mepr_nbdsos_fire_emissions_aggr.csv"
+ORGS_CSV   = f"{SRC}/ecology_organizations.csv"
+SRCS_CSV   = f"{SRC}/ecology_emission_sources.csv"
 
-OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public", "data")
-OUT_DIR = os.path.normpath(OUT_DIR)
-OUT_PATH       = os.path.join(OUT_DIR, "nbd_2025.json")
-OUT_FACTS_PATH = os.path.join(OUT_DIR, "nbd_facts.json")
+OUT_DIR = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public", "data"))
+OUT_FACTS  = os.path.join(OUT_DIR, "nbd_facts.json")
+OUT_LEGACY = os.path.join(OUT_DIR, "nbd_2025.json")
 
-# ── Глобальный аккумулятор фактов для кросс-фильтрации ──────────────────────
-# Ключ: (env, month, region, org, substance) → агрегаты.
-# Заполняется внутри aggregate() параллельно с обычными агрегатами.
-FACTS = defaultdict(lambda: {
-    "measurements": 0,
-    "ratio_filled": 0,   # air
-    "exceed":       0,   # air
-    "conc_sum":     0.0, # air
-    "conc_count":   0,   # air
-    "ph_count":     0,   # water
-    "ph_out":       0,   # water
-    "gas_sum":      0.0, # fire
-    "gas_count":    0,   # fire
-})
-
-# ── A4: реальный валидный период данных ─────────────────────────────────────
-DATE_MIN = "2025-01-01"
-DATE_MAX = "2026-12-31"
-
-# ── A1: фильтрация тестовых организаций ─────────────────────────────────────
-# «Тест АСМ» (id=1 в справочнике организаций) даёт ~1.49 млн фейковых строк
-# в выгрузке air (≈6.8% всех замеров). Также есть `TEST/ТЕСТ` в источниках.
-TEST_ORGS = {
-    "тест асм", "тест acm", "тест", "test", "test асм",
-}
-
-def is_test_org(org_name):
-    if not org_name:
-        return False
-    clean = org_name.strip().lower().strip('"').strip()
-    if clean in TEST_ORGS: return True
-    if clean.startswith("тест ") or clean.startswith("test "): return True
-    if clean in ("тест", "test"): return True
-    return False
-
-# ── A2: нормализация регионов (с case-insensitive ключами) ──────────────────
-# Опечатка «Восточно-Казхастанская» (без 'а') разбивает ВКО на два региона.
+# ── Нормализация регионов ─────────────────────────────────────────────────
 REGION_NORM = {
-    "восточно-казхастанская область":  "Восточно-Казахстанская область",
-    "восточно-казхастанская":          "Восточно-Казахстанская область",
-    "г. алматы":                       "Алматы",
-    "г. астана":                       "Астана",
-    "г. шымкент":                      "Шымкент",
+    'Восточно-Казхастанская область': 'Восточно-Казахстанская область',
+    'г. Алматы':   'Алматы',
+    'г. Шымкент':  'Шымкент',
+    'г. Астана':   'Астана',
+    'г.Алматы':    'Алматы',
+    'г.Шымкент':   'Шымкент',
+    'г.Астана':    'Астана',
+    'Город Алматы':  'Алматы',
+    'Город Шымкент': 'Шымкент',
+    'Город Астана':  'Астана',
+    'город Алматы':  'Алматы',
+    'город Шымкент': 'Шымкент',
+    'город Астана':  'Астана',
 }
+def norm_region(s):
+    s = (s or '').strip()
+    return REGION_NORM.get(s, s)
 
-def normalize_region(s):
-    if not s: return s
-    clean = s.strip()
-    return REGION_NORM.get(clean.lower(), clean)
+def is_test_name(name):
+    low = (name or '').lower()
+    return 'тест' in low or 'test ' in low or low.startswith('test')
 
-# ── A4: валидация дат ───────────────────────────────────────────────────────
-def is_valid_date(date_str):
-    if not date_str or len(date_str) < 10: return False
-    dt = date_str[:10]
-    return DATE_MIN <= dt <= DATE_MAX
+# ── Парсеры значений ──────────────────────────────────────────────────────
+def parse_float(v):
+    if v is None: return None
+    s = str(v).strip()
+    if not s or s.lower() in ('nan','none'): return None
+    try: return float(s)
+    except ValueError: return None
 
-# ── helpers ─────────────────────────────────────────────────────────────────
-def f(v):
-    if v is None or v == "": return None
-    try: return float(v)
-    except Exception: return None
+def parse_int(v):
+    if v is None: return 0
+    s = str(v).strip()
+    if not s: return 0
+    try: return int(float(s))
+    except ValueError: return 0
 
-def topn(d, n, value_key="total"):
-    items = [{"name": k, **v} for k, v in d.items()]
-    items.sort(key=lambda x: x.get(value_key, 0) or 0, reverse=True)
-    return items[:n]
-
-def monthly_sorted(d):
-    return [{"ym": k, **v} for k, v in sorted(d.items())]
-
-
-def aggregate(csv_path, label, kind):
-    """kind: 'air' | 'fire' | 'water'. Поточно читает CSV → агрегаты."""
-    by_sub = defaultdict(lambda: {"total": 0.0, "measurements": 0, "exceed": 0})
-    by_org = defaultdict(lambda: {"total": 0.0, "measurements": 0, "exceed": 0})
-    by_reg = defaultdict(lambda: {"total": 0.0, "measurements": 0, "exceed": 0})
-    monthly = defaultdict(lambda: {"total": 0.0, "measurements": 0, "exceed": 0})
-
-    # water — pH stats
-    ph_n = 0; ph_sum = 0.0; ph_out_of_range = 0
-    ph_monthly = defaultdict(lambda: {"sum": 0.0, "n": 0, "out": 0})
-
-    # air — счётчики для honest exceed_stats (A3)
-    air_total_rows = 0
-    air_ratio_filled = 0
-    air_exceed_count = 0
-
-    # счётчики отфильтрованных
-    skipped_date = 0; skipped_test = 0
-    regions_set = set(); orgs_set = set()
-
-    t0 = time.time()
-    rows_seen = 0
-    period_min = "9999-99-99"; period_max = "0000-00-00"
-
-    print(f"  → {label}", flush=True)
-    size_mb = os.path.getsize(csv_path) / 1024 / 1024
-    print(f"     {size_mb:,.0f} МБ, читаю поточно…", flush=True)
-
-    with open(csv_path, encoding="utf-8") as fh:
-        reader = csv.DictReader(fh, delimiter=";")
-        for row in reader:
-            rows_seen += 1
-            if rows_seen % 500000 == 0:
-                el = time.time() - t0
-                rate = rows_seen / el if el else 0
-                print(f"     [{label}] {rows_seen:>10,} строк · {el:>5.0f}c · {rate:>7,.0f} р/с", flush=True)
-
-            # ── фильтр 1: дата ───────────────────────────────────────────
-            dt = (row.get("registered_date") or "")[:10]
-            if not is_valid_date(dt):
-                skipped_date += 1
+# ── Чтение справочников ───────────────────────────────────────────────────
+def read_orgs():
+    rows = []
+    skipped = 0
+    with open(ORGS_CSV, encoding='utf-8', newline='') as f:
+        reader = csv.DictReader(f, delimiter=';')
+        for r in reader:
+            name = (r.get('name_ru') or '').strip()
+            if not name or is_test_name(name):
+                skipped += 1
                 continue
+            rows.append({
+                'id': parse_int(r.get('id')),
+                'name': name,
+                'name_kz': (r.get('name_kz') or '').strip(),
+                'short': (r.get('short_name_ru') or name).strip(),
+                'short_kz': (r.get('short_name_kz') or r.get('name_kz') or '').strip(),
+                'region': norm_region(r.get('region_name')),
+            })
+    return rows, skipped
 
-            # ── фильтр 2: тестовая орг ───────────────────────────────────
-            org = (row.get("organization_name") or "").strip()
-            if is_test_org(org):
-                skipped_test += 1
+def read_sources():
+    rows = []
+    skipped = 0
+    with open(SRCS_CSV, encoding='utf-8', newline='') as f:
+        reader = csv.DictReader(f, delimiter=';')
+        for r in reader:
+            name = (r.get('name_ru') or '').strip()
+            if not name or is_test_name(name):
+                skipped += 1
                 continue
+            # short_name отсутствует у источников — обрезаем name до 50 символов
+            short = name[:50] + ('…' if len(name) > 50 else '')
+            rows.append({
+                'id': parse_int(r.get('id')),
+                'serial': (r.get('serial_number') or '').strip(),
+                'name': name,
+                'short': short,
+                'collector': (r.get('collector_point_name') or '').strip(),
+                'region': norm_region(r.get('region_name')),
+            })
+    return rows, skipped
 
-            # ── после фильтров ───────────────────────────────────────────
-            ym = dt[:7]
-            if dt < period_min: period_min = dt
-            if dt > period_max: period_max = dt
+# ── Чтение агрегатов ──────────────────────────────────────────────────────
+def read_aggregate(path, num_cols):
+    """
+    num_cols: dict {col_name: 'int' | 'float'}
+    Возвращает list of dicts с базовыми полями + кастомными.
+    """
+    rows = []
+    skipped = 0
+    with open(path, encoding='utf-8', newline='') as f:
+        reader = csv.DictReader(f, delimiter=';')
+        for r in reader:
+            month = (r.get('month') or '').strip()[:7]  # YYYY-MM
+            if not month or len(month) != 7:
+                skipped += 1
+                continue
+            region = norm_region(r.get('region'))
+            org = (r.get('org') or '').strip()
+            source = (r.get('source') or '').strip()
+            pollutant = (r.get('pollutant') or '').strip()
+            if is_test_name(org) or is_test_name(source):
+                skipped += 1
+                continue
+            base = {
+                'month': month,
+                'region': region,
+                'org': org,
+                'source': source,
+                'pollutant': pollutant,
+                'n_measurements': parse_int(r.get('n_measurements')),
+            }
+            for col, typ in num_cols.items():
+                v = r.get(col)
+                base[col] = parse_int(v) if typ == 'int' else parse_float(v)
+            rows.append(base)
+    return rows, skipped
 
-            sub = (row.get("emission_type") or "").strip()
-            reg = normalize_region(row.get("region", ""))
-            if reg: regions_set.add(reg)
-            if org: orgs_set.add(org)
-
-            if kind == "air":
-                air_total_rows += 1
-                emission = f(row.get("emission"))
-                ratio = f(row.get("air_excess_ratio"))
-                conc  = f(row.get("pollutant_concentration"))
-                val = emission if emission and emission > 0 else 0.0
-                is_exceed = 0
-                if ratio is not None:
-                    air_ratio_filled += 1
-                    if ratio > 1.0:
-                        is_exceed = 1
-                        air_exceed_count += 1
-                # FACTS — компактная сборка для кросс-фильтрации
-                fk = FACTS[("air", ym, reg or "", org or "", sub or "")]
-                fk["measurements"] += 1
-                if ratio is not None:
-                    fk["ratio_filled"] += 1
-                    if ratio > 1.0: fk["exceed"] += 1
-                if conc is not None:
-                    fk["conc_sum"] += conc; fk["conc_count"] += 1
-            elif kind == "fire":
-                gas = f(row.get("volumetric_gas_consumption"))
-                val = gas or 0.0
-                is_exceed = 0
-                fk = FACTS[("fire", ym, reg or "", org or "", sub or "")]
-                fk["measurements"] += 1
-                if gas is not None:
-                    fk["gas_sum"] += gas; fk["gas_count"] += 1
-            else:  # water
-                val = f(row.get("waste_water_flow")) or 0.0
-                ph = f(row.get("hydrogen_index"))
-                fk = FACTS[("water", ym, reg or "", org or "", sub or "")]
-                fk["measurements"] += 1
-                if ph is not None and 0 < ph < 14:
-                    ph_n += 1; ph_sum += ph
-                    out = 1 if (ph < 6 or ph > 9) else 0
-                    ph_out_of_range += out
-                    m = ph_monthly[ym]
-                    m["sum"] += ph; m["n"] += 1; m["out"] += out
-                    fk["ph_count"] += 1
-                    if ph < 6 or ph > 9: fk["ph_out"] += 1
-                is_exceed = 0
-
-            if sub:
-                a = by_sub[sub]; a["total"] += val; a["measurements"] += 1; a["exceed"] += is_exceed
-            if org:
-                a = by_org[org]; a["total"] += val; a["measurements"] += 1; a["exceed"] += is_exceed
-            if reg:
-                a = by_reg[reg]; a["total"] += val; a["measurements"] += 1; a["exceed"] += is_exceed
-            m = monthly[ym]; m["total"] += val; m["measurements"] += 1; m["exceed"] += is_exceed
-
-    el = time.time() - t0
-    kept = rows_seen - skipped_date - skipped_test
-    print(f"     ✓ {label}: всего CSV {rows_seen:,} · отфильтровано (даты={skipped_date:,}, тест={skipped_test:,}) · оставлено {kept:,}  ({el:,.0f}c)", flush=True)
-
-    # У water в `total` встречаются отрицательные значения (Сточные воды) — для топов
-    # надёжнее сортировать по measurements (как и у fire).
-    sort_key = "measurements" if kind in ("fire", "water") else "total"
-    out = {
-        "rows": kept,
-        "skipped_date": skipped_date,
-        "skipped_test": skipped_test,
-        "period_from": period_min if period_min != "9999-99-99" else None,
-        "period_to":   period_max if period_max != "0000-00-00" else None,
-        "regions_n":   len(regions_set),
-        "orgs_n":      len(orgs_set),
-        "top_substances": topn(by_sub, 25, sort_key),
-        "top_orgs":       topn(by_org, 30, sort_key),
-        "top_regions":    sorted(
-            [{"name": k, **v} for k, v in by_reg.items()],
-            key=lambda x: x["measurements"], reverse=True,
-        ),
-        "monthly": monthly_sorted(monthly),
-    }
-
-    if kind == "air":
-        # ── A3: честные exceed_stats ─────────────────────────────────────
-        out["exceed_stats"] = {
-            "total_rows":         air_total_rows,
-            "ratio_filled":       air_ratio_filled,
-            "exceed_count":       air_exceed_count,
-            "pct_of_all":         round(air_exceed_count / air_total_rows * 100, 2) if air_total_rows else 0,
-            "pct_of_measured":    round(air_exceed_count / air_ratio_filled * 100, 2) if air_ratio_filled else 0,
-            "ratio_coverage_pct": round(air_ratio_filled / air_total_rows * 100, 2) if air_total_rows else 0,
-        }
-        # Срезы превышений по орг/региону/веществу/месяцу
-        ex_by_sub = sorted(
-            [{"name": k, "exceed": v["exceed"], "measurements": v["measurements"]}
-             for k, v in by_sub.items() if v["exceed"] > 0],
-            key=lambda x: x["exceed"], reverse=True)[:20]
-        ex_by_org = sorted(
-            [{"name": k, "exceed": v["exceed"], "measurements": v["measurements"]}
-             for k, v in by_org.items() if v["exceed"] > 0],
-            key=lambda x: x["exceed"], reverse=True)[:25]
-        ex_by_reg = sorted(
-            [{"name": k, "exceed": v["exceed"], "measurements": v["measurements"]}
-             for k, v in by_reg.items() if v["exceed"] > 0],
-            key=lambda x: x["exceed"], reverse=True)
-        ex_monthly = [{"ym": m["ym"], "exceed": m["exceed"], "measurements": m["measurements"]}
-                      for m in out["monthly"]]
-        out["exceed"] = {
-            "total":        air_exceed_count,
-            "measurements": air_total_rows,
-            "share_pct":    out["exceed_stats"]["pct_of_all"],  # backwards-compat
-            "by_substance": ex_by_sub,
-            "by_org":       ex_by_org,
-            "by_region":    ex_by_reg,
-            "monthly":      ex_monthly,
-        }
-    if kind == "water":
-        avg_ph = (ph_sum / ph_n) if ph_n else None
-        out["ph"] = {
-            "n": ph_n,
-            "avg": round(avg_ph, 3) if avg_ph is not None else None,
-            "out_of_range_n":   ph_out_of_range,
-            "out_of_range_pct": round(ph_out_of_range / ph_n * 100, 2) if ph_n else 0,
-            "monthly": [
-                {"ym": k, "avg": round(v["sum"]/v["n"], 3) if v["n"] else None,
-                 "n": v["n"], "out": v["out"]}
-                for k, v in sorted(ph_monthly.items())
-            ],
-        }
-    return out
-
-
-def load_lookup(csv_path, fields):
-    """Загружает справочник с фильтром тестовых записей (A1)."""
-    out = []; skipped = 0
-    try:
-        with open(csv_path, encoding="utf-8") as fh:
-            for row in csv.DictReader(fh, delimiter=";"):
-                name = row.get("name_ru", "") or row.get("short_name_ru", "")
-                if is_test_org(name) or row.get("id") == "1" and is_test_org(name):
-                    skipped += 1; continue
-                d = {f: row.get(f, "") for f in fields}
-                # нормализуем регион в справочнике тоже
-                if "region_name" in d:
-                    d["region_name"] = normalize_region(d.get("region_name", ""))
-                out.append(d)
-    except Exception as e:
-        print(f"  ⚠ {csv_path}: {e}")
-    if skipped:
-        print(f"     отфильтровано тестовых записей: {skipped}")
-    return out
-
-
-# ── A5: метаданные о покрытии (дисклеймеры для фронта) ──────────────────────
-COVERAGE_NOTES = {
-    "air":   "Плановые замеры стационарных источников промпредприятий",
-    "water": "Сточные воды крупных промпредприятий — не отражает качество воды по всему Казахстану",
-    "fire":  "Факельные выбросы только 2 организаций (NCOC/Кашаган + GAS PROCESSING COMPANY) в Атырауской и Актюбинской областях",
-}
-
-
+# ── Главная функция ───────────────────────────────────────────────────────
 def main():
-    t0 = time.time()
-    print("НБД СОС — агрегация выгрузок (период 2025-01-01 → 2026-12-31)")
-    print("Очистка: фильтр Тест АСМ + нормализация регионов + отсечение мусорных дат")
-    print("=" * 70)
-
-    print("\n[1/3] AIR (4.9 ГБ)…")
-    air = aggregate(AIR, "air", "air")
-
-    print("\n[2/3] FIRE (343 МБ)…")
-    fire = aggregate(FIRE, "fire", "fire")
-
-    print("\n[3/3] WATER (243 МБ)…")
-    water = aggregate(WATER, "water", "water")
-
-    print("\nСправочники (с фильтром TEST/ТЕСТ)…")
-    sources = load_lookup(SRCS,
-        ["id", "serial_number", "name_ru", "region_name", "collector_point_name"])
-    orgs = load_lookup(ORGS,
-        ["id", "name_ru", "short_name_ru", "region_name"])
-
-    # ── A5: metadata ─────────────────────────────────────────────────────
-    metadata = {}
-    for kind, agg in [("air", air), ("water", water), ("fire", fire)]:
-        metadata[kind] = {
-            "rows":           agg["rows"],
-            "regions":        agg["regions_n"],
-            "orgs":           agg["orgs_n"],
-            "period":         f"{agg['period_from']} — {agg['period_to']}",
-            "coverage_note":  COVERAGE_NOTES[kind],
-            "skipped_test":   agg["skipped_test"],
-            "skipped_date":   agg["skipped_date"],
-        }
-    metadata["sources_n"] = len(sources)
-    metadata["orgs_n"]    = len(orgs)
-    metadata["date_filter"] = f"{DATE_MIN} → {DATE_MAX}"
-    metadata["concentration_unit_note"] = "Единицы измерения pollutant_concentration требуют уточнения у источника"
-
-    out = {
-        "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "metadata":     metadata,
-        "air":          air,
-        "fire":         fire,
-        "water":        water,
-        "sources":      sources,
-        "orgs":         orgs,
-    }
-
+    print('═══ NBD СОС v2 (из ClickHouse-агрегатов) ═══')
     os.makedirs(OUT_DIR, exist_ok=True)
-    with open(OUT_PATH, "w", encoding="utf-8") as fh:
-        json.dump(out, fh, ensure_ascii=False, separators=(",", ":"))
 
-    # ── Часть A: компактный массив фактов для кросс-фильтрации фронта ──────
-    schema = ["env","month","region","org","substance","measurements",
-              "ratio_filled","exceed","conc_sum","conc_count",
-              "ph_count","ph_out","gas_sum","gas_count"]
-    facts_array = []
-    for (env, month, region, org, substance), fk in FACTS.items():
-        facts_array.append([
-            env, month, region, org, substance,
-            fk["measurements"],
-            fk["ratio_filled"],
-            fk["exceed"],
-            round(fk["conc_sum"], 2),
-            fk["conc_count"],
-            fk["ph_count"],
-            fk["ph_out"],
-            round(fk["gas_sum"], 4),
-            fk["gas_count"],
-        ])
-    # стабильный порядок: env → period → measurements desc
-    facts_array.sort(key=lambda r: (r[0], r[1], -r[5]))
-    facts_out = {
-        "schema":    schema,
-        "facts":     facts_array,
-        "metadata":  metadata,
-        "generated": time.strftime("%Y-%m-%d %H:%M:%S"),
+    # 1. Справочники
+    orgs, orgs_skipped = read_orgs()
+    sources, srcs_skipped = read_sources()
+    print(f'[NBD] Organizations: {len(orgs)} (отфильтровано тестовых: {orgs_skipped})')
+    print(f'[NBD] Sources:       {len(sources)} (отфильтровано тестовых: {srcs_skipped})')
+
+    # 2. Агрегаты по 3-м средам
+    AIR_COLS = {
+        'n_excess': 'int',
+        'avg_emissions_g_s': 'float',
+        'max_emissions_g_s': 'float',
+        'p95_emissions_g_s': 'float',
+        'avg_excess_ratio':  'float',
+        'max_excess_ratio':  'float',
+        'avg_concentration': 'float',
+        'max_concentration': 'float',
     }
-    with open(OUT_FACTS_PATH, "w", encoding="utf-8") as fh:
-        json.dump(facts_out, fh, ensure_ascii=False, separators=(",", ":"))
-    sz_facts = os.path.getsize(OUT_FACTS_PATH) / 1024
+    WATER_COLS = {
+        'n_excess': 'int',
+        'avg_ph': 'float', 'min_ph': 'float', 'max_ph': 'float',
+        'avg_turbidity': 'float', 'max_turbidity': 'float',
+        'avg_conductivity': 'float', 'max_conductivity': 'float',
+        'avg_temperature': 'float', 'max_temperature': 'float',
+        'avg_flow': 'float', 'max_flow': 'float',
+    }
+    FIRE_COLS = {
+        'n_active': 'int',
+        'avg_gas_flow': 'float',
+        'max_gas_flow': 'float',
+        'sum_gas_flow': 'float',
+        'avg_density':  'float',
+    }
+    air,   air_skipped   = read_aggregate(AIR_AGGR,   AIR_COLS)
+    water, water_skipped = read_aggregate(WATER_AGGR, WATER_COLS)
+    fire,  fire_skipped  = read_aggregate(FIRE_AGGR,  FIRE_COLS)
 
-    sz = os.path.getsize(OUT_PATH) / 1024
-    el = time.time() - t0
-    print("=" * 70)
-    print(f"✓ Готово за {el/60:.1f} мин · {OUT_PATH} ({sz:,.0f} КБ)")
-    print(f"  nbd_facts.json: {len(facts_array):,} комбинаций · {sz_facts:,.0f} КБ")
-    print(f"  AIR   : {air['rows']:>11,} строк · {air['period_from']} → {air['period_to']} · {air['regions_n']} рег. · {air['orgs_n']} орг.")
-    print(f"  FIRE  : {fire['rows']:>11,} строк · {fire['period_from']} → {fire['period_to']} · {fire['regions_n']} рег. · {fire['orgs_n']} орг.")
-    print(f"  WATER : {water['rows']:>11,} строк · {water['period_from']} → {water['period_to']} · {water['regions_n']} рег. · {water['orgs_n']} орг.")
-    es = air["exceed_stats"]
-    print(f"\n  Превышения ПДК (воздух):")
-    print(f"    {es['exceed_count']:,} превышений")
-    print(f"    {es['pct_of_measured']}% от {es['ratio_filled']:,} замеров с заполненным коэф.")
-    print(f"    {es['pct_of_all']}% от {es['total_rows']:,} всех замеров")
-    print(f"    покрытие коэф. ПДК: {es['ratio_coverage_pct']}%")
-    if water.get("ph"):
-        p = water["ph"]
-        print(f"\n  pH сточных вод:")
-        print(f"    avg={p['avg']} · вне 6–9: {p['out_of_range_n']:,} ({p['out_of_range_pct']}% от {p['n']:,})")
+    def total_meas(rows): return sum(r['n_measurements'] for r in rows)
+    def total_field(rows, fld): return sum(r.get(fld, 0) or 0 for r in rows)
+
+    air_meas = total_meas(air);   air_exc = total_field(air, 'n_excess')
+    wat_meas = total_meas(water); wat_exc = total_field(water, 'n_excess')
+    fir_meas = total_meas(fire);  fir_act = total_field(fire, 'n_active')
+    pct = lambda n,d: f'{(n/d*100 if d else 0):.1f}%'
+
+    print(f'[NBD] AIR aggregate:   {len(air):>5} rows, {air_meas:>12,} measurements, {air_exc:>10,} excess ({pct(air_exc,air_meas)})')
+    print(f'[NBD] WATER aggregate: {len(water):>5} rows, {wat_meas:>12,} measurements, {wat_exc:>10,} excess ({pct(wat_exc,wat_meas)})')
+    print(f'[NBD] FIRE aggregate:  {len(fire):>5} rows, {fir_meas:>12,} measurements, {fir_act:>10,} active ({pct(fir_act,fir_meas)})')
+
+    # 3. Aggregates per env
+    def per_env(rows, exceed_field, top_org_n=30, top_poll_n=25):
+        by_region = defaultdict(lambda: {'orgs':set(), 'sources':set(), 'measurements':0, 'excess':0})
+        by_org    = defaultdict(lambda: {'region':'', 'measurements':0, 'excess':0})
+        by_poll   = defaultdict(lambda: {'measurements':0, 'excess':0})
+        by_month  = defaultdict(lambda: {'measurements':0, 'excess':0})
+        for r in rows:
+            br = by_region[r['region']]
+            br['orgs'].add(r['org']); br['sources'].add(r['source'])
+            br['measurements'] += r['n_measurements']
+            br['excess']       += r.get(exceed_field, 0) or 0
+            bo = by_org[r['org']]
+            bo['region'] = r['region']
+            bo['measurements'] += r['n_measurements']
+            bo['excess']       += r.get(exceed_field, 0) or 0
+            bp = by_poll[r['pollutant']]
+            bp['measurements'] += r['n_measurements']
+            bp['excess']       += r.get(exceed_field, 0) or 0
+            bm = by_month[r['month']]
+            bm['measurements'] += r['n_measurements']
+            bm['excess']       += r.get(exceed_field, 0) or 0
+
+        by_region_list = sorted(
+            [{'region':k, **{kk:vv for kk,vv in v.items() if kk not in ('orgs','sources')},
+              'orgs': len(v['orgs']), 'sources': len(v['sources'])}
+             for k,v in by_region.items()],
+            key=lambda x: -x['excess']
+        )
+        by_org_list  = sorted([{'name':k, **v} for k,v in by_org.items()],   key=lambda x: -x['excess'])[:top_org_n]
+        by_poll_list = sorted([{'name':k, **v} for k,v in by_poll.items()],  key=lambda x: -x['excess'])[:top_poll_n]
+        by_month_d   = {k: v for k,v in sorted(by_month.items())}
+        return {'by_region':by_region_list, 'by_org':by_org_list, 'by_pollutant':by_poll_list, 'by_month':by_month_d}
+
+    air_aggs   = per_env(air,   'n_excess')
+    water_aggs = per_env(water, 'n_excess')
+    fire_aggs  = per_env(fire,  'n_active')
+
+    # 4. Прикрепить short-имена к топ-органам (из справочника)
+    org_by_name = {o['name']: o for o in orgs}
+    def attach_short(by_org_list):
+        for r in by_org_list:
+            o = org_by_name.get(r['name'])
+            if o:
+                r['short'] = o['short']
+                r['short_kz'] = o.get('short_kz', '')
+            else:
+                # Не нашли — берём первые 30 символов как заглушку
+                r['short'] = r['name'][:30] + ('…' if len(r['name']) > 30 else '')
+                r['short_kz'] = ''
+    attach_short(air_aggs['by_org'])
+    attach_short(water_aggs['by_org'])
+    attach_short(fire_aggs['by_org'])
+
+    # 5. Incidents / top burners
+    def incident_row(r):
+        return {
+            'month': r['month'], 'region': r['region'],
+            'org': r['org'], 'org_short': org_by_name.get(r['org'], {}).get('short', r['org'][:30]),
+            'source': r['source'], 'pollutant': r['pollutant'],
+            'n_measurements': r['n_measurements'],
+        }
+    air_incidents = sorted(
+        [{**incident_row(r),
+          'n_excess': r['n_excess'],
+          'max_excess_ratio': r.get('max_excess_ratio') or 0,
+          'max_concentration': r.get('max_concentration') or 0}
+         for r in air if (r.get('n_excess') or 0) > 0 and r.get('max_excess_ratio')],
+        key=lambda x: -x['max_excess_ratio']
+    )[:100]
+    water_incidents = sorted(
+        [{**incident_row(r),
+          'n_excess': r['n_excess'],
+          'max_turbidity': r.get('max_turbidity') or 0,
+          'min_ph': r.get('min_ph') or 0,
+          'max_ph': r.get('max_ph') or 0}
+         for r in water if (r.get('n_excess') or 0) > 0],
+        key=lambda x: -x['max_turbidity']
+    )[:100]
+    fire_top_burners = sorted(
+        [{**incident_row(r),
+          'n_active': r['n_active'],
+          'sum_gas_flow': r.get('sum_gas_flow') or 0,
+          'max_gas_flow': r.get('max_gas_flow') or 0}
+         for r in fire if r.get('sum_gas_flow')],
+        key=lambda x: -x['sum_gas_flow']
+    )[:50]
+
+    # 6. Coverage analytics
+    # cutoff = 6 месяцев назад от MAX(month) во всех 3 наборах
+    all_months = [r['month'] for r in air] + [r['month'] for r in water] + [r['month'] for r in fire]
+    max_month = max(all_months) if all_months else '2026-01'
+    y, m = int(max_month[:4]), int(max_month[5:7])
+    cm = m - 6; cy = y
+    while cm <= 0: cm += 12; cy -= 1
+    cutoff = f'{cy:04d}-{cm:02d}'
+
+    # Активность по последним месяцам
+    recent_orgs = set()
+    org_last_month = defaultdict(str)
+    src_seen = set()
+    for rows_set in (air, water, fire):
+        for r in rows_set:
+            if r['month'] >= cutoff: recent_orgs.add(r['org'])
+            if r['month'] > org_last_month[r['org']]: org_last_month[r['org']] = r['month']
+            src_seen.add(r['source'])
+
+    enriched_orgs = []
+    for o in orgs:
+        enriched_orgs.append({
+            **o,
+            'active': o['name'] in recent_orgs,
+            'last_month': org_last_month.get(o['name']) or None,
+        })
+    enriched_sources = [{**s, 'active': s['name'] in src_seen} for s in sources]
+
+    silent_orgs_all = sorted(
+        [{'name':o['name'], 'short':o['short'], 'region':o['region'],
+          'last_seen': org_last_month.get(o['name']) or None}
+         for o in orgs if o['name'] not in recent_orgs],
+        key=lambda x: (x['last_seen'] or '', x['region'])
+    )
+
+    # Coverage by region
+    region_orgs    = defaultdict(set)
+    region_sources = defaultdict(set)
+    for o in orgs:    region_orgs[o['region']].add(o['name'])
+    for s in sources: region_sources[s['region']].add(s['name'])
+    cov_by_region = {}
+    all_regions = set(region_orgs.keys()) | set(region_sources.keys())
+    for region in all_regions:
+        total_o = region_orgs[region]
+        active_o = total_o & recent_orgs
+        silent_o = total_o - recent_orgs
+        total_s = region_sources[region]
+        active_s = total_s & src_seen
+        cov_by_region[region] = {
+            'orgs_total':    len(total_o),
+            'orgs_active':   len(active_o),
+            'orgs_silent':   len(silent_o),
+            'silent_orgs_names': sorted(list(silent_o))[:10],
+            'sources_total':  len(total_s),
+            'sources_active': len(active_s),
+        }
+
+    # 7. Сборка nbd_facts.json (v2 schema)
+    facts_out = {
+        '_meta': {
+            'generated': datetime.now().isoformat(timespec='seconds'),
+            'schema_version': 2,
+            'period_air':   {'min': min([r['month'] for r in air] or ['']), 'max': max([r['month'] for r in air] or [''])},
+            'period_water': {'min': min([r['month'] for r in water] or ['']), 'max': max([r['month'] for r in water] or [''])},
+            'period_fire':  {'min': min([r['month'] for r in fire] or ['']), 'max': max([r['month'] for r in fire] or [''])},
+            'coverage_cutoff': cutoff,
+            'aggregate_source': 'ClickHouse pre-aggregated (mepr_nbdsos_*_aggr CSV)',
+        },
+        'organizations': enriched_orgs,
+        'sources': enriched_sources,
+        'air': {
+            'facts':       air,
+            'by_region':   air_aggs['by_region'],
+            'by_org':      air_aggs['by_org'],
+            'by_pollutant':air_aggs['by_pollutant'],
+            'by_month':    air_aggs['by_month'],
+            'incidents':   air_incidents,
+        },
+        'water': {
+            'facts':       water,
+            'by_region':   water_aggs['by_region'],
+            'by_org':      water_aggs['by_org'],
+            'by_pollutant':water_aggs['by_pollutant'],
+            'by_month':    water_aggs['by_month'],
+            'incidents':   water_incidents,
+        },
+        'fire': {
+            'facts':       fire,
+            'by_region':   fire_aggs['by_region'],
+            'by_org':      fire_aggs['by_org'],
+            'by_pollutant':fire_aggs['by_pollutant'],
+            'by_month':    fire_aggs['by_month'],
+            'top_burners': fire_top_burners,
+        },
+        'coverage': {
+            'by_region': cov_by_region,
+            'silent_orgs_all': silent_orgs_all,
+        }
+    }
+    with open(OUT_FACTS, 'w', encoding='utf-8') as f:
+        json.dump(facts_out, f, ensure_ascii=False, separators=(',', ':'))
+
+    # 8. Легаси nbd_2025.json — формат, совместимый с текущим UI renderNbd2025()
+    def env_legacy(env_rows, env_aggs, exceed_field, top_substances_label='top_substances'):
+        top_subs = [{'name': r['name'], 'measurements': r['measurements'], 'exceed': r['excess']}
+                    for r in env_aggs['by_pollutant']]
+        top_orgs = [{'name': r['name'], 'short': r.get('short',''), 'region': r.get('region',''),
+                     'measurements': r['measurements'], 'exceed': r['excess']}
+                    for r in env_aggs['by_org']]
+        top_regs = [{'name': r['region'], 'measurements': r['measurements'], 'exceed': r['excess'],
+                     'orgs': r['orgs'], 'sources': r['sources']}
+                    for r in env_aggs['by_region']]
+        monthly = [{'ym': m, 'measurements': v['measurements'], 'exceed': v['excess']}
+                   for m, v in env_aggs['by_month'].items()]
+        return {top_substances_label: top_subs, 'top_orgs': top_orgs, 'top_regions': top_regs, 'monthly': monthly}
+
+    legacy = {
+        'air':   env_legacy(air,   air_aggs,   'n_excess'),
+        'water': env_legacy(water, water_aggs, 'n_excess'),
+        'fire':  env_legacy(fire,  fire_aggs,  'n_active'),
+        'metadata': {
+            'air':   {'rows': air_meas,  'orgs': len({r['org'] for r in air}),   'regions': len({r['region'] for r in air}),
+                      'period': f"{facts_out['_meta']['period_air']['min']} → {facts_out['_meta']['period_air']['max']}",
+                      'coverage_note': 'Плановые замеры стационарных источников промпредприятий'},
+            'water': {'rows': wat_meas,  'orgs': len({r['org'] for r in water}), 'regions': len({r['region'] for r in water}),
+                      'period': f"{facts_out['_meta']['period_water']['min']} → {facts_out['_meta']['period_water']['max']}",
+                      'coverage_note': 'Сточные воды крупных промпредприятий'},
+            'fire':  {'rows': fir_meas,  'orgs': len({r['org'] for r in fire}),  'regions': len({r['region'] for r in fire}),
+                      'period': f"{facts_out['_meta']['period_fire']['min']} → {facts_out['_meta']['period_fire']['max']}",
+                      'coverage_note': 'Факельные выбросы'},
+            'sources_n': len(sources),
+            'orgs_n':    len(orgs),
+            'date_filter': '2025-01-01 → 2026-12-31',
+            'concentration_unit_note': 'Единицы pollutant_concentration уточнить у источника',
+        }
+    }
+    # water.ph — поле которое старый UI читает (опционально, считаем простую агрегацию)
+    ph_vals = [r['avg_ph'] for r in water if r.get('avg_ph') is not None]
+    if ph_vals:
+        out_of_range = sum(1 for v in ph_vals if v < 6.5 or v > 8.5)
+        legacy['water']['ph'] = {
+            'n': len(ph_vals),
+            'avg': round(sum(ph_vals)/len(ph_vals), 3),
+            'out_of_range_n': out_of_range,
+            'out_of_range_pct': round(out_of_range/len(ph_vals)*100, 1),
+        }
+    with open(OUT_LEGACY, 'w', encoding='utf-8') as f:
+        json.dump(legacy, f, ensure_ascii=False, separators=(',', ':'))
+
+    # 9. Отчёт
+    n_active = len(recent_orgs)
+    n_silent = len(silent_orgs_all)
+    print()
+    print(f'[NBD] Active orgs (recent ≥ {cutoff}): {n_active} / {len(orgs)}  ({n_silent} silent)')
+    n_active_src = sum(1 for s in enriched_sources if s['active'])
+    print(f'[NBD] Active sources: {n_active_src} / {len(sources)}')
+    print(f'[NBD] Coverage regions: {len(cov_by_region)}')
+    print()
+    print(f'[NBD] Written nbd_facts.json: {os.path.getsize(OUT_FACTS)/1024:.1f} KB (schema_v2)')
+    print(f'[NBD] Written nbd_2025.json (legacy compat): {os.path.getsize(OUT_LEGACY)/1024:.1f} KB')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
