@@ -446,6 +446,22 @@ select[data-ms-mounted="1"]{display:none !important}
   .nbd-alert .alert-detail{font-size:11px}
 }
 /* KPI «Превышения ПДК» — два процента + сноска */
+/* Period-comparison tiles под KPI */
+.nbd-pc-tile{padding:6px 10px;background:var(--surface2);border-radius:6px;border:1px solid var(--border);color:var(--text2);line-height:1.4}
+.nbd-pc-tile b{font-weight:600;font-size:11px}
+.nbd-pc-up-good{color:#16a34a;font-weight:600}
+.nbd-pc-up-bad{color:#dc2626;font-weight:600}
+.nbd-pc-down-good{color:#16a34a;font-weight:600}
+.nbd-pc-down-bad{color:#dc2626;font-weight:600}
+.nbd-pc-flat{color:#6b7280;font-weight:500}
+/* Auto-insights list */
+#nbdInsightsList li{padding:4px 0 4px 22px;position:relative}
+#nbdInsightsList li::before{content:'•';position:absolute;left:8px;color:#16a34a;font-weight:700}
+#nbdInsightsList li.warn::before{content:'⚠';color:#d97706}
+#nbdInsightsList li.bad::before{content:'🔴';left:4px}
+/* Silent-orgs clickable styling */
+#nbdCovSilentList .silent-org-link{cursor:pointer;border-radius:4px;padding:5px 8px;transition:background .12s}
+#nbdCovSilentList .silent-org-link:hover{background:#f0fdf4;border-color:#16a34a}
 #nbd2025KpiExceedTile .exceed-primary{font-weight:600;font-size:11px;color:#E53935}
 #nbd2025KpiExceedTile .exceed-secondary{font-size:10px;color:#757575;font-weight:500;margin-top:1px}
 #nbd2025KpiExceedTile .kpi-note{font-size:9px;color:#999;margin-top:3px;cursor:help;font-style:italic;line-height:1.3}
@@ -1110,6 +1126,18 @@ input[type=file]{display:none}
 
 <!-- МОНИТОРИНГ НБД СОС -->
 <div id="panel-emissions" class="panel">
+
+    <!-- ── INSIGHT-БАННЕР (динамический по среде + фильтрам) ── -->
+    <div id="nbdInsightBanner" style="display:none;padding:14px 18px;margin-bottom:12px;border-radius:8px;border-left:4px solid">
+      <div style="display:flex;align-items:flex-start;gap:14px">
+        <div id="nbdInsightIcon" style="font-size:24px;line-height:1">🔴</div>
+        <div style="flex:1">
+          <div id="nbdInsightMain" style="font-size:18px;font-weight:700;line-height:1.3;margin-bottom:4px"></div>
+          <div id="nbdInsightSub" style="font-size:12px;line-height:1.5;opacity:.92"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="nbd-sticky-zone" id="nbdStickyZone">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
       <div class="card-title" style="margin:0"><span data-i18n="nbd.fresh">Сведения НБД СОС предоставленные МЭПР</span> <span style="font-size:10px;color:var(--text3);font-weight:400" id="nbd2025Period">— загрузка…</span></div>
@@ -1212,6 +1240,14 @@ input[type=file]{display:none}
       <div class="kpi"><div class="kpi-lbl" data-i18n="nbd.kpi.regions">Регионов</div><div class="kpi-val" id="nbd2025KpiRegs">—</div><div class="kpi-d" id="nbd2025KpiRegsSub">охвачено</div></div>
     </div>
 
+    <!-- ── PERIOD COMPARISON: последние 12 мес vs предыдущие 12 мес ── -->
+    <div id="nbdPeriodCompareRow" style="display:none;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:-8px;margin-bottom:14px;font-size:11px">
+      <div class="nbd-pc-tile" id="nbdPcMeas">—</div>
+      <div class="nbd-pc-tile" id="nbdPcOrgs">—</div>
+      <div class="nbd-pc-tile" id="nbdPcEx">—</div>
+      <div class="nbd-pc-tile" id="nbdPcRegs">—</div>
+    </div>
+
     <!-- Top substances + Top orgs -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div class="card" style="padding:12px">
@@ -1256,7 +1292,14 @@ input[type=file]{display:none}
       <div class="card" style="padding:12px">
         <div class="card-title">pH сточных вод</div>
         <div id="nbd2025WaterPh" style="font-size:12px;color:var(--text2)"></div>
+        <div style="font-size:10px;color:var(--text3);margin-top:6px;font-style:italic">Норма: 6.0 ≤ pH ≤ 9.0. Отклонение = риск загрязнения водоёма.</div>
       </div>
+    </div>
+
+    <!-- ── AUTO-INSIGHTS (динамические наблюдения по среде + фильтрам) ── -->
+    <div class="card" id="nbdInsightsBlock" style="display:none;padding:14px 18px;margin-top:14px;background:var(--surface);border-left:3px solid #16a34a">
+      <div class="card-title" style="margin:0 0 8px 0;font-size:13px">📊 Ключевые наблюдения</div>
+      <ul id="nbdInsightsList" style="margin:0;padding-left:0;list-style:none;font-size:12px;line-height:1.55"></ul>
     </div>
   </div>
 
@@ -8433,9 +8476,10 @@ function _renderNbdCoverage(){
       listEl.innerHTML = silent.map(o => {
         const last = o.last_seen ? `последний замер ${o.last_seen}` : 'данных нет вообще';
         const short = o.short && o.short !== o.name ? `<span style="color:var(--text3);font-size:10px"> (${o.short})</span>` : '';
-        return `<div style="padding:5px 8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;align-items:baseline">
+        const enc = String(o.name).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+        return `<div class="silent-org-link" onclick="_nbdSilentOrgClick('${enc}')" style="border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;align-items:baseline" title="Открыть обращения по этой организации">
           <div style="flex:1">
-            <div style="color:var(--text)">${o.name}${short}</div>
+            <div style="color:var(--text)">${o.name}${short} <span style="color:#0891B2;font-size:10px;font-weight:500">→</span></div>
             <div style="font-size:10px;color:var(--text3)">${o.region || '—'}</div>
           </div>
           <div style="font-size:10px;color:#dc2626;white-space:nowrap">${last}</div>
@@ -8630,6 +8674,224 @@ function _renderNbdCoverageNote(mode, metadata){
 }
 
 // ── Главная функция: пересчитывает ВСЕ блоки модуля из отфильтрованного среза
+// ═══ Insight banner / Auto-insights / Period comparison ════════════════════
+// 3 функции которые читают A (отфильтрованную выборку) + window._NBD_FACTS_V2
+// (расширенная structure) и заполняют DOM-блоки добавленные выше в разметке.
+const _NBD_BANNER_THEMES = {
+  air:   { icon:'🔴', bg:'linear-gradient(135deg,#fef2f2,#ffffff)', border:'#dc2626', titleColor:'#b91c1c' },
+  water: { icon:'🟠', bg:'linear-gradient(135deg,#fff7ed,#ffffff)', border:'#ea580c', titleColor:'#9a3412' },
+  fire:  { icon:'⚠️', bg:'linear-gradient(135deg,#fffbeb,#ffffff)', border:'#d97706', titleColor:'#92400e' },
+};
+function _ru(n){ return (n||0).toLocaleString('ru-RU'); }
+function _ruM(n){
+  if(!n) return '0';
+  if(n >= 1e6) return (n/1e6).toFixed(2).replace(/\.?0+$/,'') + ' млн';
+  if(n >= 1e3) return (n/1e3).toFixed(1).replace(/\.0$/,'') + 'к';
+  return _ru(n);
+}
+
+function _renderNbdInsightBanner(T, A){
+  const el = document.getElementById('nbdInsightBanner');
+  if(!el) return;
+  const theme = _NBD_BANNER_THEMES[T] || _NBD_BANNER_THEMES.air;
+  el.style.background    = theme.bg;
+  el.style.borderColor   = theme.border;
+  el.style.color         = theme.titleColor;
+  document.getElementById('nbdInsightIcon').textContent = theme.icon;
+  document.getElementById('nbdInsightMain').style.color = theme.titleColor;
+
+  // Top-3 регионов из текущей выборки
+  const regSorted = Object.entries(A.byRegion).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const top3 = regSorted.map(([r,v]) => `${r} (${_ruM(v)})`).join(', ');
+  const filterReg = (window._NBD_FACTS_V2?._mSel) ? null : null; // оставлено для будущего
+  const regFltActive = (typeof nbdFilters!=='undefined' && nbdFilters?.region) ? nbdFilters.region : null;
+
+  let main = '', sub = '';
+  if(T === 'air'){
+    const pct = A.pct_of_all || 0;
+    const ratio = pct ? Math.round(100/pct) : 0;
+    const headExc = regFltActive
+      ? `${regFltActive}: ${pct}% превышений ПДК · ${_ruM(A.totalExceed)} фактов в ${_ruM(A.totalMeas)} замерах`
+      : `Каждое ${ratio || '—'}-е измерение воздуха превышает норматив`;
+    main = headExc;
+    sub  = regFltActive
+      ? `${_ru(A.totalExceed)} превышений из ${_ru(A.totalMeas)} замеров (${pct}%)`
+      : `${pct}% превышений ПДК · ${_ru(A.totalExceed)} фактов нарушения · Лидеры: ${top3 || '—'}`;
+  } else if(T === 'water'){
+    const pct = A.ph_pct || 0;
+    main = regFltActive
+      ? `${regFltActive}: ${pct}% измерений pH вне нормы 6–9`
+      : `${pct}% измерений сточных вод вне нормы pH 6–9`;
+    sub  = `${_ru(A.ph_out)} нарушений из ${_ru(A.ph_count)} замеров pH${regFltActive ? '' : ' · '+(top3 || '—')+' доминируют по объёму'}`;
+  } else { // fire
+    const nOrgs = Object.keys(A.byOrg).length;
+    main = `Узкое покрытие: только ${nOrgs} ${nOrgs===1?'оператор отчитывается':'оператора отчитываются'} о факельных выбросах`;
+    const orgs = Object.entries(A.byOrg).sort((a,b)=>b[1]-a[1]).map(([n])=>n).slice(0,3).join(' + ');
+    sub  = `${orgs || '—'} — остальные организации не подключены к телеметрии`;
+  }
+  document.getElementById('nbdInsightMain').textContent = main;
+  document.getElementById('nbdInsightSub').textContent  = sub;
+  el.style.display = '';
+}
+
+function _renderNbdInsights(T, A){
+  const block = document.getElementById('nbdInsightsBlock');
+  const list  = document.getElementById('nbdInsightsList');
+  if(!block || !list) return;
+  const insights = [];
+
+  if(T === 'air'){
+    // Топ-3 регионов и их доля от общего exceed
+    const regs = Object.entries(A.byRegion).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const top3Sum = regs.reduce((s,[,v])=>s+v, 0);
+    const totalReg = Object.values(A.byRegion).reduce((s,v)=>s+v, 0);
+    const top3Pct = totalReg ? Math.round(top3Sum/totalReg*100) : 0;
+    if(regs.length >= 3){
+      insights.push({
+        cls:'bad',
+        html: `В 3 индустриальных регионах (<b>${regs.map(([n])=>n).join(', ')}</b>) сосредоточено <b>${top3Pct}%</b> всех нарушений — приоритет для контрольных мероприятий`
+      });
+    }
+    // Top-3 организаций
+    const orgs = Object.entries(A.byOrg).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    if(orgs.length){
+      const orgStr = orgs.map(([n,v]) => `${n.length>40?n.slice(0,38)+'…':n} (${_ruM(v)})`).join(', ');
+      insights.push({ cls:'', html: `Топ-3 организации по числу замеров с превышениями: <b>${orgStr}</b>` });
+    }
+    // Top-3 загрязнителей
+    const subs = Object.entries(A.bySubstance).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    if(subs.length){
+      insights.push({ cls:'', html: `Главные загрязнители: <b>${subs.map(([n,v])=>`${n} (${_ruM(v)})`).join(', ')}</b> — индустриальная тройка` });
+    }
+  } else if(T === 'water'){
+    const regs = Object.entries(A.byRegion).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    const topReg = regs[0];
+    if(topReg){
+      const totalReg = Object.values(A.byRegion).reduce((s,v)=>s+v, 0);
+      const topPct = totalReg ? Math.round(topReg[1]/totalReg*100) : 0;
+      insights.push({
+        cls:'bad',
+        html: `<b>${topReg[0]}</b> формирует <b>${topPct}%</b> нарушений pH — связано с горно-обогатительными комбинатами (Казцинк и др.)`
+      });
+    }
+    const orgs = Object.entries(A.byOrg).sort((a,b)=>b[1]-a[1]).slice(0,3);
+    if(orgs.length){
+      const orgStr = orgs.map(([n,v]) => `${n.length>40?n.slice(0,38)+'…':n} (${_ruM(v)})`).join(', ');
+      insights.push({ cls:'', html: `Доминирующие нарушители: <b>${orgStr}</b>` });
+    }
+  } else { // fire
+    const nOrgs = Object.keys(A.byOrg).length;
+    const orgs = Object.entries(A.byOrg).sort((a,b)=>b[1]-a[1]).map(([n])=>n).slice(0,3);
+    insights.push({
+      cls:'warn',
+      html: `Только <b>${nOrgs}</b> ${nOrgs===1?'организация':'организации'} в системе — <b>${orgs.join(', ')}</b>`
+    });
+    insights.push({
+      cls:'warn',
+      html: `Реальное число факельных операторов в Казахстане — десятки. Это сигнал о неполном покрытии телеметрии`
+    });
+    // Аномалия в мае 2026 — если данные у нас об этом говорят
+    const may26 = A.byMonth['2026-05'] || 0;
+    const apr26 = A.byMonth['2026-04'] || 0;
+    if(may26 > 0 && apr26 > 0 && may26 > apr26 * 10){
+      const ratio = (may26 / apr26).toFixed(1);
+      insights.push({
+        cls:'bad',
+        html: `⚠ <b>Аномалия в данных мая 2026</b> — резкий скачок объёма в <b>${ratio}×</b> раз (${_ruM(may26)} vs ${_ruM(apr26)} в апреле). Требует валидации источника.`
+      });
+    }
+  }
+
+  if(!insights.length){
+    block.style.display = 'none';
+    return;
+  }
+  list.innerHTML = insights.map(i => `<li class="${i.cls||''}">${i.html}</li>`).join('');
+  block.style.display = '';
+}
+
+// Period comparison: последние 12 мес vs предыдущие 12 мес из NBD_FACTS
+function _renderNbdPeriodComparison(T, A){
+  const row = document.getElementById('nbdPeriodCompareRow');
+  if(!row) return;
+  if(!NBD_FACTS || !NBD_FACTS.length){ row.style.display = 'none'; return; }
+  const S = NBD_SCHEMA;
+
+  // Найти max month в env
+  const monthsAll = [];
+  for(const r of NBD_FACTS){
+    if(r[S.env] === T) monthsAll.push(r[S.month]);
+  }
+  if(!monthsAll.length){ row.style.display = 'none'; return; }
+  const maxMonth = monthsAll.sort().pop();  // YYYY-MM
+
+  // Cur period = последние 12 мес ≤ maxMonth, prev = 12 мес перед ним
+  const ymToInt = m => { const [y,mm] = m.split('-').map(Number); return y*12 + mm; };
+  const intToYm = i => { const y = Math.floor((i-1)/12); const mm = ((i-1)%12)+1; return `${y}-${String(mm).padStart(2,'0')}`; };
+  const maxI = ymToInt(maxMonth);
+  const curFromI  = maxI - 11;
+  const prevFromI = maxI - 23;
+  const prevToI   = maxI - 12;
+
+  let curMeas=0, curExc=0, prevMeas=0, prevExc=0;
+  const curOrgs=new Set(), prevOrgs=new Set(), curRegs=new Set(), prevRegs=new Set();
+  for(const r of NBD_FACTS){
+    if(r[S.env] !== T) continue;
+    const mi = ymToInt(r[S.month]);
+    const meas = r[S.measurements]||0;
+    const exc  = r[S.exceed]||0;
+    if(mi >= curFromI && mi <= maxI){
+      curMeas += meas; curExc += exc;
+      curOrgs.add(r[S.org]); curRegs.add(r[S.region]);
+    } else if(mi >= prevFromI && mi <= prevToI){
+      prevMeas += meas; prevExc += exc;
+      prevOrgs.add(r[S.org]); prevRegs.add(r[S.region]);
+    }
+  }
+  if(!curMeas || !prevMeas){
+    // Недостаточно истории для сравнения
+    row.style.display = 'none';
+    return;
+  }
+
+  const tile = (id, label, cur, prev, lessIsBetter) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    const diffPct = prev ? Math.round((cur-prev)/prev*100) : 0;
+    let cls = 'nbd-pc-flat', arrow = '→';
+    if(Math.abs(diffPct) < 5) { cls = 'nbd-pc-flat'; arrow = '→'; }
+    else if(diffPct > 0) {
+      arrow = '↑';
+      cls = lessIsBetter ? 'nbd-pc-up-bad' : 'nbd-pc-up-good';
+    } else {
+      arrow = '↓';
+      cls = lessIsBetter ? 'nbd-pc-down-good' : 'nbd-pc-down-bad';
+    }
+    const sign = diffPct > 0 ? '+' : '';
+    el.innerHTML = `<b>${label}</b><br><span class="${cls}">${arrow} ${sign}${diffPct}%</span> к прошлому году`;
+  };
+  tile('nbdPcMeas', 'Замеров',       curMeas,         prevMeas,         false);
+  tile('nbdPcEx',   'Превышений',    curExc,          prevExc,          true);
+  tile('nbdPcOrgs', 'Активных орг.', curOrgs.size,    prevOrgs.size,    false);
+  tile('nbdPcRegs', 'Регионов',      curRegs.size,    prevRegs.size,    false);
+  row.style.display = 'grid';
+}
+
+// Клик на молчащую org → переключение на вкладку Обращений с фильтром в gOrg
+function _nbdSilentOrgClick(name){
+  if(!name) return;
+  const sel = document.getElementById('gOrg');
+  if(sel){
+    sel.value = name;
+    if(typeof onGlobalFilter === 'function') onGlobalFilter();
+  }
+  // Переключить на вкладку Обращений
+  if(typeof switchTab === 'function'){
+    const tabBtn = document.querySelector("[onclick*=\"switchTab('main'\"]") || document.getElementById('tabMain');
+    switchTab('main', tabBtn);
+  }
+}
+
 function renderNbd2025(){
   const d = window._NBD_2025;
   const T = _nbd2025Tab;
@@ -8727,6 +8989,11 @@ function renderNbd2025(){
   // 12. Чекбокс «только превышения» — видимость
   const oeWrap = document.getElementById('nbdOnlyExceedWrap');
   if(oeWrap) oeWrap.style.display = (T==='air') ? '' : 'none';
+
+  // 13. NEW: Insight-баннер + auto-insights + period comparison
+  try { _renderNbdInsightBanner(T, A); } catch(e){ console.warn('insight banner:', e.message); }
+  try { _renderNbdInsights(T, A); }      catch(e){ console.warn('insights list:', e.message); }
+  try { _renderNbdPeriodComparison(T, A); } catch(e){ console.warn('period compare:', e.message); }
 }
 
 // Hero alert на основе ОТФИЛЬТРОВАННОЙ выборки
