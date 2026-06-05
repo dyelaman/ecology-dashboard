@@ -1341,6 +1341,36 @@ input[type=file]{display:none}
     <div class="kpi"><div class="kpi-lbl" data-i18n="social.kpi.inaction">Жалобы на бездействие</div><div class="kpi-val" style="color:#dc2626" id="socKpiInaction">—</div><div class="kpi-d" id="socKpiInactionPct">— % жалоб</div></div>
   </div>
 
+  <!-- НОВОСТНАЯ АНАЛИТИКА: блоки E (топ тем) + F (не освещённые регионы) -->
+  <div class="card" style="padding:14px 16px;margin-bottom:14px" id="socNewsAnalyticsCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+      <div>
+        <div class="card-title" style="margin:0;font-size:13px">📰 Связка «новости ↔ обращения»</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">Где СМИ освещают пропорционально жалобам граждан — а где замалчивают. Источник: 30-дневный архив новостей + база обращений еОбр.</div>
+      </div>
+      <div style="display:flex;gap:3px" id="socNewsRangeTabs">
+        <button class="soc-org-mode"        data-range="7"  onclick="_socAnaSetRange(7)">7д</button>
+        <button class="soc-org-mode active" data-range="30" onclick="_socAnaSetRange(30)">30д</button>
+        <button class="soc-org-mode"        data-range="90" onclick="_socAnaSetRange(90)">90д</button>
+      </div>
+    </div>
+    <div id="socNewsAnaArchiveWarn" style="display:none;font-size:11px;color:#92400e;background:#fef3c7;border:1px solid #fbbf24;border-left:3px solid #d97706;padding:8px 10px;border-radius:6px;margin-bottom:10px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+      <!-- Блок E — Топ тем -->
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">📊 Топ тем за период</div>
+        <div id="socNewsTopThemes" style="font-size:11px"></div>
+        <div id="socNewsThemesInsight" style="font-size:11px;color:var(--text2);margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:6px;line-height:1.5"></div>
+      </div>
+      <!-- Блок F — Не освещённые регионы -->
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">🌍 Не освещённые регионы</div>
+        <div id="socNewsUnreported" style="font-size:11px"></div>
+        <div id="socNewsRegionsInsight" style="font-size:11px;color:var(--text2);margin-top:8px;padding:8px 10px;background:var(--surface2);border-radius:6px;line-height:1.5"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Рейтинг регионов + Худшие органы -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
     <div class="card" style="padding:12px">
@@ -10806,6 +10836,250 @@ function _socInit(){
   rerenderSocial();
 }
 
+// ═══ News × Appeals analytics (блоки E + F на Соц.напряжении) ═══════════
+// Связка новостной повестки с реальными жалобами граждан. Цель — найти
+// «слепые пятна» (люди жалуются — СМИ молчат) и обратные перекосы
+// (СМИ хайпят — обращений мало).
+//
+// Сопоставление новостной тег → indices в _AC.issues (29 категорий
+// характера вопроса). Источник: ручной анализ маппинга см. диагностику
+// от 2026-06-05.
+const NEWS_TAG_TO_ISSUE_IDX = {
+  air:      [5, 6, 7],         // изменение климата, низкоуглеродное, санитарно-эпидем.
+  water:    [0, 8, 22],        // Водные ресурсы, трансгран. реки, сотрудничество по водам
+  waste:    [15],              // Отходы
+  forest:   [11],              // Лесное хозяйство
+  nature:   [13, 19],          // Недропользование, Рыбное хозяйство
+  industry: [2, 16, 25, 28],   // пром.безоп., Промышленность, Углевод. сырье, Электроэнерг.
+  climate:  [5, 6, 3],         // изм. климата, низкоуглеродное, зелёной таксономии
+  policy:   [12, 18],          // Лицензирование, Разрешительные системы
+  incident: [17, 26],          // Профилактика ЧС, Чрезвычайные ситуации
+  urban:    [23, 24],          // Тепло-/водо-/газо-снабжение (две формы записи)
+  // taza — нет прямого мэппинга на issues, в блок E не идёт
+};
+const NEWS_TAG_RU = {
+  air:'Атмосферный воздух', water:'Водные ресурсы', waste:'Отходы',
+  forest:'Лесное хозяйство', nature:'Природа / недропользование',
+  industry:'Промышленность', climate:'Климат',
+  urban:'Благоустройство / ЖКХ', policy:'Лицензирование / разрешения',
+  incident:'ЧС / аварии'
+};
+// Маппинг названий регионов из новостей → _AC.regions
+// (новости часто говорят про города, _AC хранит области)
+const NEWS_REG_TO_AC = {
+  'Усть-Каменогорск':'ВКО',
+  'Атырау':'Атырауская',
+  'Актау':'Мангистауская',
+  'Тараз':'Жамбылская',
+  'Кызылорда':'Кызылординская',
+  'Семей':'Абайская',
+  'Уральск':'ЗКО',
+  'Петропавловск':'СКО',
+  'Темиртау':'Карагандинская',
+  'Актобе':'Актюбинская',
+  'Павлодар':'Павлодарская',
+  'Костанай':'Костанайская',
+  'Туркестан':'Туркестанская',
+  // Прямые совпадения (Алматы/Астана/Шымкент/ВКО/СКО/ЗКО/Акмолинская/Карагандинская)
+  // не нужны в таблице — fallback на n.region.
+};
+function _socNewsToAcReg(name){
+  if(!name) return null;
+  if(NEWS_REG_TO_AC[name]) return NEWS_REG_TO_AC[name];
+  return name; // прямое совпадение либо неизвестное
+}
+
+let _socAnaRange = 30; // дней; синхронно применяется к блокам E и F
+function _socAnaSetRange(days){
+  _socAnaRange = days;
+  document.querySelectorAll('#socNewsRangeTabs button').forEach(b => {
+    b.classList.toggle('active', +b.dataset.range === days);
+  });
+  _socRenderNewsAnalytics();
+}
+
+function _socRenderNewsAnalytics(){
+  const card = document.getElementById('socNewsAnalyticsCard');
+  if(!card) return;
+  const ru = v => v.toLocaleString('ru-RU');
+
+  // 1. Период
+  const dayMs = 24*60*60*1000;
+  const tsTo = Date.now();
+  const tsFrom = tsTo - _socAnaRange*dayMs;
+  const ymdInt = (ts) => {
+    const d = new Date(ts);
+    return d.getUTCFullYear()*10000 + (d.getUTCMonth()+1)*100 + d.getUTCDate();
+  };
+  const ymdFrom = ymdInt(tsFrom), ymdTo = ymdInt(tsTo);
+
+  // 2. Новости из архива за период (allNews уже в памяти, фильтрованный архив)
+  const archNews = (typeof allNews !== 'undefined' && Array.isArray(allNews)) ? allNews : [];
+  const newsInPeriod = archNews.filter(n => (n.ts||0) >= tsFrom);
+  const newsByTag = {};
+  const newsByAcReg = {};      // ключ = название региона из _AC.regions
+  for(const n of newsInPeriod){
+    for(const tag of (n.tags||[])) newsByTag[tag] = (newsByTag[tag]||0)+1;
+    if(n.region && n.region !== 'Казахстан'){
+      const acReg = _socNewsToAcReg(n.region);
+      if(acReg) newsByAcReg[acReg] = (newsByAcReg[acReg]||0)+1;
+    }
+  }
+  const totalNews = newsInPeriod.length;
+
+  // 3. Архив маленький → предупреждение
+  const warnEl = document.getElementById('socNewsAnaArchiveWarn');
+  if(warnEl){
+    if(totalNews < 10){
+      warnEl.style.display = '';
+      warnEl.innerHTML = `⚠ Архив новостей пока маленький (${totalNews} штук за ${_socAnaRange} дн). Данные станут точнее через несколько дней непрерывного сбора. Аналитика показывается, но индикаторы могут шуметь.`;
+    } else {
+      warnEl.style.display = 'none';
+    }
+  }
+
+  // 4. Обращения за период (один проход по _AC с учётом глобальных multi-фильтров)
+  if(!_AC){
+    document.getElementById('socNewsTopThemes').innerHTML = '<div style="color:var(--text3);padding:12px;text-align:center">Загрузка обращений…</div>';
+    return;
+  }
+  const D=_AC.data, w=_AC.w, n=_AC.n;
+  const appealsByIssue  = new Int32Array(_AC.issues.length);
+  const appealsByRegion = new Int32Array(_AC.regions.length);
+  let totalAppeals = 0;
+  // Global multi-select фильтры — учитываем регион/категорию/тип (если выбраны)
+  const allowedReg = (typeof _mAllowedArr==='function') ? _mAllowedArr('gReg',  _AC.regions) : null;
+  const allowedCat = (typeof _mAllowedArr==='function') ? _mAllowedArr('gCatF', _AC.cats)    : null;
+  const allowedTyp = (typeof _mAllowedArr==='function') ? _mAllowedArr('gType', _AC.types)   : null;
+  for(let i=0;i<n;i++){
+    const o=i*w, ymd=D[o];
+    if(ymd < ymdFrom || ymd > ymdTo) continue;
+    const rr=D[o+1], cc=D[o+2], tt=D[o+3], ii=D[o+5];
+    if(allowedReg && !allowedReg[rr]) continue;
+    if(allowedCat && !allowedCat[cc]) continue;
+    if(allowedTyp && !allowedTyp[tt]) continue;
+    appealsByIssue[ii]++;
+    appealsByRegion[rr]++;
+    totalAppeals++;
+  }
+
+  // ════ Блок E — Топ тем ════════════════════════════════════════════════
+  const rowsE = [];
+  for(const [tag, issueIdxs] of Object.entries(NEWS_TAG_TO_ISSUE_IDX)){
+    if(!issueIdxs.length) continue;
+    const newsCount = newsByTag[tag]||0;
+    let appealsCount = 0;
+    for(const idx of issueIdxs) appealsCount += appealsByIssue[idx]||0;
+    if(newsCount === 0 && appealsCount === 0) continue;
+    const newsShare    = totalNews>0    ? (newsCount/totalNews*100)       : 0;
+    const appealsShare = totalAppeals>0 ? (appealsCount/totalAppeals*100) : 0;
+    // Мелкие категории не показываем (оба <1%)
+    if(appealsShare < 1 && newsShare < 1) continue;
+
+    let ind = '✓', signal = 'Совпадает', color = '#16a34a';
+    if(newsCount === 0 && appealsShare >= 5){
+      ind = '🔴'; signal = 'Слепое пятно: СМИ не пишут совсем'; color = '#dc2626';
+    } else if(appealsShare >= 5 && newsShare < appealsShare*0.7){
+      ind = '🔴'; signal = 'СМИ освещают слабо'; color = '#dc2626';
+    } else if(appealsShare > 0.5 && newsShare > appealsShare*1.5){
+      ind = '⚠';  signal = 'Обращений мало'; color = '#d97706';
+    }
+    rowsE.push({tag, name:NEWS_TAG_RU[tag], newsCount, newsShare, appealsCount, appealsShare, ind, signal, color});
+  }
+  rowsE.sort((a,b)=>b.appealsCount-a.appealsCount);
+
+  const themesEl = document.getElementById('socNewsTopThemes');
+  if(themesEl){
+    if(!rowsE.length){
+      themesEl.innerHTML = '<div style="color:var(--text3);padding:12px;text-align:center;font-size:11px">Нет данных для анализа за выбранный период</div>';
+    } else {
+      themesEl.innerHTML = rowsE.map(r => `
+        <div style="display:grid;grid-template-columns:22px 1fr auto;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);align-items:center">
+          <span style="font-size:13px;text-align:center">${r.ind}</span>
+          <div>
+            <div style="font-weight:600;color:var(--text);font-size:11px">${r.name}</div>
+            <div style="font-size:10px;color:${r.color};font-weight:500;margin-top:1px">${r.signal}</div>
+          </div>
+          <div style="text-align:right;line-height:1.3">
+            <div style="font-size:10px;color:var(--text3)">📰 ${ru(r.newsCount)} (${r.newsShare.toFixed(1)}%)</div>
+            <div style="font-size:10px;color:var(--text3)">📝 ${ru(r.appealsCount)} (${r.appealsShare.toFixed(1)}%)</div>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  // E-insight: топ СМИ, топ-жалобы, слепое пятно
+  const insE = document.getElementById('socNewsThemesInsight');
+  if(insE){
+    if(!rowsE.length){
+      insE.innerHTML = '—';
+    } else {
+      const topMedia   = [...rowsE].sort((a,b)=>b.newsCount-a.newsCount).find(r=>r.newsCount>0);
+      const topAppeals = rowsE[0];
+      const blindspot  = rowsE.find(r => r.ind === '🔴');
+      const bits = [];
+      if(topMedia)   bits.push(`<b>📰 СМИ хайпят:</b> ${topMedia.name} (${ru(topMedia.newsCount)})`);
+      if(topAppeals) bits.push(`<b>📝 Граждане жалуются:</b> ${topAppeals.name} (${ru(topAppeals.appealsCount)})`);
+      if(blindspot)  bits.push(`<b style="color:#dc2626">🚨 Слепое пятно для министерства:</b> ${blindspot.name}`);
+      insE.innerHTML = bits.join(' · ') || '—';
+    }
+  }
+
+  // ════ Блок F — Не освещённые регионы ══════════════════════════════════
+  const rowsF = [];
+  for(let i=0;i<_AC.regions.length;i++){
+    const reg = _AC.regions[i];
+    const ac = appealsByRegion[i];
+    if(ac < 100) continue; // мелкие регионы — шум
+    const nc = newsByAcReg[reg] || 0;
+    let ind='·', signal='', color='#6b7280';
+    if(ac > 1000 && nc <= 2){
+      ind='🔴'; signal='Внимание СМИ критически недостаточно'; color='#dc2626';
+    } else if(ac > 500 && nc <= 5){
+      ind='⚠';  signal='Освещение ниже нормы'; color='#d97706';
+    } else if(nc > 5 && ac < 200){
+      ind='📢'; signal='СМИ заметили без всплеска жалоб'; color='#0891B2';
+    } else if(ac*0.001 <= nc && nc <= ac*0.01){
+      ind='✓';  signal='Освещение пропорционально'; color='#16a34a';
+    } else {
+      ind='·';  signal='Слабый сигнал — мало данных'; color='#9ca3af';
+    }
+    rowsF.push({reg, ac, nc, ind, signal, color, ratio: ac / Math.max(nc,1)});
+  }
+  rowsF.sort((a,b)=>b.ratio-a.ratio);
+  const top7F = rowsF.slice(0, 7);
+
+  const unrEl = document.getElementById('socNewsUnreported');
+  if(unrEl){
+    if(!top7F.length){
+      unrEl.innerHTML = '<div style="color:var(--text3);padding:12px;text-align:center;font-size:11px">Нет региональных данных за выбранный период</div>';
+    } else {
+      unrEl.innerHTML = top7F.map(r => `
+        <div style="padding:7px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:13px;width:20px;text-align:center">${r.ind}</span>
+            <span style="font-weight:600;color:var(--text);flex:1;font-size:11px">${r.reg}</span>
+            <span style="font-size:10px;color:var(--text3);white-space:nowrap">📝 ${ru(r.ac)} · 📰 ${ru(r.nc)}</span>
+          </div>
+          ${r.signal ? `<div style="font-size:10px;color:${r.color};font-weight:500;margin-left:26px;margin-top:2px">→ ${r.signal}</div>` : ''}
+        </div>
+      `).join('');
+    }
+  }
+
+  // F-insight: самый большой перекос
+  const insF = document.getElementById('socNewsRegionsInsight');
+  if(insF){
+    const top = top7F.find(r => r.ind === '🔴') || top7F[0];
+    if(top){
+      insF.innerHTML = `<b>Самый большой перекос:</b> ${top.reg} — ${ru(top.ac)} обращений vs ${ru(top.nc)} новостей за ${_socAnaRange} дн.`;
+    } else {
+      insF.innerHTML = '—';
+    }
+  }
+}
+
 function rerenderSocial(){
   if(!_AC){ return; }
   // Применить фильтр уровня — пересчитываем общую выборку, потом отфильтровываем регионы по уровню через _socCalcIndex
@@ -10819,6 +11093,8 @@ function rerenderSocial(){
   _socRenderAnomalies(offsets, components.overdue?.pct||0);
   _socRenderInsight(offsets, components, index);
   _socRenderChips();
+  // Блоки E + F (новости × обращения) — пересчитываются вместе со всем остальным
+  try { _socRenderNewsAnalytics(); } catch(e) { console.warn('news analytics failed:', e.message); }
 }
 
 // ── КОРРЕЛЯЦИЯ: выбросы НБД ↔ эко-обращения граждан ─────────────────────────
