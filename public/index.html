@@ -1112,7 +1112,7 @@ input[type=file]{display:none}
 <div id="panel-emissions" class="panel">
     <div class="nbd-sticky-zone" id="nbdStickyZone">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
-      <div class="card-title" style="margin:0"><span data-i18n="nbd.fresh">🆕 Свежие данные НБД СОС</span> <span style="font-size:10px;color:var(--text3);font-weight:400" id="nbd2025Period">— загрузка…</span></div>
+      <div class="card-title" style="margin:0"><span data-i18n="nbd.fresh">Сведения НБД СОС предоставленные МЭПР</span> <span style="font-size:10px;color:var(--text3);font-weight:400" id="nbd2025Period">— загрузка…</span></div>
       <div style="display:flex;gap:5px" id="nbd2025Tabs">
         <button class="nbd2025-tab active" data-tab="air"   onclick="setNbd2025Tab('air')">💨 <span data-i18n="nbd.env.air">Воздух</span></button>
         <button class="nbd2025-tab"        data-tab="water" onclick="setNbd2025Tab('water')">💧 <span data-i18n="nbd.env.water">Вода</span></button>
@@ -1122,27 +1122,6 @@ input[type=file]{display:none}
 
     <!-- Дисклеймер о покрытии — меняется в зависимости от режима -->
     <div id="nbd2025CoverageNote" class="coverage-note coverage-info" style="display:none"></div>
-
-    <!-- ── ПОКРЫТИЕ МОНИТОРИНГА (из nbd_facts.json v2) ── -->
-    <div class="card" id="nbdCoverageCard" style="margin-bottom:12px;padding:12px 14px;display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-        <div>
-          <div class="card-title" style="margin:0;font-size:13px">📡 Покрытие мониторинга НБД СОС</div>
-          <div style="font-size:10px;color:var(--text3);margin-top:2px">Сколько организаций из реестра присылают замеры. «Молчащие» — нет данных за последние 6 месяцев.</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px" id="nbdCovKpi">
-        <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Подключено орг-ций</div><div class="kpi-val" id="nbdCovOrgsTotal" style="font-size:22px">—</div></div>
-        <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Активны</div><div class="kpi-val" id="nbdCovOrgsActive" style="font-size:22px;color:#16a34a">—</div><div class="kpi-d" id="nbdCovOrgsPct">— %</div></div>
-        <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Молчат</div><div class="kpi-val" id="nbdCovOrgsSilent" style="font-size:22px;color:#dc2626">—</div><div class="kpi-d" id="nbdCovOrgsSilentSub">— орг.</div></div>
-        <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Источников выбросов</div><div class="kpi-val" id="nbdCovSrcsActive" style="font-size:22px">—</div><div class="kpi-d" id="nbdCovSrcsSub">из — всего</div></div>
-      </div>
-      <!-- Свёрнутый список молчащих — раскрывается по клику -->
-      <details id="nbdCovDetails" style="margin-top:4px">
-        <summary style="cursor:pointer;font-size:11px;font-weight:600;color:#dc2626;padding:4px 0">▾ Показать молчащие организации</summary>
-        <div id="nbdCovSilentList" style="margin-top:6px;max-height:260px;overflow-y:auto;font-size:11px"></div>
-      </details>
-    </div>
 
     <!-- ── ФИЛЬТР-БАР НБД (живая кросс-фильтрация) ── -->
     <div class="nbd-fltbar">
@@ -1189,6 +1168,27 @@ input[type=file]{display:none}
   </div>
 
   <!-- КАРТА НБД СОС -->
+  <!-- ── ПОКРЫТИЕ МОНИТОРИНГА (из nbd_facts.json v2). НЕ в sticky-зоне —
+       чтобы при скролле было видно только фильтры. ── -->
+  <div class="card" id="nbdCoverageCard" style="margin-bottom:12px;padding:12px 14px;display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <div>
+        <div class="card-title" style="margin:0;font-size:13px">📡 Покрытие мониторинга НБД СОС</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">Сколько организаций из реестра присылают замеры. «Молчащие» — нет данных за последние 6 месяцев.</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px" id="nbdCovKpi">
+      <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Подключено орг-ций</div><div class="kpi-val" id="nbdCovOrgsTotal" style="font-size:22px">—</div></div>
+      <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Активны</div><div class="kpi-val" id="nbdCovOrgsActive" style="font-size:22px;color:#16a34a">—</div><div class="kpi-d" id="nbdCovOrgsPct">— %</div></div>
+      <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Молчат</div><div class="kpi-val" id="nbdCovOrgsSilent" style="font-size:22px;color:#dc2626">—</div><div class="kpi-d" id="nbdCovOrgsSilentSub">— орг.</div></div>
+      <div class="kpi" style="padding:8px 10px"><div class="kpi-lbl">Источников выбросов</div><div class="kpi-val" id="nbdCovSrcsActive" style="font-size:22px">—</div><div class="kpi-d" id="nbdCovSrcsSub">из — всего</div></div>
+    </div>
+    <details id="nbdCovDetails" style="margin-top:4px">
+      <summary style="cursor:pointer;font-size:11px;font-weight:600;color:#dc2626;padding:4px 0">▾ Показать молчащие организации</summary>
+      <div id="nbdCovSilentList" style="margin-top:6px;max-height:260px;overflow-y:auto;font-size:11px"></div>
+    </details>
+  </div>
+
   <div class="card" style="padding:10px;margin-bottom:14px">
     <div style="font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.3px;margin-bottom:8px" data-i18n="nbd.block.map">Карта объектов НБД СОС</div>
     <div id="mapNbd" style="height:420px;border-radius:8px;overflow:hidden;border:0.5px solid var(--border)"></div>
@@ -2233,7 +2233,7 @@ const I18N = {
     'nbd.block.exceedOrgs':'Организации по превышениям',
     'nbd.block.exceedSubs':'Вещества по превышениям',
     'nbd.block.map':'Карта объектов НБД СОС',
-    'nbd.fresh':'🆕 Свежие данные НБД СОС',
+    'nbd.fresh':'Сведения НБД СОС предоставленные МЭПР',
     // Таза Казахстан
     'taza.kpi.total':'Всего заявок', 'taza.kpi.done':'Исполнено',
     'taza.kpi.donePct':'%', 'taza.kpi.overdue':'Просрочено',
@@ -2346,7 +2346,7 @@ const I18N = {
     'nbd.block.exceedOrgs':'Асып кету бойынша ұйымдар',
     'nbd.block.exceedSubs':'Асып кету бойынша заттар',
     'nbd.block.map':'ҚОЖ ҰДБ объектілерінің картасы',
-    'nbd.fresh':'🆕 ҚОЖ ҰДБ жаңа деректері',
+    'nbd.fresh':'ҚОЖ ҰДБ мәліметтері (ЭГТРМ ұсынған)',
     // Таза
     'taza.kpi.total':'Барлық өтінімдер', 'taza.kpi.done':'Орындалды',
     'taza.kpi.donePct':'%', 'taza.kpi.overdue':'Мерзімі өткен',
