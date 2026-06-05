@@ -459,6 +459,24 @@ select[data-ms-mounted="1"]{display:none !important}
 #nbdInsightsList li::before{content:'•';position:absolute;left:8px;color:#16a34a;font-weight:700}
 #nbdInsightsList li.warn::before{content:'⚠';color:#d97706}
 #nbdInsightsList li.bad::before{content:'🔴';left:4px}
+/* AI-recommendations block */
+.nbd-ai-section{padding:14px 0;border-bottom:1px solid var(--border)}
+.nbd-ai-section:last-child{border-bottom:0}
+.nbd-ai-header{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.3px;text-transform:uppercase;margin-bottom:10px}
+.nbd-ai-item{padding:10px 12px;margin-bottom:8px;border-radius:6px;border-left:3px solid;font-size:12px;line-height:1.5}
+.nbd-ai-item.crit{background:#fef2f2;border-left-color:#dc2626;color:#7f1d1d}
+.nbd-ai-item.warn{background:#fff7ed;border-left-color:#ea580c;color:#7c2d12}
+.nbd-ai-item.amber{background:#fffbeb;border-left-color:#d97706;color:#78350f}
+.nbd-ai-item.info{background:#eff6ff;border-left-color:#0891b2;color:#155e75}
+.nbd-ai-item.good{background:#f0fdf4;border-left-color:#16a34a;color:#14532d}
+.nbd-ai-item .ai-title{font-weight:600;font-size:13px;margin-bottom:2px}
+.nbd-ai-item .ai-meta{font-size:11px;color:inherit;opacity:.8;line-height:1.5}
+.nbd-ai-item .ai-rec{font-size:11px;background:rgba(0,0,0,.05);padding:6px 8px;border-radius:4px;margin-top:6px}
+.nbd-ai-item .ai-rec::before{content:'▶ ИИ-рекомендация: ';font-weight:600;color:inherit}
+.nbd-ai-item strong{font-weight:700}
+.nbd-ai-item .ai-org-link{cursor:pointer;text-decoration:underline;text-decoration-style:dotted}
+.nbd-ai-item .ai-org-link:hover{text-decoration-style:solid;opacity:.85}
+.nbd-ai-empty{padding:10px 12px;color:var(--text3);font-size:11px;font-style:italic}
 /* Silent-orgs clickable styling */
 #nbdCovSilentList .silent-org-link{cursor:pointer;border-radius:4px;padding:5px 8px;transition:background .12s}
 #nbdCovSilentList .silent-org-link:hover{background:#f0fdf4;border-color:#16a34a}
@@ -1296,10 +1314,13 @@ input[type=file]{display:none}
       </div>
     </div>
 
-    <!-- ── AUTO-INSIGHTS (динамические наблюдения по среде + фильтрам) ── -->
-    <div class="card" id="nbdInsightsBlock" style="display:none;padding:14px 18px;margin-top:14px;background:var(--surface);border-left:3px solid #16a34a">
-      <div class="card-title" style="margin:0 0 8px 0;font-size:13px">📊 Ключевые наблюдения</div>
-      <ul id="nbdInsightsList" style="margin:0;padding-left:0;list-style:none;font-size:12px;line-height:1.55"></ul>
+    <!-- ── AI-РЕКОМЕНДАЦИИ ДЛЯ МИНИСТЕРСТВА (5 секций, динамика по среде+фильтрам) ── -->
+    <div class="card" id="nbdAiBlock" style="display:none;padding:0;margin-top:14px;background:var(--surface);border:1px solid var(--border);overflow:hidden">
+      <div style="padding:14px 18px;background:linear-gradient(135deg,#1f2937,#0f172a);color:#fff">
+        <div style="font-size:15px;font-weight:700;letter-spacing:.3px">🤖 ИИ-РЕКОММЕНДАЦИИ ДЛЯ МИНИСТЕРСТВА — <span id="nbdAiEnvLabel">ВОЗДУХ</span></div>
+        <div style="font-size:10px;opacity:.7;margin-top:3px">Анализ построен динамически из данных НБД СОС с учётом текущих фильтров. Все цифры обновляются при смене фильтра.</div>
+      </div>
+      <div id="nbdAiSections" style="padding:8px 18px 14px"></div>
     </div>
   </div>
 
@@ -8734,6 +8755,424 @@ function _renderNbdInsightBanner(T, A){
   el.style.display = '';
 }
 
+// Пороги для классификации значимости инсайтов (можно крутить без перепиша)
+const _AI_TH = {
+  air:   { critical_org_pct:95, min_meas:1000, growth_pct:30, impossible_ratio:1e6, impossible_conc:1e6 },
+  water: { critical_excess_n:50000, region_dominance:70 },
+  fire:  { min_operators:3, anomaly_x:10 },
+};
+const _AI_ENV_RU = {air:'ВОЗДУХ', water:'ВОДА', fire:'ФАКЕЛЬНЫЕ ВЫБРОСЫ'};
+
+// Фильтрация v2-facts тем же набором фильтров что и legacy NBD_FACTS
+// (региональный + датный — основные; substance/org внутри не нужны для аналитики)
+function _filterV2Facts(envFacts){
+  if(!Array.isArray(envFacts)) return [];
+  const F = (typeof nbdFilters!=='undefined') ? nbdFilters : {};
+  const reg = F.region || '';
+  const yearMonth = F.yearMonth || '';   // 'YYYY' или 'YYYY-MM'
+  return envFacts.filter(r => {
+    if(reg && r.region !== reg) return false;
+    if(yearMonth){
+      if(yearMonth.length === 4){ if(!String(r.month).startsWith(yearMonth)) return false; }
+      else if(r.month !== yearMonth) return false;
+    }
+    return true;
+  });
+}
+
+function _aiOrgLink(name, html){
+  const enc = String(name).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return `<span class="ai-org-link" onclick="_nbdSilentOrgClick('${enc}')" title="Открыть обращения по этой организации">${html||name}</span>`;
+}
+
+function _renderNbdAiRecommendations(T, A){
+  const block = document.getElementById('nbdAiBlock');
+  const host  = document.getElementById('nbdAiSections');
+  const lbl   = document.getElementById('nbdAiEnvLabel');
+  if(!block || !host) return;
+  if(lbl) lbl.textContent = _AI_ENV_RU[T] || T.toUpperCase();
+
+  const v2 = window._NBD_FACTS_V2;
+  if(!v2 || !v2[T] || !Array.isArray(v2[T].facts)){
+    block.style.display = 'none';
+    return;
+  }
+  const facts = _filterV2Facts(v2[T].facts);
+  if(!facts.length){
+    host.innerHTML = '<div class="nbd-ai-empty">Нет данных для аналитики в текущей выборке</div>';
+    block.style.display = '';
+    return;
+  }
+
+  const sections = [];
+  if(T === 'air')   sections.push(..._aiAirSections(facts));
+  if(T === 'water') sections.push(..._aiWaterSections(facts));
+  if(T === 'fire')  sections.push(..._aiFireSections(facts));
+
+  host.innerHTML = sections.map(s => `
+    <div class="nbd-ai-section">
+      <div class="nbd-ai-header">${s.header}</div>
+      ${s.items.length ? s.items.join('') : '<div class="nbd-ai-empty">Нет значимых отклонений в этой категории</div>'}
+    </div>
+  `).join('');
+  block.style.display = '';
+}
+
+// ── AIR sections ─────────────────────────────────────────────────────────
+function _aiAirSections(facts){
+  const TH = _AI_TH.air;
+  const ru = n => (n||0).toLocaleString('ru-RU');
+  const sections = [];
+
+  // 1. Конкретные нарушители — orgs где >95% excess на ≥2 веществах одновременно
+  const orgPollStats = {};  // org → { pollutants:{name:{meas,exc}}, region, total_meas, total_exc }
+  for(const r of facts){
+    if(!orgPollStats[r.org]) orgPollStats[r.org] = { region:r.region, pollutants:{}, total_meas:0, total_exc:0 };
+    const s = orgPollStats[r.org];
+    s.total_meas += r.n_measurements||0;
+    s.total_exc  += r.n_excess||0;
+    if(!s.pollutants[r.pollutant]) s.pollutants[r.pollutant] = {meas:0, exc:0};
+    s.pollutants[r.pollutant].meas += r.n_measurements||0;
+    s.pollutants[r.pollutant].exc  += r.n_excess||0;
+  }
+  const critOrgs = [];
+  for(const [org, st] of Object.entries(orgPollStats)){
+    if(st.total_meas < TH.min_meas) continue;
+    const overall_pct = st.total_meas ? (st.total_exc / st.total_meas * 100) : 0;
+    // Считаем сколько pollutants у орг с excess_rate >95%
+    let critPolls = 0, pollsList = [];
+    for(const [p, ps] of Object.entries(st.pollutants)){
+      if(ps.meas >= 100 && ps.meas && (ps.exc/ps.meas*100) >= TH.critical_org_pct){
+        critPolls++; pollsList.push(p);
+      }
+    }
+    if(overall_pct >= TH.critical_org_pct && critPolls >= 2){
+      critOrgs.push({ org, region:st.region, pct:overall_pct, total_meas:st.total_meas, total_exc:st.total_exc, critPolls, pollsList });
+    }
+  }
+  critOrgs.sort((a,b)=>b.total_exc-a.total_exc);
+
+  // Также — отдельно орг с extreme max_excess_ratio (≥1000×)
+  const extremeRatios = {};
+  for(const r of facts){
+    if((r.max_excess_ratio||0) >= 1000){
+      const k = r.org;
+      if(!extremeRatios[k] || (r.max_excess_ratio > extremeRatios[k].max_ratio)){
+        extremeRatios[k] = { org:r.org, region:r.region, source:r.source, pollutant:r.pollutant, max_ratio:r.max_excess_ratio };
+      }
+    }
+  }
+  const extreme = Object.values(extremeRatios)
+    .filter(r => r.max_ratio < TH.impossible_ratio)
+    .sort((a,b)=>b.max_ratio-a.max_ratio).slice(0,3);
+
+  const violatorItems = [];
+  for(const v of critOrgs.slice(0,3)){
+    const polls = v.pollsList.slice(0,5).join(', ');
+    violatorItems.push(`<div class="nbd-ai-item crit">
+      <div class="ai-title">${_aiOrgLink(v.org)} <span style="font-weight:400;font-size:11px">(${v.region})</span></div>
+      <div class="ai-meta"><strong>${v.pct.toFixed(1)}%</strong> превышений на <strong>${v.critPolls} веществах</strong> одновременно (${polls}). <strong>${ru(v.total_exc)}</strong> нарушений из <strong>${ru(v.total_meas)}</strong> замеров.</div>
+      <div class="ai-rec">Признак системной проблемы калибровки датчиков ИЛИ хронического нарушения. Внеплановая проверка в течение 30 дней с привлечением метрологической службы.</div>
+    </div>`);
+  }
+  for(const ex of extreme){
+    if(ex.max_ratio < 50) continue; // совсем мелочь не показываем
+    violatorItems.push(`<div class="nbd-ai-item crit">
+      <div class="ai-title">${_aiOrgLink(ex.org)} <span style="font-weight:400;font-size:11px">(${ex.region})</span></div>
+      <div class="ai-meta">Максимальное превышение ПДК: <strong>${ex.max_ratio.toFixed(0)}×</strong> по веществу «${ex.pollutant}» (источник «${(ex.source||'').slice(0,40)}»).</div>
+      <div class="ai-rec">Срочная проверка оборудования и очистных сооружений на этом источнике.</div>
+    </div>`);
+  }
+  sections.push({ header:'🎯 1. Конкретные нарушители (требуют немедленной проверки)', items:violatorItems });
+
+  // 2. Тренды — орг с ростом 2026 vs 2025
+  const orgYearStats = {};  // org → { '2025': {meas, exc, months:Set}, '2026': {...}, region }
+  for(const r of facts){
+    const yr = (r.month||'').slice(0,4);
+    if(yr !== '2025' && yr !== '2026') continue;
+    if(!orgYearStats[r.org]) orgYearStats[r.org] = { region:r.region, '2025':{exc:0,months:new Set()}, '2026':{exc:0,months:new Set()} };
+    const s = orgYearStats[r.org][yr];
+    s.exc += r.n_excess||0;
+    s.months.add(r.month);
+  }
+  const trends = [];
+  for(const [org, st] of Object.entries(orgYearStats)){
+    const m25 = st['2025'].months.size;
+    const m26 = st['2026'].months.size;
+    if(m25 < 3 || m26 < 2) continue;
+    const avg25 = st['2025'].exc / m25;
+    const avg26 = st['2026'].exc / m26;
+    if(avg25 < 1000) continue; // мелочь — пропускаем
+    const growth = avg25 ? ((avg26-avg25)/avg25*100) : 0;
+    if(growth >= TH.growth_pct){
+      trends.push({ org, region:st.region, growth, avg25, avg26 });
+    }
+  }
+  trends.sort((a,b)=>b.growth-a.growth);
+  const trendItems = [];
+  for(const t of trends.slice(0,5)){
+    trendItems.push(`<div class="nbd-ai-item warn">
+      <div class="ai-title">⬆ ${_aiOrgLink(t.org)} <span style="font-weight:400;font-size:11px">(${t.region}): <strong>+${t.growth.toFixed(0)}%</strong></span></div>
+      <div class="ai-meta">с <strong>${ru(Math.round(t.avg25))}</strong> нарушений/мес в 2025 → <strong>${ru(Math.round(t.avg26))}/мес</strong> в 2026</div>
+    </div>`);
+  }
+  if(trends.length >= 3){
+    trendItems.push(`<div class="nbd-ai-item info">
+      <div class="ai-meta"><strong>Общий вывод:</strong> ${trends.length} крупных предприятий одновременно ухудшили показатели в 2026. Это может говорить о системной проблеме отрасли. Министерству — запросить отчёт у этих компаний о причинах.</div>
+    </div>`);
+  }
+  sections.push({ header:'📈 2. Тренды — организации с ухудшением 2026 vs 2025', items:trendItems });
+
+  // 3. Региональные «монополии» по веществам
+  const pollRegStats = {};  // pollutant → { totalExc, regions:{name:exc} }
+  for(const r of facts){
+    if(!pollRegStats[r.pollutant]) pollRegStats[r.pollutant] = { totalExc:0, regions:{} };
+    const s = pollRegStats[r.pollutant];
+    const e = r.n_excess||0;
+    s.totalExc += e;
+    s.regions[r.region] = (s.regions[r.region]||0) + e;
+  }
+  const monos = [];
+  for(const [poll, st] of Object.entries(pollRegStats)){
+    if(st.totalExc < 1000) continue;
+    const sortedR = Object.entries(st.regions).sort((a,b)=>b[1]-a[1]);
+    const top = sortedR[0];
+    if(!top || top[1] < 1000) continue;
+    const pct = (top[1]/st.totalExc*100);
+    if(pct >= 50){
+      monos.push({ pollutant:poll, region:top[0], pct, count:top[1] });
+    }
+  }
+  monos.sort((a,b)=>b.pct-a.pct);
+  const monoItems = monos.slice(0,7).map(m =>
+    `<div class="nbd-ai-item info" style="padding:6px 12px">
+      <div class="ai-meta"><strong>${m.pollutant}</strong> → <strong>${m.pct.toFixed(0)}%</strong> ${m.region} <span style="opacity:.7">(${ru(m.count)} нарушений)</span></div>
+    </div>`
+  );
+  if(monoItems.length){
+    monoItems.push(`<div class="nbd-ai-item info">
+      <div class="ai-rec">Концентрация конкретного вещества в одном регионе позволяет точечно назначить контрольное управление и приоритеты. Министерству — закрепить за каждым «монопольным» регионом профильного инспектора.</div>
+    </div>`);
+  }
+  sections.push({ header:'🌐 3. Региональные паттерны — «монополии» по веществам', items:monoItems });
+
+  // 4. Сезонность — пик зимой (Ноя-Мар) vs минимум (Июн-Июл)
+  const monthStats = {}; // month_num → {meas, exc}
+  for(const r of facts){
+    const mn = parseInt((r.month||'').slice(5,7));
+    if(!mn) continue;
+    if(!monthStats[mn]) monthStats[mn] = {meas:0, exc:0};
+    monthStats[mn].meas += r.n_measurements||0;
+    monthStats[mn].exc  += r.n_excess||0;
+  }
+  const winterM = [11,12,1,2,3], summerM = [6,7];
+  let winM=0, winE=0, sumM=0, sumE=0;
+  for(const m of winterM){ if(monthStats[m]){ winM += monthStats[m].meas; winE += monthStats[m].exc; }}
+  for(const m of summerM){ if(monthStats[m]){ sumM += monthStats[m].meas; sumE += monthStats[m].exc; }}
+  const winPct = winM ? (winE/winM*100) : 0;
+  const sumPct = sumM ? (sumE/sumM*100) : 0;
+  const seasonItems = [];
+  if(winM > 0 && sumM > 0 && winPct > sumPct){
+    seasonItems.push(`<div class="nbd-ai-item amber">
+      <div class="ai-meta">Зима (Ноя-Мар): <strong>${winPct.toFixed(1)}%</strong> нарушений · Лето (Июн-Июл): <strong>${sumPct.toFixed(1)}%</strong> нарушений</div>
+      <div class="ai-rec">Зимний пик коррелирует с отопительным сезоном. Министерству — план усиления контроля ТЭЦ и котельных с октября по декабрь, до начала пика. Превентивный контроль эффективнее реактивного.</div>
+    </div>`);
+  }
+  sections.push({ header:'☀️ 4. Сезонность — отопительный сезон критичен', items:seasonItems });
+
+  // 5. Качество данных — overflow / impossible values
+  const qIssues = [];
+  for(const r of facts){
+    if((r.max_excess_ratio||0) >= TH.impossible_ratio){
+      qIssues.push({ type:'ratio', org:r.org, region:r.region, source:r.source, pollutant:r.pollutant, value:r.max_excess_ratio });
+    }
+    if((r.max_concentration||0) >= TH.impossible_conc){
+      qIssues.push({ type:'conc', org:r.org, region:r.region, source:r.source, pollutant:r.pollutant, value:r.max_concentration });
+    }
+  }
+  // group by org
+  const qByOrg = {};
+  for(const q of qIssues){
+    if(!qByOrg[q.org]) qByOrg[q.org] = { region:q.region, ratio_n:0, conc_n:0, max_ratio:0, max_conc:0, sources:new Set() };
+    const s = qByOrg[q.org];
+    if(q.type==='ratio'){ s.ratio_n++; s.max_ratio = Math.max(s.max_ratio, q.value); s.sources.add(q.source); }
+    if(q.type==='conc'){ s.conc_n++; s.max_conc = Math.max(s.max_conc, q.value); }
+  }
+  const qItems = [];
+  for(const [org, s] of Object.entries(qByOrg).slice(0,5)){
+    const ratioStr = s.ratio_n ? `max_excess_ratio = <strong>10<sup>${Math.floor(Math.log10(s.max_ratio))}</sup></strong>` : '';
+    const concStr = s.conc_n ? `max_concentration = <strong>${s.max_conc.toExponential(2)} мг/м³</strong>` : '';
+    qItems.push(`<div class="nbd-ai-item crit">
+      <div class="ai-title">${_aiOrgLink(org)} <span style="font-weight:400;font-size:11px">(${s.region}) — ${s.sources.size||0} источников</span></div>
+      <div class="ai-meta">${ratioStr}${ratioStr && concStr ? ', ' : ''}${concStr} — математически/физически невозможно.</div>
+      <div class="ai-rec">Overflow при делении на 0 в БД НБД СОС. Министерству — запросить у владельцев системы пересчёт агрегатов для этих источников.</div>
+    </div>`);
+  }
+  if(!qItems.length){
+    qItems.push(`<div class="nbd-ai-item good">
+      <div class="ai-meta">Аномальных значений не обнаружено в выборке ✓</div>
+    </div>`);
+  }
+  sections.push({ header:'⚠️ 5. Качество данных — обнаружены аномалии', items:qItems });
+
+  return sections;
+}
+
+// ── WATER sections ───────────────────────────────────────────────────────
+function _aiWaterSections(facts){
+  const TH = _AI_TH.water;
+  const ru = n => (n||0).toLocaleString('ru-RU');
+  const sections = [];
+
+  // 1. Топ-нарушители
+  const byOrg = {};
+  for(const r of facts){
+    if(!byOrg[r.org]) byOrg[r.org] = { region:r.region, meas:0, exc:0 };
+    byOrg[r.org].meas += r.n_measurements||0;
+    byOrg[r.org].exc  += r.n_excess||0;
+  }
+  const topOrgs = Object.entries(byOrg).sort((a,b)=>b[1].exc-a[1].exc).slice(0,5);
+  const violatorItems = [];
+  for(const [org, s] of topOrgs){
+    if(s.exc < TH.critical_excess_n) continue;
+    violatorItems.push(`<div class="nbd-ai-item crit">
+      <div class="ai-title">${_aiOrgLink(org)} <span style="font-weight:400;font-size:11px">(${s.region})</span></div>
+      <div class="ai-meta"><strong>${ru(s.exc)}</strong> нарушений pH из ${ru(s.meas)} замеров</div>
+    </div>`);
+  }
+  // Регион-доминант
+  const byReg = {};
+  let totalExc = 0;
+  for(const r of facts){
+    byReg[r.region] = (byReg[r.region]||0) + (r.n_excess||0);
+    totalExc += (r.n_excess||0);
+  }
+  const topReg = Object.entries(byReg).sort((a,b)=>b[1]-a[1])[0];
+  if(topReg && totalExc){
+    const pct = (topReg[1]/totalExc*100);
+    if(pct >= TH.region_dominance){
+      violatorItems.push(`<div class="nbd-ai-item info">
+        <div class="ai-meta">Все 3 лидера сосредоточены в <strong>${topReg[0]}</strong>, горно-металлургический сектор. Регион формирует <strong>${pct.toFixed(0)}%</strong> всех нарушений pH сточных вод в РК.</div>
+        <div class="ai-rec">Региональный план оздоровления ${topReg[0]} с фокусом на ключевые горно-обогатительные комбинаты.</div>
+      </div>`);
+    }
+  }
+  sections.push({ header:'🎯 1. Конкретные нарушители', items:violatorItems });
+
+  // 2. Структурная проблема (если регион-доминант)
+  const trendItems = [];
+  if(topReg && totalExc){
+    const pct = (topReg[1]/totalExc*100);
+    if(pct >= TH.region_dominance){
+      trendItems.push(`<div class="nbd-ai-item warn">
+        <div class="ai-meta"><strong>${pct.toFixed(0)}%</strong> нарушений pH сосредоточено в одном регионе (${topReg[0]}). Это структурная проблема, а не разовые инциденты.</div>
+      </div>`);
+    }
+  }
+  sections.push({ header:'📈 2. Тенденция — региональная концентрация', items:trendItems });
+
+  // 3. Почему pH вне нормы (объясняющий блок)
+  sections.push({ header:'🌐 3. Почему pH вне нормы?', items:[
+    `<div class="nbd-ai-item info">
+      <div class="ai-meta"><strong>pH &lt; 6.5</strong> → кислотные стоки (типично для металлургии)<br>
+      <strong>pH &gt; 8.5</strong> → щелочные стоки (типично для химпрома)<br>
+      Норматив РК: 6.0 ≤ pH ≤ 9.0</div>
+      <div class="ai-rec">Высокая доля измерений вне нормы = массовый сброс неочищенных стоков ИЛИ ошибки калибровки pH-метров. Требуется аудит обоих факторов.</div>
+    </div>`
+  ]});
+
+  // 4. Качество данных — газовые pollutants в водной таблице
+  const gasPolls = facts.filter(r => /оксид азота|диоксид азота|сера диоксид|углерод оксид/i.test(r.pollutant||''));
+  const qItems = [];
+  if(gasPolls.length){
+    qItems.push(`<div class="nbd-ai-item amber">
+      <div class="ai-meta">Найдено <strong>${gasPolls.length}</strong> записей с газовыми веществами (NO₂, NO, SO₂, CO) в водной таблице. Это ошибка классификации в БД источника.</div>
+      <div class="ai-rec">Запросить у владельцев системы НБД СОС перепроверку классификатора веществ для водных замеров.</div>
+    </div>`);
+  } else {
+    qItems.push(`<div class="nbd-ai-item good"><div class="ai-meta">Газовых веществ в водной таблице не обнаружено ✓</div></div>`);
+  }
+  sections.push({ header:'⚠️ 4. Качество данных', items:qItems });
+
+  return sections;
+}
+
+// ── FIRE sections ────────────────────────────────────────────────────────
+function _aiFireSections(facts){
+  const TH = _AI_TH.fire;
+  const ru = n => (n||0).toLocaleString('ru-RU');
+  const sections = [];
+
+  // 1. Покрытие
+  const orgsSet = new Set(facts.map(r => r.org));
+  const orgs = [...orgsSet];
+  const covItems = [];
+  covItems.push(`<div class="nbd-ai-item crit">
+    <div class="ai-title">Только ${orgs.length} ${orgs.length===1?'оператор':'оператора'} в системе</div>
+    <div class="ai-meta">${orgs.map(o => _aiOrgLink(o)).join(' · ')}</div>
+    <div class="ai-rec">В Казахстане десятки предприятий с факелами. В системе НБД — только ${orgs.length}. Это 90%+ скрытых выбросов CO₂ от факельного сжигания. Министерству — программа подключения остальных операторов (Тенгизшевройл, КазМунайГаз, Норт Каспиан и др.).</div>
+  </div>`);
+  sections.push({ header:'🎯 1. Критическое покрытие', items:covItems });
+
+  // 2. География
+  const byReg = {};
+  for(const r of facts){
+    if(!byReg[r.region]) byReg[r.region] = 0;
+    byReg[r.region]++;
+  }
+  const regions = Object.entries(byReg).sort((a,b)=>b[1]-a[1]);
+  const geoItems = regions.map(([name, cnt]) =>
+    `<div class="nbd-ai-item info" style="padding:6px 12px">
+      <div class="ai-meta"><strong>${name}</strong>: ${cnt} записей</div>
+    </div>`
+  );
+  if(geoItems.length){
+    geoItems.push(`<div class="nbd-ai-item info">
+      <div class="ai-meta">Покрытие охватывает основные нефтегазовые регионы, но в реальности факелы есть и в ЗКО, и в Кызылординской. Расширение списка операторов даст полную картину.</div>
+    </div>`);
+  }
+  sections.push({ header:'🌐 2. География — концентрация в нефтяных регионах', items:geoItems });
+
+  // 3. Аномалия мая 2026
+  const byMon = {};
+  for(const r of facts){
+    if(!byMon[r.month]) byMon[r.month] = {meas:0, gas:0};
+    byMon[r.month].meas += r.n_measurements||0;
+    byMon[r.month].gas  += r.sum_gas_flow||0;
+  }
+  const monthsSorted = Object.keys(byMon).sort();
+  const anomalyItems = [];
+  for(let i=1; i<monthsSorted.length; i++){
+    const cur = byMon[monthsSorted[i]];
+    const prev = byMon[monthsSorted[i-1]];
+    if(prev.meas > 0 && cur.meas / prev.meas >= TH.anomaly_x){
+      const ratio = (cur.meas/prev.meas).toFixed(1);
+      anomalyItems.push(`<div class="nbd-ai-item crit">
+        <div class="ai-title">Аномалия в данных ${monthsSorted[i]}</div>
+        <div class="ai-meta"><strong>${ru(cur.meas)}</strong> замеров (vs <strong>${ru(prev.meas)}</strong> в ${monthsSorted[i-1]}) — скачок в <strong>${ratio}×</strong> раз без видимых причин.</div>
+        <div class="ai-rec">Скорее всего: bug запроса на стороне БД (overflow при aggregate). Запросить у владельца данных пересчёт fire-таблицы за ${monthsSorted[i]}. До исправления данные за этот месяц в анализе не учитывать.</div>
+      </div>`);
+    }
+  }
+  if(!anomalyItems.length){
+    anomalyItems.push(`<div class="nbd-ai-item good"><div class="ai-meta">Аномалий в месячном тренде не обнаружено ✓</div></div>`);
+  }
+  sections.push({ header:'⚠️ 3. Аномалии в данных', items:anomalyItems });
+
+  // 4. Экономическая рекомендация
+  const totalGas = facts.reduce((s,r)=>s+(r.sum_gas_flow||0), 0);
+  const economicItems = [`<div class="nbd-ai-item amber">
+    <div class="ai-meta">Накопленный объём факельного сжигания в выборке: <strong>${ru(Math.round(totalGas))} м³/с</strong>.</div>
+    <div class="ai-meta">1 м³/с сжигаемого газа ≈ 31.5 млн м³/год ≈ <strong>$50 тыс. потерь</strong> по экспортной цене.</div>
+    <div class="ai-rec">Факел = горящий газ = потерянный экспортный ресурс + CO₂. Расширение мониторинга — потенциальная экономия для бюджета РК и снижение углеродного следа.</div>
+  </div>`];
+  sections.push({ header:'💰 4. Экономический потенциал', items:economicItems });
+
+  return sections;
+}
+
+// Старая узкая версия (3-5 буллетов) — оставлена как fallback на случай если
+// нужно будет переключиться, но больше не вызывается из renderNbd2025
 function _renderNbdInsights(T, A){
   const block = document.getElementById('nbdInsightsBlock');
   const list  = document.getElementById('nbdInsightsList');
@@ -8990,10 +9429,10 @@ function renderNbd2025(){
   const oeWrap = document.getElementById('nbdOnlyExceedWrap');
   if(oeWrap) oeWrap.style.display = (T==='air') ? '' : 'none';
 
-  // 13. NEW: Insight-баннер + auto-insights + period comparison
-  try { _renderNbdInsightBanner(T, A); } catch(e){ console.warn('insight banner:', e.message); }
-  try { _renderNbdInsights(T, A); }      catch(e){ console.warn('insights list:', e.message); }
-  try { _renderNbdPeriodComparison(T, A); } catch(e){ console.warn('period compare:', e.message); }
+  // 13. NEW: Insight-баннер + AI-рекомендации (5 секций) + period comparison
+  try { _renderNbdInsightBanner(T, A); }          catch(e){ console.warn('insight banner:', e.message); }
+  try { _renderNbdAiRecommendations(T, A); }      catch(e){ console.warn('ai recs:', e.message); }
+  try { _renderNbdPeriodComparison(T, A); }       catch(e){ console.warn('period compare:', e.message); }
 }
 
 // Hero alert на основе ОТФИЛЬТРОВАННОЙ выборки
