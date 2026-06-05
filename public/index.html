@@ -1689,6 +1689,15 @@ input[type=file]{display:none}
     </div>
   </div>
 
+  <!-- ── AI-РЕКОММЕНДАЦИИ КГС (динамика по типу + фильтрам) ── -->
+  <div class="card" id="kgsAiBlock" style="display:none;padding:0;margin-top:14px;background:var(--surface);border:1px solid var(--border);overflow:hidden">
+    <div style="padding:14px 18px;background:linear-gradient(135deg,#0f172a,#1e3a8a);color:#fff">
+      <div style="font-size:15px;font-weight:700;letter-spacing:.3px">🤖 ИИ-РЕКОММЕНДАЦИИ — <span id="kgsAiTypeLabel">ВСЕ ТИПЫ</span></div>
+      <div style="font-size:10px;opacity:.75;margin-top:3px">Спутниковый мониторинг КГС. Анализ построен динамически из данных с учётом текущих фильтров.</div>
+    </div>
+    <div id="kgsAiSections" style="padding:8px 18px 14px"></div>
+  </div>
+
 </div>
 
 <!-- ТАЗА КАЗАХСТАН -->
@@ -5922,6 +5931,432 @@ function rerenderKgs(){
   renderKgsTable(kgsFilters.type, facts);
   renderKgsChips();
   rerenderKgsMap(facts);
+  try { _renderKgsAiRecommendations(kgsFilters.type, facts); } catch(e){ console.warn('kgs ai recs:', e.message); }
+}
+
+// ═══ AI-РЕКОММЕНДАЦИИ КГС ════════════════════════════════════════════════
+// Источник: KGS_FACTS — массив объектов {type, year, region, subcategory,
+// status, area, lat, lng, aux, extra, volume}. type ∈ forest/nedra/waste/
+// land_seizure. Под каждый type — свой блок секций. При type='all' — блок
+// скрыт (нет смысла смешивать рубки со свалками в одной аналитике).
+const _KGS_AI_LBL = {
+  forest:'ЛЕСНЫЕ РУБКИ', nedra:'КАРЬЕРЫ', waste:'НЕСАНКЦИОНИРОВАННЫЕ СВАЛКИ',
+  land_seizure:'САМОЗАХВАТЫ ЗЕМЕЛЬ', all:'ВСЕ ТИПЫ'
+};
+function _kgsRu(n){ return (n||0).toLocaleString('ru-RU'); }
+function _kgsLink(name, html){
+  const enc = String(name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return `<span class="ai-org-link" onclick="_nbdSilentOrgClick('${enc}')" title="Поиск по этому имени в Обращениях">${html||name}</span>`;
+}
+
+function _renderKgsAiRecommendations(type, facts){
+  const block = document.getElementById('kgsAiBlock');
+  const host  = document.getElementById('kgsAiSections');
+  const lbl   = document.getElementById('kgsAiTypeLabel');
+  if(!block || !host) return;
+  if(lbl) lbl.textContent = _KGS_AI_LBL[type] || 'ВСЕ ТИПЫ';
+
+  // type='all' — скрываем (смешанная аналитика бесполезна)
+  if(type === 'all'){
+    host.innerHTML = '<div class="nbd-ai-empty">Выберите конкретный тип (Рубки / Карьеры / Свалки / Самозахваты) — ИИ-аналитика строится отдельно по каждому. На уровне «Все» смешанная аналитика менее показательна.</div>';
+    block.style.display = '';
+    return;
+  }
+  if(!facts.length){
+    host.innerHTML = '<div class="nbd-ai-empty">Нет данных для аналитики в текущей выборке</div>';
+    block.style.display = '';
+    return;
+  }
+  let sections = [];
+  if(type === 'forest')       sections = _kgsAiForestSections(facts);
+  else if(type === 'nedra')   sections = _kgsAiNedraSections(facts);
+  else if(type === 'waste')   sections = _kgsAiWasteSections(facts);
+  else if(type === 'land_seizure') sections = _kgsAiLandSections(facts);
+
+  host.innerHTML = sections.map(s => `
+    <div class="nbd-ai-section">
+      <div class="nbd-ai-header">${s.header}</div>
+      ${s.items.length ? s.items.join('') : '<div class="nbd-ai-empty">Нет значимых отклонений в этой категории при текущих фильтрах</div>'}
+    </div>
+  `).join('');
+  block.style.display = '';
+}
+
+// ── FOREST sections ─────────────────────────────────────────────────────
+function _kgsAiForestSections(facts){
+  const sections = [];
+  const illegal = facts.filter(f => f.subcategory === 'Незаконная');
+  const totalAll = facts.length;
+  const totalIll = illegal.length;
+
+  // 1. Конкретные нарушители (лесхозы) — топ по числу незаконных
+  const lhMap = {};
+  for(const f of illegal){
+    const lh = (f.aux || '').replace(/\s+/g, ' ').trim();
+    if(!lh) continue;
+    if(!lhMap[lh]) lhMap[lh] = { count:0, region:f.region };
+    lhMap[lh].count++;
+  }
+  const topLh = Object.entries(lhMap).sort((a,b)=>b[1].count-a[1].count).slice(0,7);
+  const top3Sum = topLh.slice(0,3).reduce((s,[,v])=>s+v.count, 0);
+  const top3Pct = totalIll ? Math.round(top3Sum/totalIll*100) : 0;
+  const violItems = topLh.slice(0,3).map(([lh,v]) => `<div class="nbd-ai-item crit">
+    <div class="ai-title">${_kgsLink(lh)} <span style="font-weight:400;font-size:11px">(${v.region||'—'})</span></div>
+    <div class="ai-meta"><strong>${v.count}</strong> незаконных рубок</div>
+  </div>`);
+  if(topLh.length >= 3){
+    violItems.push(`<div class="nbd-ai-item info">
+      <div class="ai-meta"><strong>${top3Sum}</strong> незаконных рубок (${top3Pct}% от всех ${totalIll} в стране) — всего у <strong>3 лесхозов</strong>.</div>
+      <div class="ai-rec">Целевая прокурорская проверка этих 3 лесхозов даст несоразмерно большой эффект. Также проверить: ${topLh.slice(3,6).map(([n,v])=>`${n.length>30?n.slice(0,28)+'…':n} (${v.count})`).join(', ')}.</div>
+    </div>`);
+  }
+  sections.push({ header:'🎯 1. Конкретные нарушители — топ лесхозов по незаконным рубкам', items:violItems });
+
+  // 2. Региональные паттерны
+  const byReg = {};
+  for(const f of facts){
+    if(!byReg[f.region]) byReg[f.region] = { total:0, ill:0 };
+    byReg[f.region].total++;
+    if(f.subcategory==='Незаконная') byReg[f.region].ill++;
+  }
+  const regRows = Object.entries(byReg).filter(([,v])=>v.total>=500).map(([r,v])=>({
+    region:r, total:v.total, ill:v.ill, pct:+(v.ill/v.total*100).toFixed(1)
+  })).sort((a,b)=>b.pct-a.pct);
+  const regAvgPct = totalAll ? +(totalIll/totalAll*100).toFixed(1) : 0;
+  const regItems = regRows.slice(0,6).map(r => {
+    const cls = r.pct >= regAvgPct*2 ? 'crit' : r.pct >= regAvgPct*1.3 ? 'warn' : r.pct <= regAvgPct*0.5 ? 'good' : 'info';
+    return `<div class="nbd-ai-item ${cls}" style="padding:6px 12px">
+      <div class="ai-meta"><strong>${r.region}</strong> — <strong>${r.pct}%</strong> незаконных (${_kgsRu(r.ill)} из ${_kgsRu(r.total)})</div>
+    </div>`;
+  });
+  if(regRows.length){
+    const best = regRows[regRows.length-1];
+    regItems.push(`<div class="nbd-ai-item info">
+      <div class="ai-meta">Среднее по стране: <strong>${regAvgPct}%</strong>. <strong>${best.region}</strong> показывает образцовый результат — самое большое число рубок при минимальном % нарушений.</div>
+      <div class="ai-rec">Стоит изучить контрольные практики ${best.region} и распространить на другие регионы.</div>
+    </div>`);
+  }
+  sections.push({ header:'🌐 2. Регионы — где спутник чаще видит нарушения', items:regItems });
+
+  // 3. Тренды по годам
+  const byY = {};
+  for(const f of facts){
+    if(!f.year) continue;
+    if(!byY[f.year]) byY[f.year] = { total:0, ill:0 };
+    byY[f.year].total++;
+    if(f.subcategory==='Незаконная') byY[f.year].ill++;
+  }
+  const years = Object.keys(byY).map(Number).sort();
+  const trendItems = [];
+  if(years.length >= 2){
+    const peakYr = years.reduce((a,b)=>byY[a].ill > byY[b].ill ? a : b);
+    const minYr  = years.filter(y=>byY[y].ill>0).reduce((a,b)=>byY[a].ill < byY[b].ill ? a : b, years[0]);
+    const last2 = years.slice(-2);
+    const growth = last2.length===2 && byY[last2[0]].ill ? ((byY[last2[1]].ill - byY[last2[0]].ill)/byY[last2[0]].ill*100) : 0;
+    trendItems.push(`<div class="nbd-ai-item info">
+      <div class="ai-meta">${years.map(y => `<strong>${y}</strong>: ${byY[y].ill}`).join(' · ')}</div>
+    </div>`);
+    if(growth >= 30){
+      trendItems.push(`<div class="nbd-ai-item warn">
+        <div class="ai-meta">Рост ${last2[0]}→${last2[1]}: <strong>+${growth.toFixed(0)}%</strong> незаконных рубок. Тенденция возвращается к высоким значениям после минимума ${minYr}.</div>
+      </div>`);
+    }
+    if(byY[peakYr].ill > 2 * (totalIll/years.length)){
+      trendItems.push(`<div class="nbd-ai-item amber">
+        <div class="ai-meta">${peakYr}: <strong>${byY[peakYr].ill}</strong> — аномально высокое число (втрое выше среднего).</div>
+        <div class="ai-rec">Либо реальный кризис того периода, либо изменение методологии спутникового мониторинга. Уточнить у КГС.</div>
+      </div>`);
+    }
+  }
+  sections.push({ header:'📈 3. Тренды по годам', items:trendItems });
+
+  // 4. Качество данных — пустые volume
+  const withVol = illegal.filter(f => (f.volume||0) > 0).length;
+  const qItems = [];
+  if(totalIll > 0){
+    const missPct = +((totalIll-withVol)/totalIll*100).toFixed(1);
+    qItems.push(`<div class="nbd-ai-item crit">
+      <div class="ai-title"><strong>${missPct}%</strong> незаконных рубок без указания объёма древесины (м³)</div>
+      <div class="ai-meta">Из ${totalIll} незаконных рубок только ${withVol} строк содержат поле obem_m3.</div>
+      <div class="ai-rec">Невозможно посчитать экономический ущерб от незаконных рубок. Министерству — требовать от лесных учреждений обязательное указание объёма древесины при фиксации факта рубки. Без этого расчёт ущерба и привлечение к ответственности невозможны.</div>
+    </div>`);
+  }
+  sections.push({ header:'⚠️ 4. Качество данных', items:qItems });
+
+  return sections;
+}
+
+// ── NEDRA sections ──────────────────────────────────────────────────────
+function _kgsAiNedraSections(facts){
+  const sections = [];
+  // 1. Резкое расширение по регионам 2024→2025
+  const reg2024 = {}, reg2025 = {};
+  for(const f of facts){
+    if(f.year === 2024) reg2024[f.region] = (reg2024[f.region]||0)+1;
+    else if(f.year === 2025) reg2025[f.region] = (reg2025[f.region]||0)+1;
+  }
+  const growth = [];
+  for(const r of new Set([...Object.keys(reg2024), ...Object.keys(reg2025)])){
+    const a = reg2024[r]||0, b = reg2025[r]||0;
+    if(a < 20) continue;
+    const delta = b - a;
+    if(delta > 0){
+      const pct = a ? +(delta/a*100).toFixed(1) : 0;
+      growth.push({ region:r, a, b, pct, delta });
+    }
+  }
+  growth.sort((a,b)=>b.pct-a.pct);
+  const gItems = growth.slice(0,5).map(g => {
+    const cls = g.pct>=50?'crit':g.pct>=20?'warn':'info';
+    return `<div class="nbd-ai-item ${cls}">
+      <div class="ai-title">${g.region} — <strong>+${g.pct}%</strong></div>
+      <div class="ai-meta">с ${g.a} карьеров в 2024 → ${g.b} в 2025 (+${g.delta} объектов)</div>
+    </div>`;
+  });
+  if(growth.length && growth[0].pct >= 50){
+    gItems.push(`<div class="nbd-ai-item info">
+      <div class="ai-meta">Лидер роста <strong>${growth[0].region}</strong> +${growth[0].pct}% — резкое расширение горных работ.</div>
+      <div class="ai-rec">Возможен признак неконтролируемого роста добычи без соответствующих разрешений. Целевой аудит лицензий и разрешений на недропользование в этом регионе.</div>
+    </div>`);
+  }
+  sections.push({ header:'🚀 1. Резкое расширение карьеров (2024→2025)', items:gItems });
+
+  // 2. Новые в 2025
+  const cls2025 = facts.filter(f => f.year===2025 && f.subcategory === 'Появившиеся в этом году');
+  const allNedra = facts.length;
+  const newItems = [];
+  if(cls2025.length){
+    const pct = +(cls2025.length/allNedra*100).toFixed(1);
+    newItems.push(`<div class="nbd-ai-item warn">
+      <div class="ai-title"><strong>${cls2025.length} новых карьеров</strong> появились в 2025 году</div>
+      <div class="ai-meta">${pct}% от общего числа ${_kgsRu(allNedra)} карьеров в выборке.</div>
+      <div class="ai-rec">КАЖДЫЙ новый карьер — кандидат на проверку наличия лицензии. Спутник уже подтвердил факт горных работ. Дашборд может выгружать список с координатами для инспекторов.</div>
+    </div>`);
+    // Топ-регионов с новыми
+    const byReg = {};
+    for(const f of cls2025) byReg[f.region] = (byReg[f.region]||0)+1;
+    const top = Object.entries(byReg).sort((a,b)=>b[1]-a[1]).slice(0,5);
+    if(top.length){
+      newItems.push(`<div class="nbd-ai-item info">
+        <div class="ai-meta">Топ регионов с новыми карьерами: ${top.map(([r,c]) => `<strong>${r}</strong> (${c})`).join(' · ')}</div>
+      </div>`);
+    }
+  }
+  sections.push({ header:'🆕 2. Новые объекты недропользования в 2025', items:newItems });
+
+  // 3. География — топ регионов
+  const byReg = {};
+  for(const f of facts) byReg[f.region] = (byReg[f.region]||0)+1;
+  const regSorted = Object.entries(byReg).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const total = facts.length;
+  const top4 = regSorted.slice(0,4).reduce((s,[,c])=>s+c, 0);
+  const top4Pct = total ? Math.round(top4/total*100) : 0;
+  const geoItems = regSorted.slice(0,5).map(([r,c]) =>
+    `<div class="nbd-ai-item info" style="padding:6px 12px">
+      <div class="ai-meta"><strong>${r}</strong> — ${_kgsRu(c)} карьеров (${(c/total*100).toFixed(1)}%)</div>
+    </div>`
+  );
+  if(regSorted.length >= 4){
+    geoItems.push(`<div class="nbd-ai-item amber">
+      <div class="ai-meta">4 региона дают <strong>${top4Pct}%</strong> всех карьеров — концентрация в южном и западном поясах.</div>
+      <div class="ai-rec">Формировать региональные планы рекультивации отработанных карьеров, начиная с топ-4.</div>
+    </div>`);
+  }
+  sections.push({ header:'🌐 3. География — топ регионов', items:geoItems });
+
+  return sections;
+}
+
+// ── WASTE sections ──────────────────────────────────────────────────────
+function _kgsAiWasteSections(facts){
+  const sections = [];
+  // 1. Брошенные свалки — % НЕ утилизированных по регионам
+  const byReg = {};
+  for(const f of facts){
+    if(!byReg[f.region]) byReg[f.region] = { total:0, not:0 };
+    byReg[f.region].total++;
+    if(f.status === 'Не утилизирован') byReg[f.region].not++;
+  }
+  const regRows = Object.entries(byReg).filter(([,v])=>v.total>=500).map(([r,v]) => ({
+    region:r, total:v.total, not:v.not, pct: v.total ? +(v.not/v.total*100).toFixed(1) : 0
+  })).sort((a,b)=>b.pct-a.pct);
+  const lostItems = regRows.slice(0,6).map(r => {
+    const cls = r.pct>=40?'crit':r.pct>=25?'warn':r.pct>=15?'amber':'good';
+    return `<div class="nbd-ai-item ${cls}" style="padding:8px 12px">
+      <div class="ai-meta"><strong>${r.region}</strong> — <strong>${r.pct}%</strong> не убираются (${_kgsRu(r.not)} из ${_kgsRu(r.total)})</div>
+    </div>`;
+  });
+  if(regRows.length && regRows[0].pct >= 40){
+    lostItems.push(`<div class="nbd-ai-item info">
+      <div class="ai-meta">Нефтегазовый пояс (${regRows.filter(r=>r.pct>=35).map(r=>r.region).slice(0,3).join(', ')}) — лидеры по «брошенным» свалкам.</div>
+      <div class="ai-rec">Специальная программа очистки этих регионов. Нагрузка на акиматы превышает их операционные мощности.</div>
+    </div>`);
+  }
+  sections.push({ header:'🔴 1. Брошенные свалки — где НЕ убирают', items:lostItems });
+
+  // 2. Горячие точки — топ район/город
+  const byDistrict = {};
+  for(const f of facts){
+    const d = f.aux || '—';
+    const key = `${f.region}__${d}`;
+    if(!byDistrict[key]) byDistrict[key] = { region:f.region, district:d, count:0 };
+    byDistrict[key].count++;
+  }
+  const topDistr = Object.values(byDistrict).sort((a,b)=>b.count-a.count).slice(0,8);
+  const total = facts.length;
+  const top2Pct = total ? Math.round((topDistr.slice(0,2).reduce((s,d)=>s+d.count,0))/total*100) : 0;
+  const hotItems = topDistr.slice(0,7).map(d => {
+    const cls = d.count >= 2000 ? 'crit' : d.count >= 1000 ? 'warn' : 'info';
+    return `<div class="nbd-ai-item ${cls}" style="padding:6px 12px">
+      <div class="ai-meta">${d.region}, <strong>${d.district}</strong> — ${_kgsRu(d.count)} свалок</div>
+    </div>`;
+  });
+  if(topDistr.length >= 2){
+    hotItems.push(`<div class="nbd-ai-item info">
+      <div class="ai-meta">Топ-2 района — <strong>${topDistr[0].district}</strong> + <strong>${topDistr[1].district}</strong> — содержат <strong>${top2Pct}%</strong> всех свалок страны.</div>
+      <div class="ai-rec">Точечная программа очистки этих 2 районов даст самый быстрый видимый эффект.</div>
+    </div>`);
+  }
+  sections.push({ header:'📍 2. Горячие точки — топ районов', items:hotItems });
+
+  // 3. Тренд по годам
+  const byY = {};
+  for(const f of facts) if(f.year) byY[f.year] = (byY[f.year]||0)+1;
+  const years = Object.keys(byY).map(Number).sort();
+  const trendItems = [];
+  if(years.length >= 3){
+    const peak = years.reduce((a,b)=>byY[a]>byY[b]?a:b);
+    const last = years[years.length-1];
+    const decline = byY[peak] ? +((byY[peak]-byY[last])/byY[peak]*100).toFixed(0) : 0;
+    trendItems.push(`<div class="nbd-ai-item info">
+      <div class="ai-meta">${years.map(y => `<strong>${y}</strong>: ${_kgsRu(byY[y])}`).join(' · ')}</div>
+    </div>`);
+    if(decline >= 30){
+      trendItems.push(`<div class="nbd-ai-item amber">
+        <div class="ai-meta">За ${last-peak} лет число обнаруженных свалок снизилось на <strong>−${decline}%</strong> от пика ${peak}.</div>
+        <div class="ai-rec"><strong>A.</strong> Реальное улучшение — программа Таза Қазақстан работает.<br><strong>B.</strong> Потеря покрытия КГС — спутник реже снимает или сменил алгоритм. Министерству — выяснить причину тренда.</div>
+      </div>`);
+    }
+    if(!byY[2025] && years.includes(2024)){
+      trendItems.push(`<div class="nbd-ai-item warn">
+        <div class="ai-meta">Данных за 2025 нет — таблица свалок обновляется реже остальных типов КГС. Запросить актуализацию у источника.</div>
+      </div>`);
+    }
+  }
+  sections.push({ header:'📉 3. Тренд по годам', items:trendItems });
+
+  // 4. Виды отходов
+  const byType = {};
+  for(const f of facts){
+    const t = f.subcategory || 'Без классификации';
+    byType[t] = (byType[t]||0)+1;
+  }
+  const typeRows = Object.entries(byType).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const typeItems = typeRows.map(([t,c]) =>
+    `<div class="nbd-ai-item info" style="padding:6px 12px">
+      <div class="ai-meta"><strong>${t}</strong> — ${_kgsRu(c)} (${(c/total*100).toFixed(0)}%)</div>
+    </div>`
+  );
+  if(typeRows[0] && typeRows[0][0].toLowerCase().includes('бытов')){
+    typeItems.push(`<div class="nbd-ai-item amber">
+      <div class="ai-meta">ТБО доминируют — бытовой мусор от населения. Промышленных и строительных свалок гораздо меньше, что говорит о слабом мониторинге индустриальных нарушителей.</div>
+    </div>`);
+  }
+  sections.push({ header:'🗂 4. Виды отходов', items:typeItems });
+
+  return sections;
+}
+
+// ── LAND SEIZURE sections ───────────────────────────────────────────────
+function _kgsAiLandSections(facts){
+  const sections = [];
+  const total = facts.length;
+
+  // 1. Капитальное строительство
+  const buildKw = /строит|здан|фундам|строен|кровл|крыш|жилой дом|сооруж|огражд/i;
+  const buildN = facts.filter(f => buildKw.test(f.subcategory||'')).length;
+  const buildPct = total ? Math.round(buildN/total*100) : 0;
+  const fundN = facts.filter(f => /фундам/i.test(f.subcategory||'')).length;
+  const fenceN = facts.filter(f => /огражд/i.test(f.subcategory||'')).length;
+  const capItems = [`<div class="nbd-ai-item crit">
+    <div class="ai-title">Это не палатки — это <strong>капитальное строительство</strong></div>
+    <div class="ai-meta"><strong>${buildPct}%</strong> самозахватов = здания на разных стадиях (фундамент → ограждение → кровля → завершённое строительство). Не временные постройки.</div>
+    <div class="ai-rec">Реагировать на этапе <strong>«Фундамент»</strong> (${fundN}) и <strong>«Ограждение»</strong> (${fenceN}) — самые ранние стадии. Снос фундамента в 100 раз дешевле сноса завершённого здания.</div>
+  </div>`];
+  sections.push({ header:'🚨 1. Что именно строят на захваченной земле', items:capItems });
+
+  // 2. Города-лидеры 2024 vs 2025
+  const c24 = {}, c25 = {};
+  for(const f of facts){
+    if(f.year===2024 && f.aux) c24[f.aux] = (c24[f.aux]||0)+1;
+    else if(f.year===2025 && f.aux) c25[f.aux] = (c25[f.aux]||0)+1;
+  }
+  const cityRows = [];
+  for(const c of new Set([...Object.keys(c24), ...Object.keys(c25)])){
+    const a = c24[c]||0, b = c25[c]||0;
+    if(a===0 && b===0) continue;
+    cityRows.push({ city:c, y24:a, y25:b, delta:b-a, growth: a>0 ? +((b-a)/a*100).toFixed(0) : null, newCity: a===0 && b>0 });
+  }
+  cityRows.sort((a,b)=>b.y25-a.y25);
+  const cityItems = cityRows.slice(0,8).map(c => {
+    let badge = '➡', cls = 'info';
+    if(c.newCity)             { badge = '🆕'; cls = 'warn'; }
+    else if(c.growth>=200)    { badge = '🚀'; cls = 'crit'; }
+    else if(c.growth>=50)     { badge = '🚀'; cls = 'warn'; }
+    else if(c.growth!==null && c.growth<=-20){ badge = '📉'; cls = 'good'; }
+    const chg = c.newCity ? 'внезапно начали мониторить' : (c.growth!==null ? `${c.growth>0?'+':''}${c.growth}%` : '—');
+    return `<div class="nbd-ai-item ${cls}" style="padding:6px 12px">
+      <div class="ai-meta">${badge} <strong>${c.city}</strong>: ${c.y24} → ${c.y25} (${chg})</div>
+    </div>`;
+  });
+  const newCities = cityRows.filter(c => c.newCity).map(c=>c.city);
+  if(newCities.length){
+    cityItems.push(`<div class="nbd-ai-item amber">
+      <div class="ai-meta">${newCities.slice(0,3).join(', ')} в 2024 = 0, в 2025 — сотни случаев. Скорее всего <strong>расширение покрытия КГС</strong>, а не реальный всплеск самозахватов.</div>
+      <div class="ai-rec">Запросить у КГС карту покрытия спутниковым мониторингом по годам. Без этого нельзя отличить «реальный рост нарушений» от «расширение зоны наблюдения».</div>
+    </div>`);
+  }
+  sections.push({ header:'🏙 2. Города-лидеры 2025 (динамика)', items:cityItems });
+
+  // 3. Общий тренд
+  const t24 = facts.filter(f=>f.year===2024).length;
+  const t25 = facts.filter(f=>f.year===2025).length;
+  const trendItems = [];
+  if(t24 > 0){
+    const growth = +((t25-t24)/t24*100).toFixed(0);
+    trendItems.push(`<div class="nbd-ai-item warn">
+      <div class="ai-title">2024: <strong>${_kgsRu(t24)}</strong> · 2025: <strong>${_kgsRu(t25)}</strong> (<strong>${growth>0?'+':''}${growth}%</strong>)</div>
+      <div class="ai-meta">Даже с учётом эффекта расширения покрытия, тенденция роста явная. Самозахваты — растущая проблема в крупных городах Казахстана.</div>
+    </div>`);
+  }
+  sections.push({ header:'📊 3. Общий тренд', items:trendItems });
+
+  // 4. Качество данных — фрагментация типа нарушения
+  const objMap = {};
+  for(const f of facts){
+    const s = f.subcategory || '';
+    if(!s) continue;
+    const norm = s.toLowerCase().replace(/\s+/g,' ').replace(/[ёе]/g,'е').replace(/c/g,'с').trim();
+    if(/строит|стоит/.test(norm)){
+      if(!objMap[s]) objMap[s] = 0;
+      objMap[s]++;
+    }
+  }
+  const variations = Object.entries(objMap).sort((a,b)=>b[1]-a[1]);
+  const qItems = [];
+  if(variations.length >= 3){
+    const sumAll = variations.reduce((s,[,c])=>s+c, 0);
+    const top = variations[0];
+    qItems.push(`<div class="nbd-ai-item amber">
+      <div class="ai-title">Типографическая фрагментация: «Объект строительства» имеет <strong>${variations.length}</strong> форм написания</div>
+      <div class="ai-meta">${variations.slice(0,6).map(([n,c]) => `«${n}» — ${_kgsRu(c)}`).join('<br>')}</div>
+      <div class="ai-meta" style="margin-top:6px">Итого <strong>~${_kgsRu(sumAll)}</strong> строк раздроблены на разные категории из-за опечаток операторов.</div>
+      <div class="ai-rec">Министерству и КГС — внедрить контролируемый словарь типов нарушений. Оператор не должен вводить произвольный текст — только выбор из списка.</div>
+    </div>`);
+  }
+  sections.push({ header:'⚠️ 4. Качество данных', items:qItems });
+
+  return sections;
 }
 
 // Координаты центров регионов
