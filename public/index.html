@@ -725,8 +725,8 @@ input[type=file]{display:none}
 
 <!-- ── ГЛОБАЛЬНАЯ ПАНЕЛЬ ФИЛЬТРОВ ── -->
 <div class="fbar" id="globalFbar">
-  <span class="fbar-label">📅 Период</span>
-  <span class="fbar-label">Год</span>
+  <span class="fbar-label" data-i18n="filter.period">📅 Период</span>
+  <span class="fbar-label" data-i18n="filter.year">Год</span>
   <select id="gYear" onchange="onYMDChange();onGlobalFilter()">
     <option value="all">Все</option>
     <option value="2026">2026</option>
@@ -736,7 +736,7 @@ input[type=file]{display:none}
     <option value="2022">2022</option>
     <option value="2021">2021</option>
   </select>
-  <span class="fbar-label">Месяц</span>
+  <span class="fbar-label" data-i18n="filter.month">Месяц</span>
   <select id="gMonth" onchange="onYMDChange();onGlobalFilter()">
     <option value="all">Все</option>
     <option value="01">Янв</option>
@@ -752,17 +752,17 @@ input[type=file]{display:none}
     <option value="11">Ноя</option>
     <option value="12">Дек</option>
   </select>
-  <span class="fbar-label">День</span>
+  <span class="fbar-label" data-i18n="filter.day">День</span>
   <select id="gDay" onchange="onYMDChange();onGlobalFilter()">
     <option value="all">Все</option>
   </select>
   <div class="fbar-sep"></div>
-  <span class="fbar-label">Диапазон</span>
+  <span class="fbar-label" data-i18n="filter.range">Диапазон</span>
   <input type="date" id="gDateFrom" min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" placeholder="Начало периода" data-i18n-placeholder="filter.range.from">
   <span class="range-sep">—</span>
   <input type="date" id="gDateTo"   min="2021-07-01" max="2026-04-30" onchange="onDateRangeChange()" placeholder="Конец периода" data-i18n-placeholder="filter.range.to">
   <div class="fbar-sep"></div>
-  <span class="fbar-label">Регион</span>
+  <span class="fbar-label" data-i18n="filter.region">Регион</span>
   <select id="gReg" onchange="cascadeIssueFilter();onGlobalFilter()">
     <option value="all">Все регионы</option>
     <option>Алматы</option><option>Астана</option><option>Шымкент</option>
@@ -777,13 +777,13 @@ input[type=file]{display:none}
   <!-- appeals-only filters: hidden on НБД СОС / КГС tabs -->
   <span id="fbarAppealsOnly" style="display:contents">
     <div class="fbar-sep"></div>
-    <span class="fbar-label">Тип</span>
+    <span class="fbar-label" data-i18n="appeals.filter.type">Тип</span>
     <select id="gType" onchange="cascadeIssueFilter();onGlobalFilter()">
       <option value="all">Все типы</option>
     </select>
 
     <div class="fbar-sep"></div>
-    <span class="fbar-label">Статус</span>
+    <span class="fbar-label" data-i18n="appeals.filter.status">Статус</span>
     <select id="gStatus" onchange="onGlobalFilter()">
       <option value="all">Все статусы</option>
       <option value="done">Исполнено</option>
@@ -792,30 +792,30 @@ input[type=file]{display:none}
     </select>
 
     <div class="fbar-sep"></div>
-    <span class="fbar-label">Повторные</span>
+    <span class="fbar-label" data-i18n="appeals.filter.repeat">Повторные</span>
     <select id="gDupSel" onchange="onDupFilter()">
       <option value="all">Все</option>
       <option value="dup">Только повторные</option>
     </select>
 
     <div class="fbar-sep"></div>
-    <button class="fbar-chip" id="fbarMoreBtn" onclick="toggleAdvancedFilters()">Доп. фильтры ▾</button>
+    <button class="fbar-chip" id="fbarMoreBtn" onclick="toggleAdvancedFilters()" data-i18n="fbar.advanced">Доп. фильтры ▾</button>
 
     <span id="fbarAdvanced" style="display:none">
       <div class="fbar-sep"></div>
-      <span class="fbar-label">Категория</span>
+      <span class="fbar-label" data-i18n="appeals.filter.category">Категория</span>
       <select id="gCatF" onchange="cascadeIssueFilter();onGlobalFilter()">
         <option value="all">Все категории</option>
       </select>
 
       <div class="fbar-sep"></div>
-      <span class="fbar-label">Подкатегория</span>
+      <span class="fbar-label" data-i18n="appeals.filter.subcategory">Подкатегория</span>
       <select id="gIssueF" onchange="cascadeSubFilter();onGlobalFilter()">
         <option value="all">Все</option>
       </select>
 
       <div class="fbar-sep"></div>
-      <span class="fbar-label">Характер вопроса</span>
+      <span class="fbar-label" data-i18n="appeals.filter.character">Характер вопроса</span>
       <select id="gSubF" onchange="onGlobalFilter()">
         <option value="all">Все</option>
       </select>
@@ -826,11 +826,11 @@ input[type=file]{display:none}
       </span>
 
       <div class="fbar-sep"></div>
-      <span class="fbar-label">Госорган</span>
+      <span class="fbar-label" data-i18n="appeals.filter.cgo">Госорган</span>
       <button class="fbar-chip" id="minFilterBtn" onclick="toggleMinFilter(event)">Все ▾</button>
 
       <div class="fbar-sep"></div>
-      <span class="fbar-label">Конкретный орган</span>
+      <span class="fbar-label" data-i18n="appeals.filter.organ">Конкретный орган</span>
       <input list="orgList" id="gOrg" placeholder="Любой..." onchange="onGlobalFilter()" style="font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:var(--surface);color:var(--text);width:220px;font-weight:500;outline:none">
       <datalist id="orgList"></datalist>
     </span>
@@ -838,7 +838,7 @@ input[type=file]{display:none}
 
   <span id="fbarActive" style="display:inline-flex;gap:5px;flex-wrap:wrap;align-items:center"></span>
 
-  <button class="fbar-reset" onclick="resetGlobalFilter()">✕ Сбросить</button>
+  <button class="fbar-reset" onclick="resetGlobalFilter()" data-i18n="filter.reset">✕ Сбросить</button>
 </div>
 
 <div class="content">
@@ -1171,10 +1171,10 @@ input[type=file]{display:none}
 
     <!-- ── ФИЛЬТР-БАР НБД (живая кросс-фильтрация) ── -->
     <div class="nbd-fltbar">
-      <span class="nbd-fltbar-lbl">📅 Период</span>
-      <span class="nbd-fltbar-sub">Год</span>
+      <span class="nbd-fltbar-lbl" data-i18n="filter.period">📅 Период</span>
+      <span class="nbd-fltbar-sub" data-i18n="filter.year">Год</span>
       <select id="nbdFltYear" onchange="_onNbdYearChange()"><option value="">Все</option></select>
-      <span class="nbd-fltbar-sub">Месяц</span>
+      <span class="nbd-fltbar-sub" data-i18n="filter.month">Месяц</span>
       <select id="nbdFltMonth" onchange="_onNbdMonthChange()">
         <option value="">Все</option>
         <option value="01">Янв</option><option value="02">Фев</option><option value="03">Мар</option>
@@ -1183,21 +1183,21 @@ input[type=file]{display:none}
         <option value="10">Окт</option><option value="11">Ноя</option><option value="12">Дек</option>
       </select>
       <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
-      <span class="nbd-fltbar-sub">Диапазон</span>
+      <span class="nbd-fltbar-sub" data-i18n="filter.range">Диапазон</span>
       <input type="text" id="nbdFltDateFrom" min="2025-01" max="2026-12" onchange="_onNbdRangeChange()" placeholder="Начало периода" data-i18n-placeholder="filter.range.from">
       <span class="range-sep">—</span>
       <input type="text" id="nbdFltDateTo" min="2025-01" max="2026-12" onchange="_onNbdRangeChange()" placeholder="Конец периода" data-i18n-placeholder="filter.range.to">
       <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
-      <span class="nbd-fltbar-sub">Регион</span>
+      <span class="nbd-fltbar-sub" data-i18n="filter.region">Регион</span>
       <select id="nbdFltRegion" onchange="_onNbdSelectChange('region',this.value)"><option value="">Все</option></select>
-      <span class="nbd-fltbar-sub">Вещество</span>
+      <span class="nbd-fltbar-sub" data-i18n="nbd.filter.substance">Вещество</span>
       <select id="nbdFltSubstance" onchange="_onNbdSelectChange('substance',this.value)"><option value="">Все</option></select>
-      <span class="nbd-fltbar-sub">Организация</span>
+      <span class="nbd-fltbar-sub" data-i18n="nbd.filter.org">Организация</span>
       <select id="nbdFltOrg" onchange="_onNbdSelectChange('org',this.value)"><option value="">Все</option></select>
       <label id="nbdOnlyExceedWrap" class="nbd-fltbar-check">
         <input type="checkbox" id="nbdOnlyExceed" onchange="_onNbdOnlyExceed(this.checked)"><span data-i18n="nbd.filter.onlyExceed">Только превышения</span>
       </label>
-      <button class="nbd-fltbar-reset" onclick="_nbdResetAll()">× Сбросить</button>
+      <button class="nbd-fltbar-reset" onclick="_nbdResetAll()" data-i18n="filter.reset">× Сбросить</button>
     </div>
     <!-- Чипы активных фильтров -->
     <div id="nbdFltChips" class="nbd-flt-chips"></div>
@@ -1346,10 +1346,10 @@ input[type=file]{display:none}
   <!-- Sticky filter bar -->
   <div class="nbd-sticky-zone" id="socStickyZone">
     <div class="nbd-fltbar">
-      <span class="nbd-fltbar-lbl">📅 Период</span>
-      <span class="nbd-fltbar-sub">Год</span>
+      <span class="nbd-fltbar-lbl" data-i18n="filter.period">📅 Период</span>
+      <span class="nbd-fltbar-sub" data-i18n="filter.year">Год</span>
       <select id="socFltYear" onchange="_onSocYear()"><option value="">Все</option></select>
-      <span class="nbd-fltbar-sub">Месяц</span>
+      <span class="nbd-fltbar-sub" data-i18n="filter.month">Месяц</span>
       <select id="socFltMonth" onchange="_onSocMonth()">
         <option value="">Все</option>
         <option value="01">Янв</option><option value="02">Фев</option><option value="03">Мар</option>
@@ -1358,14 +1358,14 @@ input[type=file]{display:none}
         <option value="10">Окт</option><option value="11">Ноя</option><option value="12">Дек</option>
       </select>
       <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
-      <span class="nbd-fltbar-sub">Диапазон</span>
+      <span class="nbd-fltbar-sub" data-i18n="filter.range">Диапазон</span>
       <input type="text" id="socFltDateFrom" min="2021-01" max="2026-12" onchange="_onSocRange()" placeholder="Начало периода" data-i18n-placeholder="filter.range.from">
       <span class="range-sep">—</span>
       <input type="text" id="socFltDateTo" min="2021-01" max="2026-12" onchange="_onSocRange()" placeholder="Конец периода" data-i18n-placeholder="filter.range.to">
       <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
-      <span class="nbd-fltbar-sub">Регион</span>
+      <span class="nbd-fltbar-sub" data-i18n="filter.region">Регион</span>
       <select id="socFltRegion" onchange="_onSocChange('region',this.value)"><option value="">Все</option></select>
-      <span class="nbd-fltbar-sub">Уровень</span>
+      <span class="nbd-fltbar-sub" data-i18n="nbd.filter.level">Уровень</span>
       <select id="socFltLevel" onchange="_onSocChange('level',this.value)">
         <option value="">Все</option>
         <option value="ok">🟢 Спокойно (0–2)</option>
@@ -1374,13 +1374,13 @@ input[type=file]{display:none}
         <option value="high">🔴 Высокое (6–8)</option>
         <option value="critical">⚫ Критическое (8–10)</option>
       </select>
-      <span class="nbd-fltbar-sub">Источник</span>
+      <span class="nbd-fltbar-sub" data-i18n="nbd.filter.source">Источник</span>
       <select id="socFltSource" onchange="_onSocChange('source',this.value)">
         <option value="">Все</option>
         <option value="eobr">еОбр</option>
         <option value="taza">Таза Казахстан</option>
       </select>
-      <button class="nbd-fltbar-reset" onclick="_socResetAll()">× Сбросить</button>
+      <button class="nbd-fltbar-reset" onclick="_socResetAll()" data-i18n="filter.reset">× Сбросить</button>
     </div>
     <div id="socFltChips" class="nbd-flt-chips"></div>
   </div>
@@ -1605,13 +1605,13 @@ input[type=file]{display:none}
     <div id="kgsCoverageNote" class="coverage-note coverage-info"></div>
 
     <div class="nbd-fltbar">
-      <span class="nbd-fltbar-lbl">📅 Год</span>
+      <span class="nbd-fltbar-lbl" data-i18n="filter.year">📅 Год</span>
       <select id="kgsFltYear" onchange="_onKgsSel('year',this.value)"><option value="">Все</option></select>
       <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 4px"></span>
-      <span class="nbd-fltbar-sub">Регион</span>
+      <span class="nbd-fltbar-sub" data-i18n="filter.region">Регион</span>
       <select id="kgsFltRegion" onchange="_onKgsSel('region',this.value)"><option value="">Все регионы</option></select>
       <span id="kgsSpecFilters" style="display:contents"></span>
-      <button class="nbd-fltbar-reset" onclick="kgsResetAll()">× Сбросить</button>
+      <button class="nbd-fltbar-reset" onclick="kgsResetAll()" data-i18n="filter.reset">× Сбросить</button>
     </div>
     <div id="kgsChips" class="nbd-flt-chips"></div>
   </div>
@@ -1706,15 +1706,15 @@ input[type=file]{display:none}
   <!-- ФИЛЬТРЫ -->
   <div class="taza-filters" id="tzFilters">
     <div class="taza-row">
-      <span class="taza-flbl">📅 Период:</span>
-      <span class="taza-flbl" style="margin-left:4px">Год</span>
+      <span class="taza-flbl" data-i18n="filter.period">📅 Период:</span>
+      <span class="taza-flbl" style="margin-left:4px" data-i18n="filter.year">Год</span>
       <select id="tzYear" onchange="onTzYMChange();onTazaFilter()" style="width:90px">
         <option value="all">Все</option>
         <option value="2026">2026</option>
         <option value="2025">2025</option>
         <option value="2024">2024</option>
       </select>
-      <span class="taza-flbl">Месяц</span>
+      <span class="taza-flbl" data-i18n="filter.month">Месяц</span>
       <select id="tzMonth" onchange="onTzYMChange();onTazaFilter()" style="width:100px">
         <option value="all">Все</option>
         <option value="01">Январь</option><option value="02">Февраль</option><option value="03">Март</option>
@@ -1722,22 +1722,22 @@ input[type=file]{display:none}
         <option value="07">Июль</option><option value="08">Август</option><option value="09">Сентябрь</option>
         <option value="10">Октябрь</option><option value="11">Ноябрь</option><option value="12">Декабрь</option>
       </select>
-      <span class="taza-flbl">День</span>
+      <span class="taza-flbl" data-i18n="filter.day">День</span>
       <select id="tzDay" onchange="onTzYMChange();onTazaFilter()" style="width:80px">
         <option value="all">Все</option>
       </select>
       <span style="display:inline-block;width:1px;height:18px;background:var(--border);margin:0 6px"></span>
-      <span class="taza-flbl">Диапазон</span>
+      <span class="taza-flbl" data-i18n="filter.range">Диапазон</span>
       <input type="date" id="tzDateFrom" min="2024-06-01" max="2026-04-28" onchange="onTzDateRangeChange();onTazaFilter()" placeholder="Начало периода" data-i18n-placeholder="filter.range.from">
       <span class="range-sep">—</span>
       <input type="date" id="tzDateTo" min="2024-06-01" max="2026-04-28" onchange="onTzDateRangeChange();onTazaFilter()" placeholder="Конец периода" data-i18n-placeholder="filter.range.to">
     </div>
     <div class="taza-row">
-      <span class="taza-flbl">Регион</span>
+      <span class="taza-flbl" data-i18n="filter.region">Регион</span>
       <select id="tzReg" onchange="onTazaFilter()"><option value="all">Все регионы</option></select>
-      <span class="taza-flbl">Категория</span>
+      <span class="taza-flbl" data-i18n="taza.filter.category">Категория</span>
       <select id="tzCat" onchange="onTazaFilter()"><option value="all">Все категории</option></select>
-      <span class="taza-flbl">Статус</span>
+      <span class="taza-flbl" data-i18n="taza.filter.status">Статус</span>
       <select id="tzStatus" onchange="onTazaFilter()">
         <option value="all">Все статусы</option>
         <option value="DONE">Выполнено</option>
@@ -1746,13 +1746,13 @@ input[type=file]{display:none}
         <option value="CREATED">Создано</option>
         <option value="RETURNED_TO_OPERATOR">Возвращено оператору</option>
       </select>
-      <span class="taza-flbl">Просрочка</span>
+      <span class="taza-flbl" data-i18n="taza.filter.overdue">Просрочка</span>
       <select id="tzOverdue" onchange="onTazaFilter()">
         <option value="all">Все</option>
         <option value="true">Просрочено</option>
         <option value="false">В срок</option>
       </select>
-      <span class="taza-flbl">Рейтинг</span>
+      <span class="taza-flbl" data-i18n="taza.filter.rating">Рейтинг</span>
       <select id="tzRating" onchange="onTazaFilter()">
         <option value="all">Все</option>
         <option value="5">5 ⭐</option>
@@ -1762,7 +1762,7 @@ input[type=file]{display:none}
         <option value="1">1 ⭐</option>
         <option value="0">Без оценки</option>
       </select>
-      <button onclick="resetTazaFilters()" class="taza-reset">✕ Сбросить</button>
+      <button onclick="resetTazaFilters()" class="taza-reset" data-i18n="filter.reset">✕ Сбросить</button>
     </div>
     <div id="tzChips" class="taza-chips"></div>
   </div>
@@ -1959,21 +1959,21 @@ input[type=file]{display:none}
   <!-- фильтры перенесены в глобальную панель -->
   <div class="card" style="margin-bottom:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="card-title" style="margin:0">📰 Последние новости об экологии</div>
-      <button onclick="switchTab('news',document.getElementById('tabNews'))" style="font-size:11px;color:#0891B2;background:none;border:none;cursor:pointer;padding:0;font-weight:500">Все новости →</button>
+      <div class="card-title" style="margin:0" data-i18n="news.latest">📰 Последние новости об экологии</div>
+      <button onclick="switchTab('news',document.getElementById('tabNews'))" style="font-size:11px;color:#0891B2;background:none;border:none;cursor:pointer;padding:0;font-weight:500" data-i18n="news.all">Все новости →</button>
     </div>
     <div id="mainNewsFeed"><div class="skeleton skl" style="width:60%;margin-bottom:6px"></div><div class="skeleton skl" style="width:100%;margin-bottom:14px"></div><div class="skeleton skl" style="width:55%;margin-bottom:6px"></div><div class="skeleton skl" style="width:100%"></div></div>
   </div>
   <div class="card" style="margin-bottom:14px">
-    <div class="card-title">Новости <span id="nCount" style="font-size:10px;font-weight:400;color:var(--text3)">—</span></div>
-    <div id="newsList"><div class="empty">Загрузка...</div></div>
+    <div class="card-title"><span data-i18n="news.list">Новости</span> <span id="nCount" style="font-size:10px;font-weight:400;color:var(--text3)">—</span></div>
+    <div id="newsList"><div class="empty" data-i18n="news.loading">Загрузка...</div></div>
   </div>
   <div class="card" style="margin-top:14px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-      <div class="card-title" style="margin:0">Соцсети — экотематика <span id="socialCount" style="font-size:10px;font-weight:400;color:var(--text3)">—</span></div>
+      <div class="card-title" style="margin:0"><span data-i18n="news.social">Соцсети — экотематика</span> <span id="socialCount" style="font-size:10px;font-weight:400;color:var(--text3)">—</span></div>
       <span id="socialStatus" style="font-size:10px;color:var(--text3)"></span>
     </div>
-    <div id="socialList"><div class="empty">Загрузка...</div></div>
+    <div id="socialList"><div class="empty" data-i18n="news.loading">Загрузка...</div></div>
   </div>
 </div>
 
@@ -2360,6 +2360,23 @@ const I18N = {
     'topic_lbl':'Тема:', 'region_lbl':'Регион:', 'all_opt':'Все',
     'opt_air':'Воздух', 'opt_waste':'Отходы', 'opt_taza':'Таза КЗ',
     'opt_urban':'Благоустройство', 'opt_inc':'Инциденты', 'opt_pol':'Политика',
+    // Новости — заголовки блоков
+    'news.latest':'📰 Последние новости об экологии',
+    'news.all':'Все новости →',
+    'news.list':'Новости',
+    'news.social':'Соцсети — экотематика',
+    'news.loading':'Загрузка...',
+    'news.empty.filter':'Нет новостей по фильтрам',
+    'common.news_short':'новостей',
+    // Доп. фильтры (НБД / Соц.напряжение / Таза / КГС)
+    'nbd.filter.level':'Уровень',
+    'nbd.filter.source':'Источник',
+    // Аномалии
+    'social.block.anomalies':'🚨 Выявленные аномалии',
+    // Меточные элементы прочих фильтр-баров
+    'fbar.more':'Доп. фильтры',
+    'fbar.advanced':'Доп. фильтры ▾',
+    'fbar.advanced.open':'Доп. фильтры ▴',
   },
   kz: {
     // Шапка
@@ -2473,6 +2490,23 @@ const I18N = {
     'topic_lbl':'Тақырып:', 'region_lbl':'Өңір:', 'all_opt':'Барлығы',
     'opt_air':'Ауа', 'opt_waste':'Қалдықтар', 'opt_taza':'Таза ҚЗ',
     'opt_urban':'Абаттандыру', 'opt_inc':'Оқиғалар', 'opt_pol':'Саясат',
+    // Жаңалықтар — блок тақырыптары
+    'news.latest':'📰 Экология туралы соңғы жаңалықтар',
+    'news.all':'Барлық жаңалықтар →',
+    'news.list':'Жаңалықтар',
+    'news.social':'Әлеуметтік желілер — экотақырып',
+    'news.loading':'Жүктелуде...',
+    'news.empty.filter':'Сүзгілер бойынша жаңалықтар жоқ',
+    'common.news_short':'жаңалықтар',
+    // Қосымша сүзгілер
+    'nbd.filter.level':'Деңгей',
+    'nbd.filter.source':'Дереккөз',
+    // Әлеуметтік ауытқулар
+    'social.block.anomalies':'🚨 Анықталған ауытқулар',
+    // Сүзгі-бар жапсырмалары
+    'fbar.more':'Қосымша сүзгілер',
+    'fbar.advanced':'Қосымша сүзгілер ▾',
+    'fbar.advanced.open':'Қосымша сүзгілер ▴',
   }
 };
 
@@ -7404,7 +7438,7 @@ function toggleAdvancedFilters(){
   if(!adv) return;
   const open = adv.style.display==='none' || !adv.style.display;
   adv.style.display = open ? 'contents' : 'none';
-  if(btn) btn.textContent = open ? 'Доп. фильтры ▴' : 'Доп. фильтры ▾';
+  if(btn) btn.textContent = open ? t('fbar.advanced.open') : t('fbar.advanced');
 }
 
 const _FCHIP_DEFS=[
@@ -7476,7 +7510,7 @@ function updateFilterChips(){
     const btn=document.getElementById('fbarMoreBtn');
     if(adv && (adv.style.display==='none'||!adv.style.display)){
       adv.style.display='contents';
-      if(btn) btn.textContent='Доп. фильтры ▴';
+      if(btn) btn.textContent=t('fbar.advanced.open');
     }
   }
 }
@@ -8668,7 +8702,7 @@ function resetGlobalFilter(){
   const adv=document.getElementById('fbarAdvanced');
   if(adv) adv.style.display='none';
   const mb=document.getElementById('fbarMoreBtn');
-  if(mb) mb.textContent='Доп. фильтры ▾';
+  if(mb) mb.textContent=t('fbar.advanced');
 }
 
 function goNews(cat){
@@ -10694,7 +10728,7 @@ function applyFilter(){
   const f=allNews.filter(n=>reg==='all'||n.region===reg);
   renderNews(f);
 }
-function renderNews(items){document.getElementById('nCount').textContent=items.length+' новостей';if(!items.length){document.getElementById('newsList').innerHTML='<div class="empty">Нет новостей по фильтрам</div>';return;}document.getElementById('newsList').innerHTML=items.map(n=>`<div class="news-item"><div class="n-meta"><span class="n-date">${n.date||''}</span><span class="n-src">${n.src||''}</span>${(n.tags||[]).map(t=>TAG_META[t]?`<span class="tag ${TAG_META[t].c}">${TAG_META[t].l}</span>`:'').join('')}${n.region&&n.region!=='Казахстан'?`<span class="tag t-reg">${n.region}</span>`:''}<span class="tag t-new">NEW</span></div><div class="n-head"><a href="${n.link||'#'}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${n.head||''}</a></div><div class="n-text">${n.text||''}</div></div>`).join('');}
+function renderNews(items){document.getElementById('nCount').textContent=items.length+' '+t('common.news_short');if(!items.length){document.getElementById('newsList').innerHTML='<div class="empty">'+t('news.empty.filter')+'</div>';return;}document.getElementById('newsList').innerHTML=items.map(n=>`<div class="news-item"><div class="n-meta"><span class="n-date">${n.date||''}</span><span class="n-src">${n.src||''}</span>${(n.tags||[]).map(t=>TAG_META[t]?`<span class="tag ${TAG_META[t].c}">${TAG_META[t].l}</span>`:'').join('')}${n.region&&n.region!=='Казахстан'?`<span class="tag t-reg">${n.region}</span>`:''}<span class="tag t-new">NEW</span></div><div class="n-head"><a href="${n.link||'#'}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${n.head||''}</a></div><div class="n-text">${n.text||''}</div></div>`).join('');}
 function renderMainNewsFeed(){const el=document.getElementById('mainNewsFeed');if(!el)return;const items=allNews.slice(0,5);if(!items.length){el.innerHTML='<div class="empty">Загрузка новостей...</div>';return;}el.innerHTML=items.map(n=>`<div class="news-item"><div class="n-meta"><span class="n-date">${n.date||''}</span><span class="n-src">${n.src||''}</span>${(n.tags||[]).map(t=>TAG_META[t]?`<span class="tag ${TAG_META[t].c}">${TAG_META[t].l}</span>`:'').join('')}${n.region&&n.region!=='Казахстан'?`<span class="tag t-reg">${n.region}</span>`:''}</div><div class="n-head"><a href="${n.link||'#'}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${n.head||''}</a></div></div>`).join('');}
 function loadCache(){try{const d=JSON.parse(localStorage.getItem(CACHE_KEY));if(d&&d.ts&&Date.now()-d.ts<TTL)return d;}catch(e){}return null;}
 function saveCache(d){try{localStorage.setItem(CACHE_KEY,JSON.stringify({...d,ts:Date.now()}));}catch(e){}}
