@@ -849,7 +849,7 @@ input[type=file]{display:none}
   <!-- KPIs -->
   <div class="kpi-grid" style="margin-bottom:14px">
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_eco">Всего обращений</div><div class="kpi-val" id="kpiEco">352 641</div><div class="kpi-d nu" id="kpiEcoSub">с 01.07.2021</div></div>
-    <div class="kpi" style="cursor:pointer" onclick="switchTab('taza',document.querySelector('[onclick*=\'taza\']'))"><div class="kpi-lbl" data-i18n="kpi_taza">Таза Казахстан</div><div class="kpi-val" id="kpiTaza">42 644</div><div class="kpi-d nu">заявок · июн 2024–апр 2026</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="switchTab('taza',document.querySelector('[onclick*=\'taza\']'))"><div class="kpi-lbl" data-i18n="kpi_taza">Таза Казахстан</div><div class="kpi-val" id="kpiTaza">42 644</div><div class="kpi-d nu" id="kpiTazaSub">заявок · июн 2024–апр 2026</div></div>
     <div class="kpi" id="kpiIkomCard"><div class="kpi-lbl" data-i18n="kpi_ikom">iKomek звонков</div><div class="kpi-val" id="kpiIkom">16 103</div><div class="kpi-d nu" id="kpiIkomSub">с 01.04.2019</div></div>
     <div class="kpi"><div class="kpi-lbl">Перенаправленные обращения</div><div class="kpi-val" id="kpiFwdTotal" style="color:#7c3aed">—</div><div class="kpi-d nu" id="kpiFwdSub">—</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_work">В работе</div><div class="kpi-val" id="kpiWork">6 342</div><div class="kpi-d nu" data-i18n="current">текущие</div></div>
@@ -2369,6 +2369,7 @@ const I18N = {
     'news.empty.filter':'Нет новостей по фильтрам',
     'common.news_short':'новостей',
     'kpi.period.prefix':'данные:',
+    'taza.requests_lbl':'заявок',
     // Доп. фильтры (НБД / Соц.напряжение / Таза / КГС)
     'nbd.filter.level':'Уровень',
     'nbd.filter.source':'Источник',
@@ -2500,6 +2501,7 @@ const I18N = {
     'news.empty.filter':'Сүзгілер бойынша жаңалықтар жоқ',
     'common.news_short':'жаңалықтар',
     'kpi.period.prefix':'деректер:',
+    'taza.requests_lbl':'өтінім',
     // Қосымша сүзгілер
     'nbd.filter.level':'Деңгей',
     'nbd.filter.source':'Дереккөз',
@@ -2617,8 +2619,9 @@ function setLang(lang){
     if(active === 'panel-hearings')  { if(typeof rerenderSocial==='function') rerenderSocial(); }
     if(active === 'panel-kgs')       { if(typeof rerenderKgs==='function')   rerenderKgs(); }
     if(active === 'panel-news')      { if(typeof renderMainNewsFeed==='function') renderMainNewsFeed(); if(typeof applyFilter==='function') applyFilter(); }
-    // Период KPI «Всего обращений» — обновить префикс на новом языке
+    // Период KPI «Всего обращений» / «Таза Казахстан» — обновить префикс на новом языке
     if(typeof _updateAppealsPeriodSub==='function') _updateAppealsPeriodSub();
+    if(typeof _updateTazaPeriodSub==='function')    _updateTazaPeriodSub();
   } catch(_){}
   // 7. Дата-пикеры: локаль календаря + плейсхолдеры (после возможной перерисовки фильтр-бара)
   try { if(typeof _applyDatePickerLang==='function') _applyDatePickerLang(lang); } catch(_){}
@@ -3405,7 +3408,7 @@ function renderMainCharts() {
     // iKomek per-call датасет (для полноценной кросс-фильтрации kpiIkom)
     if(typeof _loadIkomek === 'function') _loadIkomek();
     fetch('/data/taza_compact.json').then(r=>r.json()).then(tc=>{
-      _TAZA=tc; populateTazaFilters();
+      _TAZA=tc; populateTazaFilters(); try { _updateTazaPeriodSub(); } catch(_){}
       if(document.getElementById('panel-taza')?.classList.contains('active') && tazaEngineFilterActive()) rerenderTaza();
     }).catch(e=>console.warn('taza_compact load failed:',e.message));
     fetch('/data/appeals_compact.json').then(r=>r.json()).then(ac=>{
@@ -3628,6 +3631,31 @@ function _updateAppealsPeriodSub(){
   const setEl = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
   setEl('kpiEcoSub', text);
   setEl('appKpiTotalSub', text);
+}
+
+// Период данных в KPI «Таза Казахстан» — макс. дата из _TAZA.data (тот же
+// per-row int-encoded YMD в первой колонке, w=9). Глобальный header
+// (#kpiTazaSub) и вкладка Таза (#tzPeriod).
+function _updateTazaPeriodSub(){
+  if(!_TAZA || !_TAZA.data || !_TAZA.n) return;
+  const W = _TAZA.w, D = _TAZA.data, n = _TAZA.n;
+  let max = 0, min = 99999999;
+  for(let i = 0; i < n; i++){
+    const v = D[i*W];
+    if(v > max) max = v;
+    if(v && v < min) min = v;
+  }
+  const fmt = ymd => {
+    const y = (ymd/10000)|0, m = ((ymd/100)|0)%100, d = ymd%100;
+    return `${String(d).padStart(2,'0')}.${String(m).padStart(2,'0')}.${y}`;
+  };
+  const prefix = (typeof t==='function') ? (t('kpi.period.prefix') || 'данные:') : 'данные:';
+  const requestsLbl = (typeof t==='function') ? (t('taza.requests_lbl') || 'заявок') : 'заявок';
+  const setEl = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  // Глобальная шапка — короткий формат с лейблом "заявок ·"
+  setEl('kpiTazaSub', `${requestsLbl} · ${fmt(min)} — ${fmt(max)}`);
+  // Подвкладка Таза — тот же стиль что у обращений
+  setEl('tzPeriod',   `${prefix} ${fmt(min)} — ${fmt(max)}`);
 }
 
 function _updateIkomekKpi(){
