@@ -848,7 +848,7 @@ input[type=file]{display:none}
 
   <!-- KPIs -->
   <div class="kpi-grid" style="margin-bottom:14px">
-    <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_eco">Всего обращений</div><div class="kpi-val" id="kpiEco">352 641</div><div class="kpi-d nu">с 01.07.2021</div></div>
+    <div class="kpi"><div class="kpi-lbl" data-i18n="kpi_eco">Всего обращений</div><div class="kpi-val" id="kpiEco">352 641</div><div class="kpi-d nu" id="kpiEcoSub">с 01.07.2021</div></div>
     <div class="kpi" style="cursor:pointer" onclick="switchTab('taza',document.querySelector('[onclick*=\'taza\']'))"><div class="kpi-lbl" data-i18n="kpi_taza">Таза Казахстан</div><div class="kpi-val" id="kpiTaza">42 644</div><div class="kpi-d nu">заявок · июн 2024–апр 2026</div></div>
     <div class="kpi" id="kpiIkomCard"><div class="kpi-lbl" data-i18n="kpi_ikom">iKomek звонков</div><div class="kpi-val" id="kpiIkom">16 103</div><div class="kpi-d nu" id="kpiIkomSub">с 01.04.2019</div></div>
     <div class="kpi"><div class="kpi-lbl">Перенаправленные обращения</div><div class="kpi-val" id="kpiFwdTotal" style="color:#7c3aed">—</div><div class="kpi-d nu" id="kpiFwdSub">—</div></div>
@@ -1496,7 +1496,7 @@ input[type=file]{display:none}
     </select>
   </div>
   <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-lbl">Всего обращений</div><div class="kpi-val" id="appKpiTotal">352 641</div><div class="kpi-d nu">с 01.07.2021</div></div>
+    <div class="kpi"><div class="kpi-lbl">Всего обращений</div><div class="kpi-val" id="appKpiTotal">352 641</div><div class="kpi-d nu" id="appKpiTotalSub">с 01.07.2021</div></div>
     <div class="kpi"><div class="kpi-lbl" data-i18n="taza.kpi.done">Исполнено</div><div class="kpi-val" id="appKpiDone" style="color:#16A34A">98%</div></div>
     <div class="kpi"><div class="kpi-lbl">В работе</div><div class="kpi-val" id="appKpiWork">5 457</div></div>
     <div class="kpi"><div class="kpi-lbl">Просрочено</div><div class="kpi-val" id="appKpiLate" style="color:#DC2626">885</div></div>
@@ -2368,6 +2368,7 @@ const I18N = {
     'news.loading':'Загрузка...',
     'news.empty.filter':'Нет новостей по фильтрам',
     'common.news_short':'новостей',
+    'kpi.period.prefix':'данные:',
     // Доп. фильтры (НБД / Соц.напряжение / Таза / КГС)
     'nbd.filter.level':'Уровень',
     'nbd.filter.source':'Источник',
@@ -2498,6 +2499,7 @@ const I18N = {
     'news.loading':'Жүктелуде...',
     'news.empty.filter':'Сүзгілер бойынша жаңалықтар жоқ',
     'common.news_short':'жаңалықтар',
+    'kpi.period.prefix':'деректер:',
     // Қосымша сүзгілер
     'nbd.filter.level':'Деңгей',
     'nbd.filter.source':'Дереккөз',
@@ -2615,6 +2617,8 @@ function setLang(lang){
     if(active === 'panel-hearings')  { if(typeof rerenderSocial==='function') rerenderSocial(); }
     if(active === 'panel-kgs')       { if(typeof rerenderKgs==='function')   rerenderKgs(); }
     if(active === 'panel-news')      { if(typeof renderMainNewsFeed==='function') renderMainNewsFeed(); if(typeof applyFilter==='function') applyFilter(); }
+    // Период KPI «Всего обращений» — обновить префикс на новом языке
+    if(typeof _updateAppealsPeriodSub==='function') _updateAppealsPeriodSub();
   } catch(_){}
   // 7. Дата-пикеры: локаль календаря + плейсхолдеры (после возможной перерисовки фильтр-бара)
   try { if(typeof _applyDatePickerLang==='function') _applyDatePickerLang(lang); } catch(_){}
@@ -3407,6 +3411,7 @@ function renderMainCharts() {
     fetch('/data/appeals_compact.json').then(r=>r.json()).then(ac=>{
       _AC=ac;
       try { if(engineFilterActive()) applyTimeEngine(); } catch(_){}
+      try { _updateAppealsPeriodSub(); } catch(_){}
       if(document.getElementById('panel-hearings')?.classList.contains('active')
          && typeof _socInit==='function') _socInit();
     }).catch(e=>console.warn('appeals_compact load failed:',e.message));
@@ -3602,6 +3607,29 @@ function _ikRegionIdx(name){
 // 1) ACTIVE_REGION (клик по карте) — пишет свой режим, не трогаем.
 // 2) _IK загружен → честный пересчёт через _ikComputeFiltered (это норма).
 // 3) _IK ещё не загружен → fallback: показать baseline без приглушения (на стадии init).
+// Период данных в KPI «Всего обращений» — макс. дата из _AC.data (перебор
+// первой колонки YMD-int). На обоих кейсах: глобальный header (#kpiEcoSub)
+// и подвкладка eObr (#appKpiTotalSub). Префикс берётся из t().
+function _updateAppealsPeriodSub(){
+  if(!_AC || !_AC.data || !_AC.n) return;
+  const W = _AC.w, D = _AC.data, n = _AC.n;
+  let max = 0, min = 99999999;
+  for(let i = 0; i < n; i++){
+    const v = D[i*W];
+    if(v > max) max = v;
+    if(v && v < min) min = v;
+  }
+  const fmt = ymd => {
+    const y = (ymd/10000)|0, m = ((ymd/100)|0)%100, d = ymd%100;
+    return `${String(d).padStart(2,'0')}.${String(m).padStart(2,'0')}.${y}`;
+  };
+  const prefix = (typeof t==='function') ? (t('kpi.period.prefix') || 'данные:') : 'данные:';
+  const text = `${prefix} ${fmt(min)} — ${fmt(max)}`;
+  const setEl = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  setEl('kpiEcoSub', text);
+  setEl('appKpiTotalSub', text);
+}
+
 function _updateIkomekKpi(){
   const val = document.getElementById('kpiIkom');
   const sub = document.getElementById('kpiIkomSub');
