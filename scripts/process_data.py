@@ -34,11 +34,11 @@ FIRE_CSV       = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс �
 WATER_CSV      = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по НБД СОС/view_water_emissions_full.csv"
 # Таза Казахстан
 TAZA_DIR = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по Таза Казахстан"
-TAZA_REQUESTS_CSV   = f"{TAZA_DIR}/requests_share_202604281652.csv"
-TAZA_REGIONS_CSV    = f"{TAZA_DIR}/region_share_202604281649.csv"
-TAZA_CATS_CSV       = f"{TAZA_DIR}/request_category_share_202604281650.csv"
-TAZA_COMPLAINTS_CSV = f"{TAZA_DIR}/report_complaint_share_202604281650.csv"
-TAZA_SAT_CSV        = f"{TAZA_DIR}/report_satisfaction_share_202604281650.csv"
+TAZA_REQUESTS_CSV   = f"{TAZA_DIR}/requests_share_202606151504 (2).csv"
+TAZA_REGIONS_CSV    = f"{TAZA_DIR}/region_share_202606151503.csv"
+TAZA_CATS_CSV       = f"{TAZA_DIR}/request_category_share_202606151504 (2).csv"
+TAZA_COMPLAINTS_CSV = f"{TAZA_DIR}/report_complaint_share_202606151503 (2).csv"
+TAZA_SAT_CSV        = f"{TAZA_DIR}/report_satisfaction_share_202606151504 (2).csv"
 OUT_DIR     = os.path.join(os.path.dirname(__file__), "..", "public", "data")
 CHUNKS_DIR  = os.path.join(OUT_DIR, "chunks")
 
