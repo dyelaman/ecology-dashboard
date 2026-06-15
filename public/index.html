@@ -2619,9 +2619,10 @@ function setLang(lang){
     if(active === 'panel-hearings')  { if(typeof rerenderSocial==='function') rerenderSocial(); }
     if(active === 'panel-kgs')       { if(typeof rerenderKgs==='function')   rerenderKgs(); }
     if(active === 'panel-news')      { if(typeof renderMainNewsFeed==='function') renderMainNewsFeed(); if(typeof applyFilter==='function') applyFilter(); }
-    // Период KPI «Всего обращений» / «Таза Казахстан» — обновить префикс на новом языке
+    // Период KPI «Всего обращений» / «Таза» / «iKomek» — обновить префикс на новом языке
     if(typeof _updateAppealsPeriodSub==='function') _updateAppealsPeriodSub();
     if(typeof _updateTazaPeriodSub==='function')    _updateTazaPeriodSub();
+    if(typeof _updateIkomekKpi==='function')        _updateIkomekKpi();
   } catch(_){}
   // 7. Дата-пикеры: локаль календаря + плейсхолдеры (после возможной перерисовки фильтр-бара)
   try { if(typeof _applyDatePickerLang==='function') _applyDatePickerLang(lang); } catch(_){}
@@ -2968,7 +2969,7 @@ function renderIkomekMainTab(){
 
   // ── KPI ──
   setEl('ikKpiTotal', ru(r.total));
-  setEl('ikKpiTotalSub', filtersActive ? 'по выбранным фильтрам' : 'с 01.04.2019');
+  setEl('ikKpiTotalSub', filtersActive ? 'по выбранным фильтрам' : _ikPeriodStr());
 
   const stClosedI = _IK.statuses.indexOf('Закрыто');
   const closed = (stClosedI>=0 && r.byStatus) ? r.byStatus[stClosedI] : 0;
@@ -3658,6 +3659,26 @@ function _updateTazaPeriodSub(){
   setEl('tzPeriod',   `${prefix} ${fmt(min)} — ${fmt(max)}`);
 }
 
+// Период данных iKomek — макс/мин ymd из _IK.data (per-call YMD, w=5).
+// Возвращает «данные: 01.04.2019 — 19.04.2026». Если _IK не загружен —
+// возвращает fallback «с 01.04.2019».
+function _ikPeriodStr(){
+  const prefix = (typeof t==='function') ? (t('kpi.period.prefix') || 'данные:') : 'данные:';
+  if(!_IK || !_IK.data || !_IK.n) return 'с 01.04.2019';
+  const W = _IK.w, D = _IK.data, n = _IK.n;
+  let max = 0, min = 99999999;
+  for(let i = 0; i < n; i++){
+    const v = D[i*W];
+    if(v > max) max = v;
+    if(v && v < min) min = v;
+  }
+  const fmt = ymd => {
+    const y = (ymd/10000)|0, m = ((ymd/100)|0)%100, d = ymd%100;
+    return `${String(d).padStart(2,'0')}.${String(m).padStart(2,'0')}.${y}`;
+  };
+  return `${prefix} ${fmt(min)} — ${fmt(max)}`;
+}
+
 function _updateIkomekKpi(){
   const val = document.getElementById('kpiIkom');
   const sub = document.getElementById('kpiIkomSub');
@@ -3670,7 +3691,7 @@ function _updateIkomekKpi(){
     const r = _ikComputeFiltered();
     val.textContent = r.total.toLocaleString('ru-RU');
     if(sub){
-      if(!filtersActive) sub.textContent = 'с 01.04.2019';
+      if(!filtersActive) sub.textContent = _ikPeriodStr();
       else if(r.regionUnknown) sub.textContent = 'нет звонков iKomek в этом регионе';
       else sub.textContent = 'по выбранным фильтрам';
     }
@@ -3680,7 +3701,7 @@ function _updateIkomekKpi(){
   // Fallback пока _IK не догрузился — baseline без приглушения
   const baseline = _DATA?.summary?.ikomek?.total ?? 16103;
   val.textContent = baseline.toLocaleString('ru-RU');
-  if(sub) sub.textContent = 'с 01.04.2019';
+  if(sub) sub.textContent = _ikPeriodStr();
   card && card.classList.remove('kpi-muted');
 }
 
