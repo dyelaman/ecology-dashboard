@@ -18,7 +18,7 @@ from collections import OrderedDict
 
 csv.field_size_limit(sys.maxsize)
 
-SRC = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/выгрузки по ikomek с 2019-04-01/ecology_ikomek.csv"
+SRC = "/Users/alprasalam/Desktop/проекты/Кейс по экологии/выгрузки по ikomek с 2019-04-01/komek_total_data d.csv"
 OUT = os.path.join(os.path.dirname(__file__), "..", "public", "data", "ikomek_compact.json")
 
 # ── Регионы → короткие формы (как в #gReg на главной) ──
@@ -42,18 +42,30 @@ def norm_region(s):
     return REGION_NORM.get(s, s)
 
 # ── Character → 6 устойчивых групп ──
+# Матчинг с учётом типовых опечаток источника (БЛАГОУСТРЙСТВО, Благоустройтсво).
+_BLAGO_KEYS = ("благоустройств", "благоустрйств", "благоустройтсв", "восстановлени")
 def norm_character(s):
     s = (s or "").strip()
     low = s.lower()
-    if "природно-сырь" in low or low == "экология" or "другое(использ" in low:
-        return "Природные ресурсы и экология"
+    # Эко-экспертиза (проверяем первой — если есть «экспертиз», это точно она)
     if "экспертиз" in low:
         return "Государственная экологическая экспертиза"
+    # Эко-контроль
     if "эколог" in low and "контрол" in low:
         return "Экологический контроль"
+    # Природные ресурсы / вода / экология (расширенный список)
+    if ("природно-сырь" in low
+        or low.startswith("экология")
+        or "другое(использ" in low
+        or "водных отношени" in low
+        or "водопользован" in low
+        or "водных ресурс" in low):
+        return "Природные ресурсы и экология"
+    # ЖКХ
     if "жкх" in low:
         return "ЖКХ и благоустройство"
-    if "благоустройств" in low:
+    # Благоустройство (с учётом опечаток)
+    if any(k in low for k in _BLAGO_KEYS):
         return "Благоустройство"
     if "прогресс" in low:
         return "Прочее"
@@ -68,8 +80,11 @@ def idx(d, v):
     return i
 
 rows = []
+# Авто-детект separator: старая выгрузка ',' новая '`'
+with open(SRC, encoding="utf-8") as _probe:
+    _delim = '`' if '`' in _probe.readline() else ','
 with open(SRC, encoding="utf-8") as f:
-    for r in csv.DictReader(f):
+    for r in csv.DictReader(f, delimiter=_delim):
         date = (r.get("created_date") or "")[:10]
         if not date or len(date) != 10:
             continue
