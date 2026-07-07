@@ -1,86 +1,86 @@
 {
-  "total": 45341,
-  "done": 41749,
-  "done_pct": 92.1,
-  "cancelled": 3123,
-  "in_work": 469,
-  "overdue": 4161,
-  "overdue_pct": 9.2,
-  "median_days": 2,
-  "avg_days": 3.8,
+  "total": 48375,
+  "done": 44348,
+  "done_pct": 91.7,
+  "cancelled": 3206,
+  "in_work": 821,
+  "overdue": 4239,
+  "overdue_pct": 8.8,
+  "median_days": 2.0,
+  "avg_days": 3.9,
   "period_from": "2024-06",
-  "period_to": "2026-06",
+  "period_to": "2026-07",
   "categories": [
     {
       "id": "4",
       "name": "Уборка территории",
-      "total": 15032,
-      "done": 14833,
-      "done_pct": 98.7,
-      "overdue": 808,
-      "avg_days": 2.5
+      "total": 16187,
+      "done": 15860,
+      "done_pct": 98.0,
+      "overdue": 828,
+      "avg_days": 2.6
     },
     {
       "id": "10",
       "name": "Разное",
-      "total": 7684,
-      "done": 7421,
-      "done_pct": 96.6,
-      "overdue": 1203,
+      "total": 7855,
+      "done": 7562,
+      "done_pct": 96.3,
+      "overdue": 1217,
       "avg_days": 4.1
     },
     {
       "id": "9",
       "name": "Благоустройство улиц",
-      "total": 4016,
-      "done": 3853,
-      "done_pct": 95.9,
-      "overdue": 204,
+      "total": 4978,
+      "done": 4752,
+      "done_pct": 95.5,
+      "overdue": 215,
       "avg_days": 5.2
     },
     {
       "id": "3",
       "name": "Вывоз бытового мусора",
-      "total": 3338,
-      "done": 3301,
-      "done_pct": 98.9,
-      "overdue": 464,
-      "avg_days": 2.4
+      "total": 3501,
+      "done": 3458,
+      "done_pct": 98.8,
+      "overdue": 468,
+      "avg_days": 2.5
     },
     {
       "id": "16",
       "name": "Ремонт дорог",
-      "total": 2671,
-      "done": 2528,
-      "done_pct": 94.6,
-      "overdue": 288,
-      "avg_days": 8.4
+      "total": 2746,
+      "done": 2601,
+      "done_pct": 94.7,
+      "overdue": 293,
+      "avg_days": 8.5
     },
     {
       "id": "8",
       "name": "Озеленение",
-      "total": 2094,
-      "done": 2014,
-      "done_pct": 96.2,
-      "overdue": 173,
-      "avg_days": 5.8
+      "total": 2197,
+      "done": 2115,
+      "done_pct": 96.3,
+      "overdue": 180,
+      "avg_days": 6.0
     },
     {
       "id": "1",
       "name": "Освещение",
-      "total": 1517,
-      "done": 1474,
-      "done_pct": 97.2,
-      "overdue": 127,
+      "total": 1567,
+      "done": 1513,
+      "done_pct": 96.6,
+      "overdue": 129,
       "avg_days": 6.6
     },
     {
       "id": "6",
       "name": "Вывоз строительного мусора",
-      "total": 1384,
-      "done": 1349,
-      "done_pct": 97.5,
-      "overdue": 79,
+      "total": 1427,
+      "done": 1390,
+      "done_pct": 97.4,
+      "overdue": 81,
       "avg_days": 5.0
     },
     {
@@ -95,56 +95,56 @@
     {
       "id": "12",
       "name": "Дворовые площадки",
-      "total": 1042,
-      "done": 997,
-      "done_pct": 95.7,
-      "overdue": 52,
-      "avg_days": 5.1
+      "total": 1075,
+      "done": 1023,
+      "done_pct": 95.2,
+      "overdue": 53,
+      "avg_days": 5.2
     },
     {
       "id": "11",
       "name": "Открытые люки",
-      "total": 500,
-      "done": 492,
-      "done_pct": 98.4,
-      "overdue": 165,
-      "avg_days": 3.2
+      "total": 516,
+      "done": 506,
+      "done_pct": 98.1,
+      "overdue": 167,
+      "avg_days": 3.3
     },
     {
       "id": "7",
       "name": "Очистка водоемов",
-      "total": 419,
-      "done": 414,
-      "done_pct": 98.8,
-      "overdue": 25,
-      "avg_days": 2.1
+      "total": 430,
+      "done": 423,
+      "done_pct": 98.4,
+      "overdue": 29,
+      "avg_days": 2.2
     },
     {
       "id": "2",
       "name": "Уборка дорог (трасс)",
-      "total": 416,
-      "done": 405,
-      "done_pct": 97.4,
-      "overdue": 38,
-      "avg_days": 3.7
-    },
-    {
-      "id": "20",
-      "name": "Очистка прилотковой части дороги и арыков от снега",
-      "total": 392,
-      "done": 387,
-      "done_pct": 98.7,
-      "overdue": 67,
-      "avg_days": 0.6
+      "total": 428,
+      "done": 418,
+      "done_pct": 97.7,
+      "overdue": 39,
+      "avg_days": 3.9
     },
     {
       "id": "15",
       "name": "Уборка парков и аллей",
-      "total": 388,
-      "done": 381,
-      "done_pct": 98.2,
-      "overdue": 25,
+      "total": 397,
+      "done": 388,
+      "done_pct": 97.7,
+      "overdue": 26,
       "avg_days": 3.6
+    },
+    {
+      "id": "20",
+      "name": "Очистка прилотковой части дороги и арыков от снега",
+      "total": 393,
+      "done": 387,
+      "done_pct": 98.5,
+      "overdue": 67,
+      "avg_days": 0.6
     },
     {
       "id": "19",
@@ -158,29 +158,47 @@
     {
       "id": "5",
       "name": "Санитарное состояние прилегающих территорий хозяйственных субъектов",
-      "total": 202,
-      "done": 191,
+      "total": 223,
+      "done": 211,
       "done_pct": 94.6,
-      "overdue": 35,
+      "overdue": 36,
       "avg_days": 6.6
     },
     {
       "id": "13",
       "name": "Фасады зданий",
-      "total": 180,
-      "done": 172,
-      "done_pct": 95.6,
+      "total": 186,
+      "done": 176,
+      "done_pct": 94.6,
       "overdue": 13,
-      "avg_days": 10.1
+      "avg_days": 10.0
     },
     {
       "id": "14",
       "name": "Санитарное состояние подъездов",
-      "total": 92,
-      "done": 87,
-      "done_pct": 94.6,
+      "total": 95,
+      "done": 89,
+      "done_pct": 93.7,
       "overdue": 3,
       "avg_days": 9.3
+    },
+    {
+      "id": "22",
+      "name": "покос сорной растительности на экообъектах",
+      "total": 32,
+      "done": 27,
+      "done_pct": 84.4,
+      "overdue": 3,
+      "avg_days": 2.1
+    },
+    {
+      "id": "21",
+      "name": "полив, обрезка зеленых насаждений вдоль автомобильных дорог, эко-парков",
+      "total": 22,
+      "done": 21,
+      "done_pct": 95.5,
+      "overdue": 3,
+      "avg_days": 2.1
     },
     {
       "id": "17",
@@ -190,24 +208,6 @@
       "done_pct": 100.0,
       "overdue": 7,
       "avg_days": 2.3
-    },
-    {
-      "id": "21",
-      "name": "полив, обрезка зеленых насаждений вдоль автомобильных дорог, эко-парков",
-      "total": 16,
-      "done": 14,
-      "done_pct": 87.5,
-      "overdue": 3,
-      "avg_days": 2
-    },
-    {
-      "id": "22",
-      "name": "покос сорной растительности на экообъектах",
-      "total": 8,
-      "done": 8,
-      "done_pct": 100.0,
-      "overdue": 0,
-      "avg_days": 1.5
     },
     {
       "id": "23",
@@ -231,223 +231,223 @@
   "by_region": [
     {
       "name": "Алматы",
-      "total": 15571,
-      "done": 14629,
-      "done_pct": 94.0,
-      "overdue": 1826,
-      "overdue_pct": 11.7,
-      "satisfaction": 4.38,
-      "complaints": 389,
+      "total": 15779,
+      "done": 14790,
+      "done_pct": 93.7,
+      "overdue": 1865,
+      "overdue_pct": 11.8,
+      "satisfaction": 4.29,
+      "complaints": 403,
       "complaint_pct": 2.6
     },
     {
       "name": "Астана",
-      "total": 4789,
-      "done": 4268,
-      "done_pct": 89.1,
-      "overdue": 435,
-      "overdue_pct": 9.1,
-      "satisfaction": 4.26,
-      "complaints": 142,
-      "complaint_pct": 3.1
+      "total": 4955,
+      "done": 4435,
+      "done_pct": 89.5,
+      "overdue": 443,
+      "overdue_pct": 8.9,
+      "satisfaction": 4.19,
+      "complaints": 152,
+      "complaint_pct": 3.2
     },
     {
       "name": "Туркестанская область",
-      "total": 3872,
-      "done": 3634,
-      "done_pct": 93.9,
+      "total": 4733,
+      "done": 4386,
+      "done_pct": 92.7,
       "overdue": 65,
-      "overdue_pct": 1.7,
-      "satisfaction": 4.74,
-      "complaints": 11,
+      "overdue_pct": 1.4,
+      "satisfaction": 4.75,
+      "complaints": 13,
       "complaint_pct": 0.3
     },
     {
       "name": "Костанайская область",
-      "total": 3514,
-      "done": 3355,
-      "done_pct": 95.5,
+      "total": 4392,
+      "done": 4161,
+      "done_pct": 94.7,
       "overdue": 106,
-      "overdue_pct": 3.0,
-      "satisfaction": 4.51,
-      "complaints": 38,
-      "complaint_pct": 1.1
+      "overdue_pct": 2.4,
+      "satisfaction": 4.53,
+      "complaints": 39,
+      "complaint_pct": 0.9
     },
     {
       "name": "Карагандинская область",
-      "total": 3434,
-      "done": 3337,
-      "done_pct": 97.2,
+      "total": 3546,
+      "done": 3433,
+      "done_pct": 96.8,
       "overdue": 119,
-      "overdue_pct": 3.5,
-      "satisfaction": 4.07,
-      "complaints": 108,
-      "complaint_pct": 3.2
+      "overdue_pct": 3.4,
+      "satisfaction": 4.1,
+      "complaints": 116,
+      "complaint_pct": 3.4
     },
     {
       "name": "Жамбылская область",
-      "total": 1634,
-      "done": 1527,
-      "done_pct": 93.5,
+      "total": 1718,
+      "done": 1608,
+      "done_pct": 93.6,
       "overdue": 122,
-      "overdue_pct": 7.5,
-      "satisfaction": 4.45,
-      "complaints": 18,
-      "complaint_pct": 1.1
+      "overdue_pct": 7.1,
+      "satisfaction": 4.44,
+      "complaints": 20,
+      "complaint_pct": 1.2
     },
     {
       "name": "Алматинская область",
-      "total": 1489,
-      "done": 1209,
-      "done_pct": 81.2,
-      "overdue": 255,
-      "overdue_pct": 17.1,
-      "satisfaction": 3.2,
-      "complaints": 99,
+      "total": 1531,
+      "done": 1227,
+      "done_pct": 80.1,
+      "overdue": 260,
+      "overdue_pct": 17.0,
+      "satisfaction": 3.18,
+      "complaints": 101,
       "complaint_pct": 7.1
     },
     {
       "name": "Кызылординская область",
-      "total": 1312,
-      "done": 1235,
-      "done_pct": 94.1,
+      "total": 1356,
+      "done": 1277,
+      "done_pct": 94.2,
       "overdue": 10,
-      "overdue_pct": 0.8,
-      "satisfaction": 3.99,
-      "complaints": 89,
-      "complaint_pct": 7.3
+      "overdue_pct": 0.7,
+      "satisfaction": 3.96,
+      "complaints": 91,
+      "complaint_pct": 7.2
     },
     {
       "name": "Северо-Казахстанская область",
-      "total": 1068,
-      "done": 977,
-      "done_pct": 91.5,
-      "overdue": 78,
-      "overdue_pct": 7.3,
-      "satisfaction": 3.53,
+      "total": 1164,
+      "done": 1039,
+      "done_pct": 89.3,
+      "overdue": 86,
+      "overdue_pct": 7.4,
+      "satisfaction": 3.51,
       "complaints": 37,
-      "complaint_pct": 3.6
+      "complaint_pct": 3.3
     },
     {
       "name": "Восточно-Казахстанская область",
-      "total": 1026,
-      "done": 936,
-      "done_pct": 91.2,
-      "overdue": 210,
+      "total": 1046,
+      "done": 959,
+      "done_pct": 91.7,
+      "overdue": 214,
       "overdue_pct": 20.5,
-      "satisfaction": 3.57,
-      "complaints": 62,
-      "complaint_pct": 6.4
+      "satisfaction": 3.62,
+      "complaints": 64,
+      "complaint_pct": 6.5
     },
     {
       "name": "Абайская область",
-      "total": 1018,
-      "done": 954,
-      "done_pct": 93.7,
+      "total": 1033,
+      "done": 965,
+      "done_pct": 93.4,
       "overdue": 0,
       "overdue_pct": 0.0,
-      "satisfaction": 3.6,
+      "satisfaction": 3.56,
       "complaints": 42,
-      "complaint_pct": 4.3
+      "complaint_pct": 4.2
     },
     {
       "name": "Шымкент",
-      "total": 914,
-      "done": 668,
-      "done_pct": 73.1,
-      "overdue": 152,
-      "overdue_pct": 16.6,
-      "satisfaction": 3.4,
-      "complaints": 58,
-      "complaint_pct": 6.8
+      "total": 973,
+      "done": 699,
+      "done_pct": 71.8,
+      "overdue": 153,
+      "overdue_pct": 15.7,
+      "satisfaction": 3.45,
+      "complaints": 61,
+      "complaint_pct": 6.7
+    },
+    {
+      "name": "Западно-Казахстанская область",
+      "total": 930,
+      "done": 888,
+      "done_pct": 95.5,
+      "overdue": 206,
+      "overdue_pct": 22.2,
+      "satisfaction": 2.34,
+      "complaints": 77,
+      "complaint_pct": 9.0
     },
     {
       "name": "Актюбинская область",
-      "total": 872,
-      "done": 788,
-      "done_pct": 90.4,
+      "total": 907,
+      "done": 809,
+      "done_pct": 89.2,
       "overdue": 65,
-      "overdue_pct": 7.5,
+      "overdue_pct": 7.2,
       "satisfaction": 3.4,
-      "complaints": 37,
+      "complaints": 38,
       "complaint_pct": 4.4
     },
     {
       "name": "Атырауская область",
-      "total": 859,
-      "done": 795,
-      "done_pct": 92.5,
-      "overdue": 43,
+      "total": 885,
+      "done": 811,
+      "done_pct": 91.6,
+      "overdue": 44,
       "overdue_pct": 5.0,
-      "satisfaction": 3.84,
-      "complaints": 29,
-      "complaint_pct": 3.5
+      "satisfaction": 3.83,
+      "complaints": 32,
+      "complaint_pct": 3.8
     },
     {
       "name": "Мангистауская область",
-      "total": 836,
-      "done": 691,
-      "done_pct": 82.7,
-      "overdue": 132,
-      "overdue_pct": 15.8,
-      "satisfaction": 3.65,
-      "complaints": 27,
-      "complaint_pct": 3.3
+      "total": 861,
+      "done": 699,
+      "done_pct": 81.2,
+      "overdue": 134,
+      "overdue_pct": 15.6,
+      "satisfaction": 3.74,
+      "complaints": 28,
+      "complaint_pct": 3.4
     },
     {
       "name": "Акмолинская область",
-      "total": 766,
-      "done": 670,
-      "done_pct": 87.5,
+      "total": 794,
+      "done": 690,
+      "done_pct": 86.9,
       "overdue": 55,
-      "overdue_pct": 7.2,
-      "satisfaction": 2.74,
-      "complaints": 79,
-      "complaint_pct": 11.5
-    },
-    {
-      "name": "Западно-Казахстанская область",
-      "total": 730,
-      "done": 658,
-      "done_pct": 90.1,
-      "overdue": 202,
-      "overdue_pct": 27.7,
-      "satisfaction": 2.42,
-      "complaints": 67,
-      "complaint_pct": 10.1
+      "overdue_pct": 6.9,
+      "satisfaction": 2.63,
+      "complaints": 80,
+      "complaint_pct": 11.2
     },
     {
       "name": "Жетысуская область",
-      "total": 687,
-      "done": 564,
-      "done_pct": 82.1,
-      "overdue": 114,
-      "overdue_pct": 16.6,
-      "satisfaction": 3.36,
-      "complaints": 31,
-      "complaint_pct": 4.7
+      "total": 748,
+      "done": 600,
+      "done_pct": 80.2,
+      "overdue": 115,
+      "overdue_pct": 15.4,
+      "satisfaction": 3.5,
+      "complaints": 33,
+      "complaint_pct": 4.6
     },
     {
       "name": "Павлодарская область",
-      "total": 643,
-      "done": 588,
-      "done_pct": 91.4,
-      "overdue": 119,
-      "overdue_pct": 18.5,
-      "satisfaction": 3.2,
-      "complaints": 56,
-      "complaint_pct": 9.5
+      "total": 698,
+      "done": 595,
+      "done_pct": 85.2,
+      "overdue": 124,
+      "overdue_pct": 17.8,
+      "satisfaction": 3.19,
+      "complaints": 58,
+      "complaint_pct": 9.1
     },
     {
       "name": "Улытауская область",
-      "total": 307,
-      "done": 266,
-      "done_pct": 86.6,
+      "total": 326,
+      "done": 277,
+      "done_pct": 85.0,
       "overdue": 53,
-      "overdue_pct": 17.3,
+      "overdue_pct": 16.3,
       "satisfaction": 2.73,
       "complaints": 22,
-      "complaint_pct": 7.7
+      "complaint_pct": 7.2
     }
   ],
   "monthly": [
@@ -549,33 +549,33 @@
     },
     {
       "ym": "2026-06",
-      "total": 797
+      "total": 3126
+    },
+    {
+      "ym": "2026-07",
+      "total": 705
     }
   ],
   "satisfaction": [
     {
       "region": "Западно-Казахстанская область",
-      "rating": 2.42
+      "rating": 2.34
+    },
+    {
+      "region": "Акмолинская область",
+      "rating": 2.63
     },
     {
       "region": "Улытауская область",
       "rating": 2.73
     },
     {
-      "region": "Акмолинская область",
-      "rating": 2.74
-    },
-    {
       "region": "Алматинская область",
-      "rating": 3.2
+      "rating": 3.18
     },
     {
       "region": "Павлодарская область",
-      "rating": 3.2
-    },
-    {
-      "region": "Жетысуская область",
-      "rating": 3.36
+      "rating": 3.19
     },
     {
       "region": "Актюбинская область",
@@ -583,61 +583,65 @@
     },
     {
       "region": "Шымкент",
-      "rating": 3.4
+      "rating": 3.45
+    },
+    {
+      "region": "Жетысуская область",
+      "rating": 3.5
     },
     {
       "region": "Северо-Казахстанская область",
-      "rating": 3.53
-    },
-    {
-      "region": "Восточно-Казахстанская область",
-      "rating": 3.57
+      "rating": 3.51
     },
     {
       "region": "Абайская область",
-      "rating": 3.6
+      "rating": 3.56
+    },
+    {
+      "region": "Восточно-Казахстанская область",
+      "rating": 3.62
     },
     {
       "region": "Мангистауская область",
-      "rating": 3.65
+      "rating": 3.74
     },
     {
       "region": "Атырауская область",
-      "rating": 3.84
+      "rating": 3.83
     },
     {
       "region": "Кызылординская область",
-      "rating": 3.99
+      "rating": 3.96
     },
     {
       "region": "Карагандинская область",
-      "rating": 4.07
+      "rating": 4.1
     },
     {
       "region": "Астана",
-      "rating": 4.26
+      "rating": 4.19
     },
     {
       "region": "Алматы",
-      "rating": 4.38
+      "rating": 4.29
     },
     {
       "region": "Жамбылская область",
-      "rating": 4.45
+      "rating": 4.44
     },
     {
       "region": "Костанайская область",
-      "rating": 4.51
+      "rating": 4.53
     },
     {
       "region": "Туркестанская область",
-      "rating": 4.74
+      "rating": 4.75
     }
   ],
   "speed": {
-    "same_day": 12697,
-    "d1_3": 14003,
-    "d4_7": 8929,
-    "over_7": 6120
+    "same_day": 13354,
+    "d1_3": 14831,
+    "d4_7": 9531,
+    "over_7": 6632
   }
 }
