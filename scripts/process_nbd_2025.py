@@ -31,10 +31,10 @@ from collections import defaultdict
 from datetime import datetime
 
 # ── Пути ──────────────────────────────────────────────────────────────────
-SRC = "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/НБД СОС актуальное"
-AIR_AGGR   = f"{SRC}/mepr_nbdsos_air_emissions_aggr_1.csv"
-WATER_AGGR = f"{SRC}/mepr_nbdsos_water_emissions_aggr.csv"
-FIRE_AGGR  = f"{SRC}/mepr_nbdsos_fire_emissions_aggr.csv"
+SRC = "/Users/alprasalam/Desktop/проекты/Кейс по экологии/НБД СОС актуальное"
+AIR_AGGR   = f"{SRC}/mepr_nbdsos_air_emissions dd.csv"
+WATER_AGGR = f"{SRC}/mepr_nbdsos_water_emissions dd.csv"
+FIRE_AGGR  = f"{SRC}/mepr_nbdsos_fire_emissions d.csv"
 ORGS_CSV   = f"{SRC}/ecology_organizations.csv"
 SRCS_CSV   = f"{SRC}/ecology_emission_sources.csv"
 
@@ -132,8 +132,12 @@ def read_aggregate(path, num_cols):
     """
     rows = []
     skipped = 0
+    # Авто-детект separator: ClickHouse-выгрузки могут быть ';' (июнь) или '`' (июль+)
+    with open(path, encoding='utf-8') as f:
+        first_line = f.readline()
+    delim = '`' if '`' in first_line else ';'
     with open(path, encoding='utf-8', newline='') as f:
-        reader = csv.DictReader(f, delimiter=';')
+        reader = csv.DictReader(f, delimiter=delim)
         for r in reader:
             month = (r.get('month') or '').strip()[:7]  # YYYY-MM
             if not month or len(month) != 7:
