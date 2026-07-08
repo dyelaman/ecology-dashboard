@@ -1269,7 +1269,7 @@ input[type=file]{display:none}
     <!-- Top substances + Top orgs -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
       <div class="card" style="padding:12px">
-        <div class="card-title"><span data-i18n="nbd.block.substances">Загрязняющие вещества</span> <span id="nbd2025SubUnitNote" style="font-size:9px;color:var(--text3);font-weight:400" title="единица измерения требует уточнения у источника"></span></div>
+        <div class="card-title"><span data-i18n="nbd.block.substances">Загрязняющие вещества</span> <span id="nbd2025SubUnitNote" style="font-size:9px;color:var(--text3);font-weight:400" title="Количество замеров в штуках (единицы измерения показателей: концентрация мг/м³, эмиссии г/с)"></span></div>
         <div id="nbd2025SubList" class="region-list-scroll" style="max-height:300px;padding-right:6px"></div>
       </div>
       <div class="card" style="padding:12px">
@@ -9112,15 +9112,19 @@ function _nbdAggregate(facts){
 }
 
 const _NBD_UNIT = {
-  // unit_label = «усл. ед.» с подсказкой про единицы (B3)
-  air:   {meas:'замеров', unit:'усл. ед.',
-          col:'#dc2626', label:'Воздух', what:'Замеров загрязнителей в атмосфере'},
-  water: {meas:'замеров', unit:'усл. ед.',
-          col:'#1E88E5', label:'Вода',   what:'Замеров сточных вод'},
-  fire:  {meas:'замеров', unit:'усл. ед.',
-          col:'#ea580c', label:'Факел',  what:'Замеров факельных выбросов'},
+  // measUnit — базовая единица «сколько замеров» (shown под KPI + рядом со значениями).
+  // fieldUnits — единицы измерения по конкретным метрикам среды (для подсказки под KPI).
+  air:   {meas:'замеров', measUnit:'шт.',
+          col:'#dc2626', label:'Воздух', what:'Замеров загрязнителей в атмосфере',
+          fieldUnits:'концентрация мг/м³ · эмиссии г/с · коэф. ПДК (раз)'},
+  water: {meas:'замеров', measUnit:'шт.',
+          col:'#1E88E5', label:'Вода',   what:'Замеров сточных вод',
+          fieldUnits:'pH · турбидность мг/л · проводимость мкСм/см · температура °C · поток м³/ч'},
+  fire:  {meas:'замеров', measUnit:'шт.',
+          col:'#ea580c', label:'Факел',  what:'Замеров факельных выбросов',
+          fieldUnits:'расход газа м³/ч · плотность кг/м³'},
 };
-const CONCENTRATION_NOTE = 'единица измерения требует уточнения у источника';
+const CONCENTRATION_NOTE = 'единица измерения согласно НБД СОС (мг/м³ для концентраций)';
 
 function _fmtNum(n){
   if(n==null||isNaN(n)) return '—';
@@ -9143,9 +9147,10 @@ function _renderNbdList(elId, items, opts){
     const truncated = nm.length>opts.nameMax ? nm.slice(0,opts.nameMax)+'…' : nm;
     const measStr = r.measurements!=null ? r.measurements.toLocaleString('ru-RU')+' зам.' : '';
     const exStr = r.exceed ? ` · <span style="color:#dc2626">${r.exceed.toLocaleString('ru-RU')} прев.</span>` : '';
-    // B3: total отображаем с пометкой «усл. ед.*» вместо «мг/м³»
+    // total отображаем с явной единицей (для air это мг/м³ по НБД СОС)
+    const totalUnit = opts.totalUnit || 'мг/м³';
     const valStr = opts.showTotal && r.total!=null
-      ? `<span style="font-weight:600" title="${CONCENTRATION_NOTE}">${_fmtNum(r.total)} <span style="color:#999;font-weight:400">усл. ед.*</span></span> · ${measStr}`
+      ? `<span style="font-weight:600" title="${CONCENTRATION_NOTE}">${_fmtNum(r.total)} <span style="color:#999;font-weight:400">${totalUnit}</span></span> · ${measStr}`
       : measStr;
     return `<div class="sat-row" title="${nm}">
       <span class="sat-name">${truncated}</span>
@@ -9897,13 +9902,13 @@ function renderNbd2025(){
   _renderNbdAlertFromFiltered(T, A, d);
   // 3. Плашка покрытия (статичная по среде)
   _renderNbdCoverageNote(T, d?.metadata);
-  // 4. Подпись единиц
+  // 4. Подпись единиц — реальные единицы измерения по среде
   const subUnitNote = document.getElementById('nbd2025SubUnitNote');
-  if(subUnitNote) subUnitNote.textContent = (T==='air') ? '· усл. ед.* (требует уточнения)' : '';
+  if(subUnitNote) subUnitNote.textContent = `· значения в шт. замеров`;
 
-  // 5. KPI
-  document.getElementById('nbd2025KpiMeas').textContent = _fmtNum(A.totalMeas);
-  document.getElementById('nbd2025KpiMeasSub').textContent = U.what;
+  // 5. KPI (с явной единицей «шт.» под числом замеров)
+  document.getElementById('nbd2025KpiMeas').innerHTML = `${_fmtNum(A.totalMeas)} <span style="font-size:12px;color:#9ca3af;font-weight:500">шт.</span>`;
+  document.getElementById('nbd2025KpiMeasSub').textContent = `${U.what} · ${U.fieldUnits}`;
   document.getElementById('nbd2025KpiOrgs').textContent = Object.keys(A.byOrg).length.toLocaleString('ru-RU');
   document.getElementById('nbd2025KpiOrgsSub').textContent = 'с замерами';
   document.getElementById('nbd2025KpiRegs').textContent = Object.keys(A.byRegion).length.toLocaleString('ru-RU');
@@ -9915,37 +9920,37 @@ function renderNbd2025(){
   const exNote= document.getElementById('nbd2025KpiExNote');
   if(T==='air'){
     exLbl.textContent = 'Превышения ПДК';
-    exEl.textContent  = _fmtNum(A.totalExceed);
+    exEl.innerHTML    = `${_fmtNum(A.totalExceed)} <span style="font-size:12px;color:#9ca3af;font-weight:500">шт.</span>`;
     exEl.style.color  = '#dc2626';
     exSub.textContent  = `${A.pct_of_measured}% от измеренных`;
     exSub2.textContent = `${A.pct_of_all}% от всех замеров`;
-    exNote.textContent = `ℹ️ Коэф. ПДК заполнен у ${A.ratio_coverage_pct}% замеров`;
+    exNote.textContent = `ℹ️ Коэф. ПДК (раз) заполнен у ${A.ratio_coverage_pct}% замеров`;
     // Air-only exceed block: ТОП по орг и по веществу — но из выборки!
     document.getElementById('nbd2025ExceedBlock').style.display = '';
     _renderNbdExceedSub(facts);
     _renderNbdExceedOrg(facts);
   } else if(T==='water'){
     exLbl.textContent = 'pH вне нормы (6–9)';
-    exEl.textContent  = _fmtNum(A.ph_out);
+    exEl.innerHTML    = `${_fmtNum(A.ph_out)} <span style="font-size:12px;color:#9ca3af;font-weight:500">шт.</span>`;
     exEl.style.color  = '#dc2626';
     exSub.textContent  = `${A.ph_pct}% от ${A.ph_count.toLocaleString('ru-RU')} замеров pH`;
     exSub2.textContent = '';
-    exNote.textContent = '';
+    exNote.textContent = 'ℹ️ pH — безразмерная величина, норма 6–9';
     document.getElementById('nbd2025ExceedBlock').style.display = 'none';
     const wphBlock = document.getElementById('nbd2025WaterPhBlock');
     const wph = document.getElementById('nbd2025WaterPh');
     if(wphBlock && wph){
       wphBlock.style.display = '';
-      wph.innerHTML = `Замеров pH в выборке: <b>${A.ph_count.toLocaleString('ru-RU')}</b><br>` +
-        `Вне нормы 6–9: <b style="color:#dc2626">${A.ph_out.toLocaleString('ru-RU')}</b> (${A.ph_pct}%)`;
+      wph.innerHTML = `Замеров pH в выборке: <b>${A.ph_count.toLocaleString('ru-RU')} шт.</b><br>` +
+        `Вне нормы 6–9: <b style="color:#dc2626">${A.ph_out.toLocaleString('ru-RU')} шт.</b> (${A.ph_pct}%)`;
     }
   } else { // fire
     exLbl.textContent = 'Замеров факела';
-    exEl.textContent  = _fmtNum(A.totalMeas);
+    exEl.innerHTML    = `${_fmtNum(A.totalMeas)} <span style="font-size:12px;color:#9ca3af;font-weight:500">шт.</span>`;
     exEl.style.color  = '#ea580c';
     exSub.textContent  = `${Object.keys(A.byOrg).length} организаций`;
     exSub2.textContent = '';
-    exNote.textContent = 'ℹ️ Нет норматива в выгрузке';
+    exNote.textContent = 'ℹ️ Нет норматива в выгрузке · расход в м³/ч, плотность в кг/м³';
     document.getElementById('nbd2025ExceedBlock').style.display = 'none';
   }
   if(T!=='water'){ const wphBlock=document.getElementById('nbd2025WaterPhBlock'); if(wphBlock) wphBlock.style.display='none'; }
@@ -10026,6 +10031,7 @@ function _renderNbdClickList(elId, data, opts){
   if(!sorted.length){ el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:10px">Нет данных по фильтрам</div>'; return; }
   const max = sorted[0][1] || 1;
   const cur = nbdFilters[opts.filterKey] || null;
+  const unit = opts.unit || 'зам.';
   el.innerHTML = sorted.map(([name, val])=>{
     const w = Math.max(1, (val/max)*100);
     const nm = _esc(name||'—');
@@ -10034,7 +10040,7 @@ function _renderNbdClickList(elId, data, opts){
     return `<div class="nbd-list-row${active}" data-name="${nm.replace(/"/g,'&quot;')}" onclick="_onNbdListClick('${opts.filterKey}', this)">
       <span class="nbd-list-name" title="${nm}">${trunc}</span>
       <div class="nbd-list-bar-wrap"><div class="nbd-list-bar" style="width:${w}%;background:${opts.col}"></div></div>
-      <span class="nbd-list-value">${val.toLocaleString('ru-RU')}</span>
+      <span class="nbd-list-value">${val.toLocaleString('ru-RU')} <span style="color:#9ca3af;font-weight:400;font-size:10px">${unit}</span></span>
     </div>`;
   }).join('');
 }
@@ -10087,11 +10093,17 @@ function _renderNbdMonthlyChart(A, T){
     type:'line', data:{labels, datasets},
     options:{responsive:true,maintainAspectRatio:false,
       interaction:{intersect:false,mode:'index'},
-      plugins:{legend:{display:datasets.length>1, labels:{font:{size:10},color:'#6b7280'}}},
+      plugins:{
+        legend:{display:datasets.length>1, labels:{font:{size:10},color:'#6b7280'}},
+        tooltip:{callbacks:{label:(c)=>`${c.dataset.label}: ${c.parsed.y.toLocaleString('ru-RU')} шт.`}}
+      },
       scales:{
-        y:{beginAtZero:true, ticks:{font:{size:9},color:'#9ca3af',
-          callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?Math.round(v/1e3)+'K':v}},
-        x:{ticks:{font:{size:9},color:'#9ca3af',maxRotation:0,autoSkip:true,maxTicksLimit:12}},
+        y:{beginAtZero:true,
+          title:{display:true, text:'Количество замеров, шт.', font:{size:10}, color:'#6b7280'},
+          ticks:{font:{size:9},color:'#9ca3af',
+            callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?Math.round(v/1e3)+'K':v}},
+        x:{title:{display:true, text:'Месяц', font:{size:10}, color:'#6b7280'},
+           ticks:{font:{size:9},color:'#9ca3af',maxRotation:0,autoSkip:true,maxTicksLimit:12}},
       }
     }
   });
