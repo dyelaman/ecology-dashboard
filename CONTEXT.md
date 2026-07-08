@@ -4,10 +4,11 @@
 > Источник правды о том, на чём остановились. Не держим сессию открытой —
 > вместо этого читаем этот файл при старте новой.
 
-**Последнее обновление:** 2026-06-05
+**Последнее обновление:** 2026-07-08
 **Производство:** <https://taza-eco.vercel.app>
 **Репозиторий:** <https://github.com/dyelaman/ecology-dashboard>
-**Корень проекта:** `/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/eco-dashboard`
+**Корень проекта:** `/Users/alprasalam/Desktop/проекты/Кейс по экологии/eco-dashboard`
+**Корень данных:** `/Users/alprasalam/Desktop/проекты/Кейс по экологии/`  (переименовано из `Вайбкод кейсы/`)
 
 ---
 
@@ -28,9 +29,9 @@
 - Нет БД. Всё в **статичных JSON в `public/data/`**:
   - `summary.json` (~3.3 МБ) — агрегаты по обращениям
   - `preview.json` (~2.5 МБ) — стратифицированная выборка таблицы обращений
-  - `appeals_compact.json` (~10 МБ) — **344 260** эко-обращений per-row, int-кодированные (период 2021-07-23 → 2026-06-05)
-  - `ikomek_compact.json` (~270 КБ raw / ~14 КБ gzip) — **16 103** звонка iKomek per-call, int-кодированные
-  - `taza_kz.json`, `taza_compact.json` (~1.5 МБ), `taza_table.json` (~19 МБ)
+  - `appeals_compact.json` (~11 МБ) — **343 228** эко-обращений per-row, int-кодированные (период **23.07.2021 → 07.07.2026**, обновлено 08.07.2026)
+  - `ikomek_compact.json` (~1.5 МБ) — **86 687** звонков iKomek per-call (была урезанная эко-выборка 16 103, теперь полная выгрузка komek_total_data, период **18.03.2019 → 02.07.2026**)
+  - `taza_kz.json`, `taza_compact.json` (~1.7 МБ), `taza_table.json` (~22 МБ) — **48 375 заявок** (20.06.2024 → 07.07.2026)
   - `nbd_facts.json` (~6.8 МБ, **schema v2**) — расширенная структура: organizations[], sources[], air/water/fire (facts+aggregates+incidents), coverage + LEGACY-схема facts[] для backward-compat
   - `nbd_2025.json` (~23 КБ) — легаси-формат для существующего UI
   - `pek_objects.json` (~2 МБ), `kgs_facts.json` (~5 МБ), `kgs.json` (~7 КБ), `kgs_map.json`
@@ -39,7 +40,7 @@
 
 ### Как запускать локально
 ```bash
-cd "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/eco-dashboard"
+cd "/Users/alprasalam/Desktop/проекты/Кейс по экологии/eco-dashboard"
 python3 -m http.server 8000 --directory public
 # открыть http://localhost:8000
 ```
@@ -47,9 +48,9 @@ API-ручки (`/api/proxy`, `/api/social`) локально работают �
 
 ### Как деплоить
 ```bash
-cd "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/eco-dashboard"
+cd "/Users/alprasalam/Desktop/проекты/Кейс по экологии/eco-dashboard"
 git push origin main
-URL=$(vercel deploy --prod 2>&1 | grep -oE "https://taza-[a-z0-9-]+\.vercel\.app" | head -1)
+URL=$(vercel --prod 2>&1 | grep -oE "https://taza-[a-z0-9-]+\.vercel\.app" | head -1)
 vercel alias set "$URL" taza-eco.vercel.app
 ```
 
@@ -89,21 +90,28 @@ eco-dashboard/
 └── vercel.json
 ```
 
-### Источники сырых данных (вне репо)
-- Обращения eObr: `…/выгрузки по обращениям с 2021-07-01/ecology_eobr_subissues.csv` (297 МБ, 366 219 строк)
-  - Инкремент 2026-04-22 → 2026-06-05: `eobr_ecolog_5.06.2026.csv` (11 МБ, 14 355 строк, backtick `;` separator)
-  - Backup: `ecology_eobr_subissues.bak_2026-04-21.csv`
-- iKomek: `…/выгрузки по ikomek с 2019-04-01/ecology_ikomek.csv`
-- Таza: `…/выгрузки по Таза Казахстан/`
-- **НБД СОС актуальное** (с 2026-06-05 — ClickHouse-агрегаты):
-  - `mepr_nbdsos_air_emissions_aggr_1.csv` (2.5 МБ, 11 394 строки)
-  - `mepr_nbdsos_water_emissions_aggr.csv` (152 КБ)
-  - `mepr_nbdsos_fire_emissions_aggr.csv` (148 КБ)
-  - `ecology_organizations.csv` (25 КБ, 83 строки)
-  - `ecology_emission_sources.csv` (60 КБ, 243 строки)
-  - Также raw: `ecology_air/water/fire_emissions_2025.csv` (4.8 ГБ + 243 МБ + 344 МБ) — больше не используются, заменены агрегатами
-- НБД СОС исторические: `…/выгрузки по НБД СОС/` (pekobject, emergency, accumulation, view_fire/water)
-- КГС: `…/КГС/` (4 файла: forest, land_seizure, nedra, waste)
+### Источники сырых данных (вне репо, все под `/проекты/Кейс по экологии/`)
+
+- **Обращения eObr**: `выгрузки по обращениям с 2021-07-01/ecology_eobr_subissues.csv` (310 МБ, 363 582 уникальных appeal_id после дедупа 08.07)
+  - Инкременты: `eobr_ecolog_5.06.2026.csv` (11 МБ), `eobr_ecolog_5.06-15.06.csv` (1.9 МБ), `eobr_ecolog_7.07.csv` (5.7 МБ) — все backtick-separated
+  - Merge-логика (внешняя, не в скрипте): reorder колонок из incr → main порядок, `concat + drop_duplicates(subset=['appeal_id'], keep='first')` (incr побеждает)
+  - Backups: `.bak_2026-04-21.csv`, `.bak_2026-06-05.csv`, `.bak_2026-06-15.csv`
+
+- **iKomek**: `выгрузки по ikomek с 2019-04-01/komek_total_data d.csv` (18 МБ, 86 687 звонков, backtick separator)
+  - Старая: `ecology_ikomek.csv` (3.8 МБ, 16 103 звонка — искусственно эко-урезанная)
+  - Новая — **полная выгрузка** из системы 109 (много «БЛАГОУСТРОЙСТВА»)
+
+- **Таза**: `выгрузки по Таза Казахстан/` — 5 CSV от 07.07.2026 (`202607071242…44`)
+
+- **НБД СОС актуальное** (ClickHouse-агрегаты, обновлено 08.07.2026):
+  - `mepr_nbdsos_air_emissions dd.csv` (2.8 МБ, 11 846 строк, до **2026-07**)
+  - `mepr_nbdsos_water_emissions dd.csv` (164 КБ, 569 строк, до **2026-06**)
+  - `mepr_nbdsos_fire_emissions d.csv` (160 КБ, 662 строки, до **2026-06**)
+  - Разделитель: `` ` `` (backtick) — в июньских версиях был `;`. Скрипт авто-детектит.
+  - Справочники (без изменений): `ecology_organizations.csv` (81 орг), `ecology_emission_sources.csv` (242 источника)
+
+- НБД СОС исторические: `выгрузки по НБД СОС/` (pekobject, emergency, accumulation, view_fire/water) — НЕ обновлены, последние данные апрель 2026
+- КГС: `КГС/` (forest, land_seizure, nedra, waste) — НЕ обновлены
 
 ---
 
@@ -120,6 +128,13 @@ eco-dashboard/
 ---
 
 ## 3. Что уже сделано (последние ~40 коммитов, новые → старые)
+
+**Июль 2026 — refresh 07-08.07 (пред-презентационный):**
+- `3611a13` ui(nbd): явные единицы измерения во всех блоках вкладки НБД СОС (шт., мг/м³, г/с, м³/ч, °C, мкСм/см, pH, кг/м³)
+- `49c4d53` data: refresh iKomek → 07.07 (полная выгрузка komek_total_data, 86 687 звонков вместо старых 16 103)
+- `0d2d347` data: refresh НБД СОС агрегаты → 2026-07-01 (авто-детект separator `;`/`` ` ``)
+- `fb0addf` data: refresh appeals 2026-06-15 → 2026-07-07 (+6 957 · дедуп 11 702 pre-existing дублей · 343 228 итого)
+- `71c02e8` data: refresh Таза → 07.07 (+3 034 → 48 375)
 
 **Финальный спринт (июнь 2026):**
 - `071948c` AI-рекомендации КГС — поименные нарушители × 4 типа (forest/nedra/waste/land_seizure)
@@ -159,10 +174,11 @@ eco-dashboard/
 
 Приоритет сверху вниз:
 
-1. **Единицы измерения на чартах НБД** (отложено из последнего спринта)
-   - Добавить `scales.x/y.title.display: true` + text axis label на ~6 chart configs (cAppType, c12, cRegLate, cMonthly, cYearDyn в НБД)
-   - Tooltip formatter с полным числом (`4 350 461 превышение`)
-   - Префиксы единиц (млн/тыс/шт.) в KPI-карточках
+1. ~~**Единицы измерения на чартах НБД**~~ ✅ **сделано 08.07.2026** (коммит `3611a13`)
+   - `_NBD_UNIT.measUnit = 'шт.'` + `fieldUnits` по среде
+   - KPI-карточки: явное «шт.» под числом
+   - `_renderNbdClickList` — «зам.» справа
+   - Monthly chart: Y-title «Количество замеров, шт.» + X-title «Месяц» + tooltip с «шт.»
 
 2. **Short_names в bar-чартах НБД**
    - Сейчас `_renderNbdClickList` обрезает длинные имена через `nameMax`
@@ -175,9 +191,8 @@ eco-dashboard/
 
 4. **Запросить обновления данных** (по результатам диагностики):
    - **КГС**: полная пере-выгрузка 4 файлов (forest/land_seizure/nedra/waste). Особенно `get_waste_detailed.csv` — 2025 год пуст.
-   - **НБД СОС исторические**: refresh `ecology_pekobject.csv`, `ecology_emergency_emission.csv`, `accumulation_waste.csv` (последние данные 22-27 апреля 2026).
-   - **НБД СОС актуальные**: обновить 3 агрегата + 2 справочника до 2026-06-05 (сейчас до 2026-05-21).
-   - **Fire May 2026 anomaly** — попросить пересчёт mepr_nbdsos_fire_emissions_aggr (см. раздел 6).
+   - **НБД СОС исторические**: refresh `ecology_pekobject.csv`, `ecology_emergency_emission.csv`, `accumulation_waste.csv` (последние данные 22-27 апреля 2026, сегодня 08.07).
+   - **Fire аномалия резко усугубилась** (см. раздел 6): май 8.2M, июнь 3.3M вместо ~80K. Требуется срочный пересчёт `mepr_nbdsos_fire_emissions` за 2026-05 и 2026-06.
    - **Расшифровка** `get_rational.csv` (rational land use) — ждём от владельца данных что значит `area_ha`.
 
 5. **i18n Этап 2** — машинный перевод динамического контента (тексты новостей, обращений, организаций)
@@ -215,8 +230,10 @@ eco-dashboard/
 
 См. отдельную memory-запись `project_eco_dashboard_anomalies.md` в `~/.claude/projects/`.
 
-- **Fire-данные май 2026** (`mepr_nbdsos_fire_emissions_aggr.csv`): measurements 2M вместо ожидаемых ~80K. AI-блок Факел автоматически алертит «Аномалия мая 2026». Скорее всего bug в SQL-запросе на стороне ClickHouse. **При следующей пере-выгрузке от МЭПР — явно попросить пересчёт за май 2026 для fire.**
-- **КГС waste — пропуск 2025 года** (`get_waste_detailed.csv`): распределение обрывается на 2024 (4 886 записей), 2025 пуст. AI-блок Свалки алертит. Либо реально нет данных, либо при экспорте отвалилось. **Отметить при запросе пере-выгрузки.**
+- **Fire-данные май-июнь 2026 (усугубление!)** (`mepr_nbdsos_fire_emissions d.csv`): май 8.2M замеров, июнь 3.3M — ожидаемая норма ~80K/мес. В июньской выгрузке было 2M за май; теперь ×4. Явный bug SQL-агрегации на стороне ClickHouse (скорее всего JOIN даёт декартово произведение). **Обязательно запросить пересчёт mepr_nbdsos_fire_emissions за 2026-05 и 2026-06.**
+- **Appeals: pre-existing дубли в main CSV** — при merge 07.07 обнаружено 11 702 задвоенных `appeal_id` в источнике. После дедупа: 356 625 → 363 582 (с +6 957 новыми от 15.06→07.07). **Стоит попросить владельца проверить процесс экспорта.**
+- **iKomek: сдвиг цифры на дашборде** — было 16 103 (эко-урезанная выгрузка), стало 86 687 (полная). При презентации явно проговорить: «это не рост, это правильная полная выборка звонков 109».
+- **КГС waste — пропуск 2025 года** (`get_waste_detailed.csv`): распределение обрывается на 2024 (4 886 записей), 2025 пуст. AI-блок Свалки алертит. **Отметить при запросе пере-выгрузки.**
 - **Air emissions registered_date overflow**: 22 строки с датами 1970-01-01 → 2127-01-19 (битые timestamp'ы). При sync с ClickHouse — проверить.
 
 ### UI / технические
@@ -244,7 +261,7 @@ eco-dashboard/
 
 ### Какие команды запустить для проверки
 ```bash
-cd "/Users/alprasalam/Desktop/Вайбкод кейсы/Кейс по экологии/eco-dashboard"
+cd "/Users/alprasalam/Desktop/проекты/Кейс по экологии/eco-dashboard"
 
 # 1. Состояние репозитория
 git status && git log --oneline -10
@@ -336,4 +353,4 @@ print(f'eObr: {N:,} обращений, {fmt(min(dates))} → {fmt(max(dates))}'
 
 ---
 
-*Документ обновлён 2026-06-05 после финального коммита `071948c` (AI-рекомендации КГС). Перед началом новой сессии — посмотри `git log --oneline -10` для актуальной верхушки.*
+*Документ обновлён 2026-07-08 после коммита `3611a13` (единицы измерения НБД). Перед началом новой сессии — посмотри `git log --oneline -10` для актуальной верхушки. Все 4 источника (Обращения, Таза, iKomek, НБД воздух/вода/факелы) обновлены до 07-08.07.2026.*
