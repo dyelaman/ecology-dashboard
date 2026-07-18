@@ -3464,8 +3464,11 @@ function _loadRaion(){
     if(j && j.idx){ _RAION = j;
       // Предвычисляем сайдкар-район → конфиг-каноническое имя (один раз).
       _RAION._canon = j.districts.map(d => d ? (_distNormalize(d) || d) : _NO_DIST);
-      try { if(_AC && typeof applyTimeEngine === 'function') applyTimeEngine(); } catch(_){}
-      try { if(typeof renderDistrictsTab === 'function') renderDistrictsTab(); } catch(_){}
+      // Переприменяем районный разрез несколько раз: baseline renderMainCharts
+      // идёт через setTimeout(200) и может перекрыть c12 регионами уже ПОСЛЕ
+      // загрузки сайдкара. Повторы 0/350/1000мс гарантируют, что районы победят.
+      const _go = () => { try { if(_AC) applyTimeEngine(); } catch(_){} try { renderDistrictsTab(); } catch(_){} };
+      _go(); setTimeout(_go, 350); setTimeout(_go, 1000);
     }
   }).catch(() => {});
 }
