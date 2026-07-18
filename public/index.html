@@ -5674,6 +5674,43 @@ function _kgsShade(hex,t){
   return `rgb(${m(r)},${m(g)},${m(b)})`;
 }
 
+// ── Санитайзер координат КГС ───────────────────────────────────────────────
+// Часть записей источника (особенно карьеры) имеет lat/lng перепутанными
+// местами → точки уезжают вертикальной полосой на север, вплоть до Арктики.
+// Валидная зона РК: широта 40–56, долгота 46–88 (с небольшим запасом по краям).
+// Правки только в рендере; kgs_facts.json и process_kgs.py НЕ трогаем.
+const _KZ_ZONE = {latMin:40, latMax:56, lngMin:46, lngMax:88};
+function _kzInZone(lat,lng){
+  return lat!=null && lng!=null
+      && lat>=_KZ_ZONE.latMin && lat<=_KZ_ZONE.latMax
+      && lng>=_KZ_ZONE.lngMin && lng<=_KZ_ZONE.lngMax;
+}
+// Возвращает {lat,lng,fixed} с исправленными координатами, либо null — точку не рисовать.
+function _kgsFixCoord(lat,lng){
+  if(lat==null||lng==null) return null;
+  if(_kzInZone(lat,lng)) return {lat,lng,fixed:false};
+  if(_kzInZone(lng,lat)) return {lat:lng,lng:lat,fixed:true};  // swap
+  return null;
+}
+// Разовая диагностика по 4 типам — печатает статистику санитайзера в консоль.
+// По этим числам решаем, чинить ли координаты в самом источнике КГС.
+let _kgsCoordDiagDone=false;
+function _kgsCoordDiagnostics(){
+  if(_kgsCoordDiagDone||!KGS_FACTS.length) return; _kgsCoordDiagDone=true;
+  const RU={forest:'рубки',nedra:'карьеры',waste:'свалки',land_seizure:'самозахваты'};
+  KGS_TYPE_ORDER.forEach(t=>{
+    const tf=KGS_FACTS.filter(f=>f.type===t);
+    let ok=0,swap=0,drop=0,nocoord=0;
+    tf.forEach(f=>{
+      if(f.lat==null||f.lng==null){nocoord++;return;}
+      const r=_kgsFixCoord(f.lat,f.lng);
+      if(!r) drop++; else if(r.fixed) swap++; else ok++;
+    });
+    console.log(`[КГС координаты] ${RU[t]}: всего ${tf.length}, с коорд ${tf.length-nocoord}, ок ${ok}, исправлено swap ${swap}, отброшено ${drop}`
+      + (nocoord?`, без координат в источнике ${nocoord}`:''));
+  });
+}
+
 async function kgsOnTabOpen(){
   if(!_kgsLoaded) await loadKgsFacts();
   rerenderKgs();
@@ -5693,6 +5730,7 @@ async function loadKgsFacts(){
       aux:str(row,'aux'), extra:str(row,'extra'), volume:row[ix.vol],
     }));
     KGS_META=d.metadata; _kgsLoaded=true;
+    _kgsCoordDiagnostics();
     populateKgsYearRegion(); renderKgsSpecificFilters('all');
   }catch(e){ console.warn('KGS facts load failed:', e.message); }
   finally{ _kgsLoading=false; }
@@ -5875,14 +5913,18 @@ function renderKgsYearChart(facts){
 function renderKgsSubChart(type, facts){
   const ctx=document.getElementById('kgsSubChart'); if(!ctx) return;
   if(_kgsC.sub){ _kgsC.sub.destroy(); _kgsC.sub=null; }
-  let map={}, palette, titleTxt;
+  let map={}, palette, titleTxt, colorByLabel=null;
   if(type==='all'){ KGS_TYPE_ORDER.forEach(t=>{ map[KGS_TYPES[t].label]=facts.filter(f=>f.type===t).length; });
-    palette=KGS_TYPE_ORDER.map(t=>KGS_TYPES[t].color); titleTxt=_kgsT('Распределение по типам'); }
+    // Цвет привязан к ТИПУ, а не к позиции сортировки — иначе зелёный сегмент donut
+    // означал бы «Свалки», а в соседней «Динамике по годам» зелёный = «Рубки».
+    colorByLabel={}; KGS_TYPE_ORDER.forEach(t=>{ colorByLabel[KGS_TYPES[t].label]=KGS_TYPES[t].color; });
+    titleTxt=_kgsT('Распределение по типам'); }
   else { facts.forEach(f=>{ const k=f.subcategory||'—'; map[k]=(map[k]||0)+1; });
     palette=['#1B7A3A','#dc2626','#d97706','#7c3aed','#0891B2','#16a34a','#9ca3af'];
     titleTxt = _kgsT(type==='forest'?'Законные vs незаконные':type==='nedra'?'Класс карьеров':type==='waste'?'Виды отходов':'Тип нарушения'); }
   const entries=Object.entries(map).sort((a,b)=>b[1]-a[1]);
-  const labels=entries.map(e=>_kgsT(e[0])), data=entries.map(e=>e[1]), bg=labels.map((_,i)=>palette[i%palette.length]);
+  const labels=entries.map(e=>_kgsT(e[0])), data=entries.map(e=>e[1]);
+  const bg=entries.map((e,i)=> colorByLabel ? colorByLabel[e[0]] : palette[i%palette.length]);
   _kgsC.sub=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:bg,borderWidth:2,borderColor:'#fff'}]},options:{
     responsive:true,maintainAspectRatio:false,cutout:'60%',
     plugins:{legend:{display:false},datalabels:{display:false},tooltip:{callbacks:{label:c=>c.label+': '+_kgsFmt(c.raw)}}}}});
@@ -5942,7 +5984,7 @@ function _kgsChipClear(i){
 function initKgsMap2(){
   if(_kgsMap){ setTimeout(()=>_kgsMap.invalidateSize(),200); return; }
   if(!document.getElementById('mapKgsNew')) return;
-  _kgsMap=L.map('mapKgsNew',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.0,67.0],5);
+  _kgsMap=L.map('mapKgsNew',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.0,67.0],5);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.5}).addTo(_kgsMap);
   L.control.attribution({prefix: KZ_FLAG+'КГС'}).addTo(_kgsMap);
   const loadGeo = window._tzGeoData ? Promise.resolve(window._tzGeoData)
@@ -5965,6 +6007,21 @@ function rerenderKgsMap(facts){
   // Синхронизируем swatch у чекбокса «Точки объектов» — цвет = KGS_POINT_COLORS[текущий тип].
   const sw=document.getElementById('kgsPointsSwatch');
   if(sw) sw.style.background = (kgsFilters.type==='all' ? '#0F172A' : (KGS_POINT_COLORS[kgsFilters.type]||'#0F172A'));
+  // Рубки в источнике КГС идут без координат (0 из 24 685) → точки рисовать нечем.
+  // Дизейблим чекбокс и подписываем, чтобы это не читалось как баг рендера.
+  const chk=document.getElementById('kgsLyrPoints');
+  if(chk){
+    const hasCoord=facts.some(f=>f.lat!=null&&f.lng!=null);
+    chk.disabled=!hasCoord;
+    const lbl=chk.closest('label');
+    if(lbl){
+      let note=lbl.querySelector('.kgs-pts-note');
+      if(!hasCoord){
+        if(!note){ note=document.createElement('span'); note.className='kgs-pts-note'; note.style.cssText='color:#b45309;font-size:9px;margin-left:2px'; lbl.appendChild(note); }
+        note.textContent='(нет координат в источнике)';
+      } else if(note){ note.remove(); }
+    }
+  }
   _kgsGeoLayer.eachLayer(layer=>{
     const reg=layer._kgsReg||''; const cnt=by[reg]||0; const sel=kgsFilters.region===reg;
     layer.setStyle({fillColor: cnt?_kgsShade(color,cnt/max):'#f5f5f5', fillOpacity: cnt?0.7:0.15, weight: sel?3:1.2, color: sel?'#0d4d24':'#1B7A3A'});
@@ -5975,17 +6032,31 @@ function rerenderKgsMap(facts){
     _kgsPointsLayer.clearLayers();
     const show=document.getElementById('kgsLyrPoints');
     if(show&&show.checked){
-      const renderer=L.canvas({padding:0.5}); const all=facts.filter(f=>f.lat&&f.lng); const pts=all.slice(0,10000);
-      if(all.length>pts.length) console.warn('KGS points capped at 10000 of '+all.length);
+      const renderer=L.canvas({padding:0.5});
       // Точки — контрастный цвет к заливке региона + белая обводка, чтобы не сливались.
       // При type='all' каждая точка красится по своему f.type; иначе — один цвет на всю выборку.
       const isAll = kgsFilters.type === 'all';
       const uniColor = KGS_POINT_COLORS[kgsFilters.type] || '#0F172A';
+      const withCoord = facts.filter(f=>f.lat!=null&&f.lng!=null);
+      const pts = withCoord.slice(0,10000);
+      if(withCoord.length>pts.length) console.warn('KGS points capped at 10000 of '+withCoord.length);
+      // Санитайзер: swap перепутанных lat/lng, отброс безнадёжных вне зоны РК.
+      let drawn=0, swapped=0, dropped=0;
+      const validPts=[];
       pts.forEach(f=>{
+        const c=_kgsFixCoord(f.lat,f.lng);
+        if(!c){ dropped++; return; }
+        if(c.fixed) swapped++;
         const fc = isAll ? (KGS_POINT_COLORS[f.type] || uniColor) : uniColor;
-        const m=L.circleMarker([f.lat,f.lng],{renderer,radius:4,fillColor:fc,color:'#fff',weight:1,opacity:0.9,fillOpacity:0.95});
-        m.bindPopup(_kgsPopup(f)); _kgsPointsLayer.addLayer(m);
+        const m=L.circleMarker([c.lat,c.lng],{renderer,radius:4,fillColor:fc,color:'#fff',weight:1,opacity:0.9,fillOpacity:0.95});
+        m.bindPopup(_kgsPopup(f)); _kgsPointsLayer.addLayer(m); drawn++;
+        validPts.push([c.lat,c.lng]);
       });
+      if(swapped||dropped) console.log(`[КГС координаты · выборка «${kgsFilters.type}»] отрисовано ${drawn}, swap ${swapped}, отброшено ${dropped}`);
+      // Зумим на реальные точки (в пределах РК), чтобы карта не «отъезжала».
+      if(validPts.length && _kgsMap){
+        try{ _kgsMap.fitBounds(L.latLngBounds(validPts).pad(0.15), {maxZoom:7, animate:false}); }catch(_){}
+      }
     }
   }
 }
@@ -6021,7 +6092,14 @@ function _kgsCell(f,key){
   return v;
 }
 function renderKgsTable(type, facts){
-  _kgsTblState.cols=_kgsTblColsFor(type); _kgsTblState.allRows=facts;
+  let cols=_kgsTblColsFor(type);
+  // Скрываем колонку, если во всей текущей выборке нет ни одного значения
+  // (напр. «Объём, м³» у рубок не заполняется источником КГС).
+  cols=cols.filter(c=>{
+    if(c[0]!=='volume') return true;
+    return facts.some(f=>f.volume!=null && f.volume!=='' && +f.volume>0);
+  });
+  _kgsTblState.cols=cols; _kgsTblState.allRows=facts;
   _kgsTblApply();
   const t=document.getElementById('kgsTableTitle'); if(t) t.textContent=_kgsT('Детальный список · ')+(type==='all'?_kgsT('все типы'):_kgsT(KGS_TYPES[type].label));
 }
@@ -6030,6 +6108,11 @@ function _kgsTblApply(){
   if(st.search){ const q=st.search.toLowerCase(); rows=rows.filter(f=>st.cols.some(c=>String(_kgsCell(f,c[0])).toLowerCase().includes(q))); }
   if(st.sort){ const k=st.sort,d=st.dir,num=['year','area','volume','lat','lng'].includes(k);
     rows=[...rows].sort((a,b)=>{ let x=a[k],y=b[k]; if(num){x=+x||0;y=+y||0;return (x-y)*d;} return String(x==null?'':x).localeCompare(String(y==null?'':y),'ru')*d; }); }
+  else {
+    // Дефолт: год ↓, внутри года — площадь ↓ (свежие и крупные объекты сверху),
+    // иначе первые 50 строк — почти одинаковые мелкие записи одного года.
+    rows=[...rows].sort((a,b)=> ((+b.year||0)-(+a.year||0)) || ((+b.area||0)-(+a.area||0)) );
+  }
   st.rows=rows; const pages=Math.max(1,Math.ceil(rows.length/st.size)); st.page=Math.min(st.page,pages-1);
   _kgsTblRender();
 }
@@ -8818,7 +8901,7 @@ function goNews(cat){
 function initMainMap(){
   if(mapMainInst||!document.getElementById('mapMain')) return;
   const _rc=ACTIVE_REGION&&REGION_CENTERS[ACTIVE_REGION];
-  mapMainInst=L.map('mapMain',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView(_rc?[_rc[0],_rc[1]]:[48.0,66.0],_rc?_rc[2]:4);
+  mapMainInst=L.map('mapMain',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(_rc?[_rc[0],_rc[1]]:[48.0,66.0],_rc?_rc[2]:4);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:ACTIVE_REGION?1.0:0.45}).addTo(mapMainInst);
   L.control.attribution({prefix: KZ_FLAG+'Таза Казахстан'}).addTo(mapMainInst);
   const maxVal=Math.max(...Object.values(REAL_ECO).map(d=>d.total),1);
@@ -10255,7 +10338,7 @@ function _matchRegionToGeo(s){
 
 function initNbdMap(){
   if(mapNbdInst||!document.getElementById('mapNbd')) return;
-  mapNbdInst=L.map('mapNbd',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.5, 67.5], 5);
+  mapNbdInst=L.map('mapNbd',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.5, 67.5], 5);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.6}).addTo(mapNbdInst);
   L.control.attribution({prefix: KZ_FLAG+'НБД СОС'}).addTo(mapNbdInst);
 
@@ -10334,7 +10417,7 @@ function _restyleNbdChoro(){
 // ── КАРТА КГС ─────────────────────────────────────────────────────────────────
 function initKgsMap(){
   if(mapKgsInst||!document.getElementById('mapKgs')) return;
-  mapKgsInst=L.map('mapKgs',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.0,66.0],4);
+  mapKgsInst=L.map('mapKgs',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.0,66.0],4);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.45}).addTo(mapKgsInst);
   L.control.attribution({prefix: KZ_FLAG+'КГС'}).addTo(mapKgsInst);
   kgsMapWaste=L.layerGroup().addTo(mapKgsInst);
@@ -12566,9 +12649,9 @@ async function initCorrelation(){
 
   const tile = ()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.6});
 
-  _corrMapL = L.map('corrMapEmissions',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.5,67.5],4);
+  _corrMapL = L.map('corrMapEmissions',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.5,67.5],4);
   tile().addTo(_corrMapL);
-  _corrMapR = L.map('corrMapComplaints',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.5,67.5],4);
+  _corrMapR = L.map('corrMapComplaints',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.5,67.5],4);
   tile().addTo(_corrMapR);
 
   // Sync zoom/pan
