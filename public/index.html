@@ -1637,6 +1637,7 @@ input[type=file]{display:none}
         <label style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);cursor:pointer">
           <input type="checkbox" id="kgsLyrPoints" style="width:11px;height:11px;accent-color:#1B7A3A" onchange="kgsTogglePoints(this.checked)">
           Точки объектов
+          <span id="kgsPointsSwatch" style="display:inline-block;width:8px;height:8px;border-radius:50%;border:1px solid #fff;box-shadow:0 0 0 1px #94a3b8;margin-left:2px" title="Цвет точек (контрастный к заливке региона)"></span>
         </label>
       </div>
     </div>
@@ -2558,6 +2559,12 @@ const REGION_KZ = {
 
 // Текущий язык + persist
 let curLang = (function(){ try{ return localStorage.getItem('dashboardLang')||'ru'; } catch(_){ return 'ru'; } })();
+
+// Флаг Казахстана — inline-SVG вместо emoji 🇰🇿 (на части ОС regional-indicator
+// рендерится сине-жёлтыми буквами «KZ» и путается с 🇺🇦). Точный флаг РК: голубой
+// фон + жёлтое солнце. Используется в Leaflet-атрибуциях всех карт.
+const KZ_FLAG_SVG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 12'><rect width='20' height='12' fill='%2300ABC2'/><circle cx='10' cy='6' r='2.4' fill='%23FEC50C'/></svg>";
+const KZ_FLAG = `<img src="${KZ_FLAG_SVG}" alt="KZ" title="Казахстан" style="height:9px;width:15px;vertical-align:-1px;margin-right:3px;border-radius:1px">`;
 
 function t(key){
   return (I18N[curLang] && I18N[curLang][key]) || (I18N.ru && I18N.ru[key]) || key;
@@ -4734,7 +4741,7 @@ function _initTazaMap(){
     const el = document.getElementById('mapTaza'); if(!el) return;
     _tzMap = L.map('mapTaza', {zoomControl:true, preferCanvas:true, attributionControl:true}).setView([48.5, 67.5], 5);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      {subdomains:'abcd', maxZoom:19, attribution:'🇰🇿 Таза Казахстан · &copy; OSM/Carto'}).addTo(_tzMap);
+      {subdomains:'abcd', maxZoom:19, attribution: KZ_FLAG+'Таза Казахстан · &copy; OSM/Carto'}).addTo(_tzMap);
     _tzCanvas = L.canvas({padding:0.4});
     if(!_tzGeoData){
       try { const r = await fetch('/border_regions.geojson'); _tzGeoData = await r.json(); } catch(e){ _tzGeoData = null; }
@@ -5574,6 +5581,16 @@ const KGS_TYPES = {
   waste:        { label:'Свалки',       icon:'🗑️', color:'#E53935' },
   land_seizure: { label:'Самозахваты',  icon:'🏗️', color:'#FB8C00' },
 };
+// Цвета точек на карте КГС — специально КОНТРАСТНЫЕ к заливке регионов
+// (заливка = тип * shade). Иначе, например, коричневые карьеры сливаются с
+// коричневым же регионом. Точки берут комплементарный оттенок + белую обводку.
+const KGS_POINT_COLORS = {
+  all:          '#0F172A',  // почти чёрный — универсальный контраст
+  forest:       '#7C3AED',  // фиолет — контраст к зелёной заливке
+  nedra:        '#0891B2',  // циан — контраст к коричневой
+  waste:        '#1E40AF',  // тёмно-синий — контраст к красной
+  land_seizure: '#6B21A8',  // пурпур — контраст к оранжевой
+};
 const KGS_TYPE_ORDER = ['forest','nedra','waste','land_seizure'];
 
 // ── KZ-локализация модуля КГС: точечные переводы ru→kz; в ru возвращаем строку как есть.
@@ -5927,7 +5944,7 @@ function initKgsMap2(){
   if(!document.getElementById('mapKgsNew')) return;
   _kgsMap=L.map('mapKgsNew',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.0,67.0],5);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.5}).addTo(_kgsMap);
-  L.control.attribution({prefix:'🇰🇿 КГС'}).addTo(_kgsMap);
+  L.control.attribution({prefix: KZ_FLAG+'КГС'}).addTo(_kgsMap);
   const loadGeo = window._tzGeoData ? Promise.resolve(window._tzGeoData)
     : fetch('/border_regions.geojson').then(r=>r.json()).then(j=>{window._tzGeoData=j;return j;});
   loadGeo.then(geo=>{
@@ -5945,6 +5962,9 @@ function rerenderKgsMap(facts){
   if(!_kgsGeoLayer) return;
   const by={}; facts.forEach(f=>{ if(f.region) by[f.region]=(by[f.region]||0)+1; });
   const max=Math.max(...Object.values(by),1); const color=KGS_TYPES[kgsFilters.type].color;
+  // Синхронизируем swatch у чекбокса «Точки объектов» — цвет = KGS_POINT_COLORS[текущий тип].
+  const sw=document.getElementById('kgsPointsSwatch');
+  if(sw) sw.style.background = (kgsFilters.type==='all' ? '#0F172A' : (KGS_POINT_COLORS[kgsFilters.type]||'#0F172A'));
   _kgsGeoLayer.eachLayer(layer=>{
     const reg=layer._kgsReg||''; const cnt=by[reg]||0; const sel=kgsFilters.region===reg;
     layer.setStyle({fillColor: cnt?_kgsShade(color,cnt/max):'#f5f5f5', fillOpacity: cnt?0.7:0.15, weight: sel?3:1.2, color: sel?'#0d4d24':'#1B7A3A'});
@@ -5957,7 +5977,15 @@ function rerenderKgsMap(facts){
     if(show&&show.checked){
       const renderer=L.canvas({padding:0.5}); const all=facts.filter(f=>f.lat&&f.lng); const pts=all.slice(0,10000);
       if(all.length>pts.length) console.warn('KGS points capped at 10000 of '+all.length);
-      pts.forEach(f=>{ const m=L.circleMarker([f.lat,f.lng],{renderer,radius:3,fillColor:color,stroke:false,fillOpacity:0.6}); m.bindPopup(_kgsPopup(f)); _kgsPointsLayer.addLayer(m); });
+      // Точки — контрастный цвет к заливке региона + белая обводка, чтобы не сливались.
+      // При type='all' каждая точка красится по своему f.type; иначе — один цвет на всю выборку.
+      const isAll = kgsFilters.type === 'all';
+      const uniColor = KGS_POINT_COLORS[kgsFilters.type] || '#0F172A';
+      pts.forEach(f=>{
+        const fc = isAll ? (KGS_POINT_COLORS[f.type] || uniColor) : uniColor;
+        const m=L.circleMarker([f.lat,f.lng],{renderer,radius:4,fillColor:fc,color:'#fff',weight:1,opacity:0.9,fillOpacity:0.95});
+        m.bindPopup(_kgsPopup(f)); _kgsPointsLayer.addLayer(m);
+      });
     }
   }
 }
@@ -8792,7 +8820,7 @@ function initMainMap(){
   const _rc=ACTIVE_REGION&&REGION_CENTERS[ACTIVE_REGION];
   mapMainInst=L.map('mapMain',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView(_rc?[_rc[0],_rc[1]]:[48.0,66.0],_rc?_rc[2]:4);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:ACTIVE_REGION?1.0:0.45}).addTo(mapMainInst);
-  L.control.attribution({prefix:'🇰🇿 Таза Казахстан'}).addTo(mapMainInst);
+  L.control.attribution({prefix: KZ_FLAG+'Таза Казахстан'}).addTo(mapMainInst);
   const maxVal=Math.max(...Object.values(REAL_ECO).map(d=>d.total),1);
   fetch(KAZ_GEO_URL)
     .then(r=>{if(!r.ok)throw new Error(r.status);return r.json();})
@@ -10229,7 +10257,7 @@ function initNbdMap(){
   if(mapNbdInst||!document.getElementById('mapNbd')) return;
   mapNbdInst=L.map('mapNbd',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.5, 67.5], 5);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.6}).addTo(mapNbdInst);
-  L.control.attribution({prefix:'🇰🇿 НБД СОС'}).addTo(mapNbdInst);
+  L.control.attribution({prefix: KZ_FLAG+'НБД СОС'}).addTo(mapNbdInst);
 
   // Слой границ регионов (на самом нижнем уровне, под маркерами ПЭК)
   // Переиспользуем кэшированный GeoJSON если он уже загружен Тазой
@@ -10308,7 +10336,7 @@ function initKgsMap(){
   if(mapKgsInst||!document.getElementById('mapKgs')) return;
   mapKgsInst=L.map('mapKgs',{zoomControl:true,scrollWheelZoom:false,attributionControl:false}).setView([48.0,66.0],4);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.45}).addTo(mapKgsInst);
-  L.control.attribution({prefix:'🇰🇿 КГС'}).addTo(mapKgsInst);
+  L.control.attribution({prefix: KZ_FLAG+'КГС'}).addTo(mapKgsInst);
   kgsMapWaste=L.layerGroup().addTo(mapKgsInst);
   kgsMapLand=L.layerGroup().addTo(mapKgsInst);
   kgsMapNedra=L.layerGroup().addTo(mapKgsInst);
@@ -10501,7 +10529,7 @@ function initLeafletMap(){
   mapInit=true;
   mapLeaflet = L.map('mapLeaflet',{zoomControl:true,attributionControl:false}).setView([48.0,66.0],5);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:12}).addTo(mapLeaflet);
-  L.control.attribution({prefix:'🇰🇿 Таза Казахстан'}).addTo(mapLeaflet);
+  L.control.attribution({prefix: KZ_FLAG+'Таза Казахстан'}).addTo(mapLeaflet);
 
   // Стиль для подписей пузырьков
   const style = document.createElement('style');
