@@ -3365,8 +3365,67 @@ function renderMainCharts() {
   if (charCtx) _chartChar = new Chart(charCtx,{type:'doughnut',data:{labels:charLabels,datasets:[{data:charData,backgroundColor:['#dc2626','#d97706','#0891B2','#7c3aed','#16a34a','#9ca3af'],borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},color:'#6b7280',boxWidth:10,padding:8}}}}});
 }
 
+// ─── КОНФИГ ДАШБОРДА (national/region) ───────────────────────────────────────
+// Единый index.html обслуживает и национальный, и региональные дашборды.
+// Отличия описаны данными (dashboard_config.json), а не кодом. Дефолт = national,
+// поэтому при отсутствии/битом конфиге дашборд работает как раньше (страховка).
+const _CFG_DEFAULT = {
+  scope: "national",
+  title: "Единая Национальная система мониторинга экологии и благоустройства",
+  subtitle: "Smart Data Ukimet · Е-Өтініш · iKomek · Таза Қазақстан · НБД СОС · Қазақстан Ғарыш Сапары",
+  geo_level: "region",
+  show_region_selector: true,
+  map_center: [48.0, 68.0],
+  map_zoom: 4,
+  region_label: "По регионам",
+  hidden_tabs: [],
+};
+let _CFG = Object.assign({}, _CFG_DEFAULT);
+
+// Центр/зум карты: в региональном scope — из конфига (все карты на регион);
+// в национальном — дефолты каждой карты (у них разные центры, менять нельзя).
+// Возвращает [center, zoom] под spread: .setView(..._mapView([48,66],4)).
+function _mapView(defCenter, defZoom){
+  return (_CFG.scope === 'region') ? [_CFG.map_center, _CFG.map_zoom] : [defCenter, defZoom];
+}
+
+async function _loadConfig(){
+  try {
+    const r = await fetch('/data/dashboard_config.json');
+    if(r.ok){ const c = await r.json(); if(c && typeof c === 'object') _CFG = Object.assign({}, _CFG_DEFAULT, c); }
+  } catch(_){}
+  try { _applyConfig(); } catch(_){}
+}
+
+// Применяет конфиг к DOM. В национальном scope — НИЧЕГО не меняет (страховка).
+function _applyConfig(){
+  if(_CFG.scope === 'region'){
+    const ht = document.querySelector('.hdr-title'); if(ht && _CFG.title)    ht.textContent = _CFG.title;
+    const hs = document.querySelector('.hdr-sub');   if(hs && _CFG.subtitle) hs.textContent = _CFG.subtitle;
+    if(_CFG.title) document.title = _CFG.title;
+    if(_CFG.show_region_selector === false){
+      ['gReg', 'appealsRegion'].forEach(id => {
+        const el = document.getElementById(id); if(!el) return;
+        const wrap = el.closest('label, .fbar-item, .taza-fitem') || el; wrap.style.display = 'none';
+      });
+    }
+    // Заголовки блоков «По регионам» → region_label (этап 4 подменит на «По районам»)
+    if(_CFG.region_label){
+      const c12 = document.getElementById('c12Title'); // на этапе 4 — районный заголовок
+    }
+  }
+  // Заготовка под районный разрез (наполняется на этапе 4). Национальный —
+  // всегда ветка else, поведение без изменений.
+  if(_CFG.geo_level === 'raion'){
+    // этап 4 — районный разрез
+  } else {
+    // текущее поведение — без изменений
+  }
+}
+
 (async () => {
   try {
+    await _loadConfig();
     const [sRes, pRes, kgsRes, kgsMapRes, tzRes] = await Promise.all([
       fetch('/data/summary.json'),
       fetch('/data/preview.json'),
@@ -4825,7 +4884,7 @@ function _initTazaMap(){
   if(_tzMapInitPromise) return _tzMapInitPromise;
   _tzMapInitPromise = (async ()=>{
     const el = document.getElementById('mapTaza'); if(!el) return;
-    _tzMap = L.map('mapTaza', {zoomControl:true, preferCanvas:true, attributionControl:true}).setView([48.5, 67.5], 5);
+    _tzMap = L.map('mapTaza', {zoomControl:true, preferCanvas:true, attributionControl:true}).setView(..._mapView([48.5, 67.5], 5));
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
       {subdomains:'abcd', maxZoom:19, attribution: KZ_FLAG+'Таза Казахстан · &copy; OSM/Carto'}).addTo(_tzMap);
     _tzCanvas = L.canvas({padding:0.4});
@@ -6070,7 +6129,7 @@ function _kgsChipClear(i){
 function initKgsMap2(){
   if(_kgsMap){ setTimeout(()=>_kgsMap.invalidateSize(),200); return; }
   if(!document.getElementById('mapKgsNew')) return;
-  _kgsMap=L.map('mapKgsNew',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.0,67.0],5);
+  _kgsMap=L.map('mapKgsNew',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(..._mapView([48.0,67.0],5));
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.5}).addTo(_kgsMap);
   L.control.attribution({prefix: KZ_FLAG+'КГС'}).addTo(_kgsMap);
   const loadGeo = window._tzGeoData ? Promise.resolve(window._tzGeoData)
@@ -8989,7 +9048,7 @@ function goNews(cat){
 function initMainMap(){
   if(mapMainInst||!document.getElementById('mapMain')) return;
   const _rc=ACTIVE_REGION&&REGION_CENTERS[ACTIVE_REGION];
-  mapMainInst=L.map('mapMain',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(_rc?[_rc[0],_rc[1]]:[48.0,66.0],_rc?_rc[2]:4);
+  mapMainInst=L.map('mapMain',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(_rc?[_rc[0],_rc[1]]:_mapView([48.0,66.0],4)[0], _rc?_rc[2]:_mapView([48.0,66.0],4)[1]);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:ACTIVE_REGION?1.0:0.45}).addTo(mapMainInst);
   L.control.attribution({prefix: KZ_FLAG+'Таза Казахстан'}).addTo(mapMainInst);
   const maxVal=Math.max(...Object.values(REAL_ECO).map(d=>d.total),1);
@@ -10426,7 +10485,7 @@ function _matchRegionToGeo(s){
 
 function initNbdMap(){
   if(mapNbdInst||!document.getElementById('mapNbd')) return;
-  mapNbdInst=L.map('mapNbd',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.5, 67.5], 5);
+  mapNbdInst=L.map('mapNbd',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(..._mapView([48.5, 67.5], 5));
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.6}).addTo(mapNbdInst);
   L.control.attribution({prefix: KZ_FLAG+'НБД СОС'}).addTo(mapNbdInst);
 
@@ -10505,7 +10564,7 @@ function _restyleNbdChoro(){
 // ── КАРТА КГС ─────────────────────────────────────────────────────────────────
 function initKgsMap(){
   if(mapKgsInst||!document.getElementById('mapKgs')) return;
-  mapKgsInst=L.map('mapKgs',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.0,66.0],4);
+  mapKgsInst=L.map('mapKgs',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(..._mapView([48.0,66.0],4));
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.45}).addTo(mapKgsInst);
   L.control.attribution({prefix: KZ_FLAG+'КГС'}).addTo(mapKgsInst);
   kgsMapWaste=L.layerGroup().addTo(mapKgsInst);
@@ -10698,7 +10757,7 @@ function loadMapCSV(event, type){
 
 function initLeafletMap(){
   mapInit=true;
-  mapLeaflet = L.map('mapLeaflet',{zoomControl:true,attributionControl:false}).setView([48.0,66.0],5);
+  mapLeaflet = L.map('mapLeaflet',{zoomControl:true,attributionControl:false}).setView(..._mapView([48.0,66.0],5));
   L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:12}).addTo(mapLeaflet);
   L.control.attribution({prefix: KZ_FLAG+'Таза Казахстан'}).addTo(mapLeaflet);
 
@@ -12737,9 +12796,9 @@ async function initCorrelation(){
 
   const tile = ()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.6});
 
-  _corrMapL = L.map('corrMapEmissions',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.5,67.5],4);
+  _corrMapL = L.map('corrMapEmissions',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(..._mapView([48.5,67.5],4));
   tile().addTo(_corrMapL);
-  _corrMapR = L.map('corrMapComplaints',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView([48.5,67.5],4);
+  _corrMapR = L.map('corrMapComplaints',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(..._mapView([48.5,67.5],4));
   tile().addTo(_corrMapR);
 
   // Sync zoom/pan

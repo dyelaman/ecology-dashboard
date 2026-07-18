@@ -1,0 +1,11 @@
+{
+  "scope": "national",
+  "title": "Единая Национальная система мониторинга экологии и благоустройства",
+  "subtitle": "Smart Data Ukimet · Е-Өтініш · iKomek · Таза Қазақстан · НБД СОС · Қазақстан Ғарыш Сапары",
+  "geo_level": "region",
+  "show_region_selector": true,
+  "map_center": [48.0, 68.0],
+  "map_zoom": 4,
+  "region_label": "По регионам",
+  "hidden_tabs": []
+}
