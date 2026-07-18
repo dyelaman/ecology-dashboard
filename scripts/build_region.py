@@ -275,15 +275,45 @@ def build_emergency(cfg, out_dir):
     rep("emergency_emissions.json", None, os.path.join(out_dir, "emergency_emissions.json"), "нац. (fallback)")
 
 
-# ── C. Нерегионализируемые (нац. пред-агрегаты без region) — копируем ──────────
-NATIONAL_COPY = ["air_emissions.json", "fire_emissions.json",
-                 "water_emissions.json", "waste_accumulation.json"]
-def copy_national(out_dir):
-    for f in NATIONAL_COPY:
-        src = os.path.join(NAT, f)
-        if os.path.exists(src):
-            shutil.copy(src, os.path.join(out_dir, f))
-            rep(f, None, os.path.join(out_dir, f), "нац. (нет region-размерности)")
+# ── Накопленные отходы: регион по координатам места хранения (swap-aware) ──────
+# ACCUM_WASTE_CSV не имеет region-колонки, но есть waste_place_storage_coords
+# (JSON площадок). Фильтруем строки, чьи координаты попадают в границы области;
+# swap перепутанных lat/lng как у КГС. Пересобираем нац. билдером на отфильтр. df.
+def _accum_in_zone(coords_json, b):
+    if not isinstance(coords_json, str): return False
+    s = coords_json.strip()
+    if not s: return False
+    try: areas = json.loads(s)
+    except Exception: return False
+    def inz(lat, lng):
+        return lat is not None and lng is not None and \
+               b["latMin"] <= lat <= b["latMax"] and b["lngMin"] <= lng <= b["lngMax"]
+    for a in (areas if isinstance(areas, list) else []):
+        for c in (a.get("coords") or []):
+            if isinstance(c, (list, tuple)) and len(c) >= 2:
+                try: x, y = float(c[0]), float(c[1])
+                except Exception: continue
+                if inz(x, y) or inz(y, x):        # swap-aware
+                    return True
+    return False
+
+
+def build_accum(cfg, out_dir):
+    import process_data as P
+    b = cfg["map"]["bounds"]
+    df = P.read_csv(P.ACCUM_WASTE_CSV, "Накопленные отходы")
+    col = "waste_place_storage_coords"
+    if col in df.columns:
+        df = df[df[col].apply(lambda s: _accum_in_zone(s, b))].copy()
+    waste = P.process_accumulation_waste(df)
+    p = write(out_dir, "waste_accumulation.json", waste)
+    n = (waste.get("kpi") or {}).get("n_sites", len(df))
+    rep("waste_accumulation.json", n, p, "регион по координатам склада (swap-aware)")
+
+
+# ── Мёртвые файлы (0 ссылок в index.html) — НЕ копируем ────────────────────────
+# air_emissions / fire_emissions / water_emissions — легаси, вкладка НБД читает
+# nbd_facts.json. В регион не тащим (и в национальном это техдолг).
 
 
 def build_config(cfg, out_dir):
@@ -325,7 +355,7 @@ def main():
     build_nbd(cfg, out_dir)
     build_pek(cfg, out_dir)
     build_emergency(cfg, out_dir)
-    copy_national(out_dir)
+    build_accum(cfg, out_dir)
     build_config(cfg, out_dir)
 
     vn, rn = verify(out_dir)
