@@ -964,7 +964,7 @@ input[type=file]{display:none}
       <div class="region-list-scroll"><div class="rc-host" style="height:260px"><canvas id="c12"></canvas></div></div>
     </div>
     <div class="card" id="blkRegLate" style="padding:12px">
-      <div class="block-title" style="margin-top:0">Просрочено по регионам</div>
+      <div class="block-title" style="margin-top:0" id="cRegLateTitle">Просрочено по регионам</div>
       <div class="region-list-scroll"><div class="rc-host" style="height:260px"><canvas id="cRegLate"></canvas></div></div>
     </div>
     <div class="card" id="blkExecutors" style="padding:12px;display:flex;flex-direction:column">
@@ -7125,7 +7125,9 @@ function _rechartOnFilter(){
   const reg=document.getElementById('gReg')?.value||'all';
   const type=document.getElementById('gType')?.value||'all';
   const year=document.getElementById('gYear')?.value||'all';
-  if(c12Chart){
+  // В region+raion c12/cRegLate — районный разрез (владеет applyTimeEngine),
+  // региональную пере-сборку из REAL_ECO/_CROSS пропускаем.
+  if(c12Chart && !(typeof _raionActive==='function' && _raionActive())){
     const c12TitleEl=document.getElementById('c12Title');
     const trunc12=n=>n;
     if(reg!=='all'){
@@ -8645,8 +8647,9 @@ function applyTimeEngine(){
     _engSetChart('cRegLate', dLate, 0, '_dist');
     _fitRegionCanvas('c12', dPairs.length);
     _fitRegionCanvas('cRegLate', dLate.length);
-    const lbl=_CFG.region_label||'По районам';
-    const t1=document.getElementById('c12Title'); if(t1) t1.textContent='Количество обращений · '+lbl.toLowerCase();
+    const lbl=(_CFG.region_label||'По районам').toLowerCase();
+    const t1=document.getElementById('c12Title'); if(t1) t1.textContent='Количество обращений · '+lbl;
+    const t2=document.getElementById('cRegLateTitle'); if(t2) t2.textContent='Просрочено · '+lbl;
   } else {
   const regPairs=pairsOf(regTot,_AC.regions), latePairs=pairsOf(regLate,_AC.regions);
   _engSetChart('c12', regPairs, 0, 'gReg');
