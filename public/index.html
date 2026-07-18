@@ -1524,7 +1524,7 @@ input[type=file]{display:none}
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
     <div class="card"><div class="card-title">Регионы по обращениям</div>
-      <div class="cw" style="height:270px"><canvas id="c12"></canvas></div></div>
+      <div class="cw" style="height:270px"><canvas id="c12b"></canvas></div></div>
     <div class="card"><div class="card-title">Темы обращений (Экология)</div>
       <div class="cw" style="height:270px"><canvas id="c13"></canvas></div></div>
     <div class="card" style="padding:12px"><div class="card-title" style="margin-bottom:10px">Органы-исполнители</div>
@@ -7135,9 +7135,10 @@ function _rechartOnFilter(){
   const reg=document.getElementById('gReg')?.value||'all';
   const type=document.getElementById('gType')?.value||'all';
   const year=document.getElementById('gYear')?.value||'all';
-  // В region+raion c12/cRegLate — районный разрез (владеет applyTimeEngine),
-  // региональную пере-сборку из REAL_ECO/_CROSS пропускаем.
-  if(c12Chart && !(typeof _raionActive==='function' && _raionActive())){
+  // В raion-конфиге c12/cRegLate — районный разрез (владеет applyTimeEngine),
+  // региональную пере-сборку из REAL_ECO/_CROSS пропускаем (по конфигу, чтобы
+  // не мелькнуть регионами до загрузки сайдкара).
+  if(c12Chart && !(typeof _CFG!=='undefined' && _CFG.geo_level==='raion')){
     const c12TitleEl=document.getElementById('c12Title');
     const trunc12=n=>n;
     if(reg!=='all'){
@@ -7427,10 +7428,11 @@ function renderRegLateChart(){
   if(!el) return;
   // region+raion: baseline по РАЙОНАМ (без гонки с applyTimeEngine)
   const _rb=(typeof _raionBars==='function')?_raionBars():null;
+  const _raionCfg=(typeof _CFG!=='undefined' && _CFG.geo_level==='raion');
   const data = _rb
     ? _rb.late.map(p=>({name:p[0],late:p[1]}))
-    : Object.entries(REAL_ECO).map(([name,d])=>({name,late:d.late||0})).filter(d=>d.late>0).sort((a,b)=>b.late-a.late);
-  if(_rb){ const _t=document.getElementById('cRegLateTitle'); if(_t)_t.textContent='Просрочено · '+(_CFG.region_label||'По районам').toLowerCase(); }
+    : (_raionCfg ? [] : Object.entries(REAL_ECO).map(([name,d])=>({name,late:d.late||0})).filter(d=>d.late>0).sort((a,b)=>b.late-a.late));
+  if(_rb||_raionCfg){ const _t=document.getElementById('cRegLateTitle'); if(_t)_t.textContent='Просрочено · '+(_CFG.region_label||'По районам').toLowerCase(); }
   if(cRegLateChart) cRegLateChart.destroy();
   cRegLateChart=new Chart(el,{type:'bar',data:{
     labels:data.map(d=>d.name),
@@ -7500,8 +7502,11 @@ setTimeout(()=>{
   // Обращения — реальные данные. В region+raion baseline рендерим сразу РАЙОНЫ
   // (без гонки с applyTimeEngine): бары/клик по району.
   const _rb = (typeof _raionBars==='function') ? _raionBars() : null;
-  const topR = _rb ? _rb.tot : Object.entries(REAL_ECO).sort((a,b)=>b[1].total-a[1].total).map(([n,d])=>[n,d.total]);
-  const _isR = !!_rb;
+  const _raionCfg = (typeof _CFG!=='undefined' && _CFG.geo_level==='raion');
+  // В raion-конфиге НИКОГДА не показываем регионы: если сайдкар ещё не загружен —
+  // пусто (applyTimeEngine дозаполнит районами), иначе был бы мельк «Астана/Алматы».
+  const topR = _rb ? _rb.tot : (_raionCfg ? [] : Object.entries(REAL_ECO).sort((a,b)=>b[1].total-a[1].total).map(([n,d])=>[n,d.total]));
+  const _isR = !!_rb || _raionCfg;
   c12Chart=new Chart(document.getElementById('c12'),{type:'bar',data:{labels:topR.map(p=>p[0]),datasets:[{label:'Обращений',data:topR.map(p=>p[1]),backgroundColor:'#0891B2',borderRadius:3,datalabels:_regBarDataLabels('#0E7490')}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:40}},plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(128,128,128,0.08)'},ticks:{font:{size:10},color:'#9ca3af'}},y:{grid:{display:false},ticks:{font:{size:10},color:'#9ca3af',callback:_truncTick}}},onHover:(e,els)=>{if(e.native)e.native.target.style.cursor=els.length?'pointer':'default';},onClick:(e,els)=>{if(!els.length)return;const v=topR[els[0].index]?.[0];if(!v)return;if(_isR){_toggleDist(v);}else if(typeof _mToggle==='function'){_mToggle('gReg', v); onGlobalFilter();}}}});
   _fitRegionCanvas('c12',topR.length);
   if(_isR){ const _t=document.getElementById('c12Title'); if(_t)_t.textContent='Количество обращений · '+(_CFG.region_label||'По районам').toLowerCase(); }
