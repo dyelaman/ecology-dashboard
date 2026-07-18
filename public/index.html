@@ -8643,13 +8643,13 @@ function applyTimeEngine(){
     // Разрез по РАЙОНАМ (клик → фильтр по району). Имена — конфиг-канонические.
     const dPairs=[...distMap.entries()].map(([k,v])=>[k,v.t]).filter(p=>p[1]>0).sort((a,b)=>b[1]-a[1]);
     const dLate=[...distMap.entries()].map(([k,v])=>[k,v.l]).filter(p=>p[1]>0).sort((a,b)=>b[1]-a[1]);
-    _engSetChart('c12', dPairs, 0, '_dist');
-    _engSetChart('cRegLate', dLate, 0, '_dist');
-    _fitRegionCanvas('c12', dPairs.length);
-    _fitRegionCanvas('cRegLate', dLate.length);
+    // Заголовки — первыми (не бросают), затем чарты в try (Chart.js иногда кидает
+    // на _fitRegionCanvas/getChart если чарт ещё не готов — заголовок не должен теряться).
     const lbl=(_CFG.region_label||'По районам').toLowerCase();
     const t1=document.getElementById('c12Title'); if(t1) t1.textContent='Количество обращений · '+lbl;
     const t2=document.getElementById('cRegLateTitle'); if(t2) t2.textContent='Просрочено · '+lbl;
+    try { _engSetChart('c12', dPairs, 0, '_dist'); _fitRegionCanvas('c12', dPairs.length); } catch(_){}
+    try { _engSetChart('cRegLate', dLate, 0, '_dist'); _fitRegionCanvas('cRegLate', dLate.length); } catch(_){}
   } else {
   const regPairs=pairsOf(regTot,_AC.regions), latePairs=pairsOf(regLate,_AC.regions);
   _engSetChart('c12', regPairs, 0, 'gReg');
