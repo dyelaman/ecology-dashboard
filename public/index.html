@@ -9097,7 +9097,10 @@ function initMainMap(){
           layer.bindTooltip(_richRegionTooltip(ecoKey,displayName),{sticky:true,maxWidth:260,className:''});
         }
       }).addTo(mapMainInst);
-      mapMainInst.fitBounds(geoLayerMain.getBounds(),{padding:[8,8]});
+      // Национальный: подгоняем под всю границу РК. Региональный: geojson всё равно
+      // национальный (все регионы) → fitBounds дал бы вид на страну; оставляем
+      // центр/зум области из конфига.
+      if(_CFG.scope !== 'region') mapMainInst.fitBounds(geoLayerMain.getBounds(),{padding:[8,8]});
     })
     .catch(err=>console.warn('GeoJSON load failed:',err));
   setTimeout(()=>mapMainInst.invalidateSize(),400);
