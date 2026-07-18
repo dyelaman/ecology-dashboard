@@ -1899,15 +1899,27 @@ def make_appeals_compact(df, top_orgs):
     dt = dt[mask]
     ymd = (dt.dt.year * 10000 + dt.dt.month * 100 + dt.dt.day).astype("int64")
 
-    regions = sorted(d["_region"].dropna().astype(str).unique().tolist())
-    cats    = sorted(d["_category"].dropna().astype(str).unique().tolist())
-    types   = sorted(d["appeal_type"].dropna().astype(str).unique().tolist())
-    issues  = sorted(d["issue"].dropna().astype(str).unique().tolist())
-    subs    = sorted(d["_subissue"].dropna().astype(str).unique().tolist())
+    # ВАЖНО: раньше несопоставленные строки шли fillna(0) → индекс 0 словаря,
+    # а regions/cats/... отсортированы → индекс 0 = первый по алфавиту («Абайская»
+    # для регионов). Это фиктивно завышало первый элемент (Абайская +17k «безрегионных»).
+    # Фикс: явный бакет «Не указан» в КОНЕЦ каждого словаря (не сдвигает индексы
+    # существующих значений → производные/чанки/сайдкар остаются валидными),
+    # несопоставленные строки → этот индекс.
+    def _with_unknown(vals, label="Не указан"):
+        vals = sorted(vals)
+        if label not in vals:
+            vals = vals + [label]            # только в конец
+        return vals, vals.index(label)
+
+    regions, NO_REG = _with_unknown(d["_region"].dropna().astype(str).unique().tolist())
+    cats,    NO_CAT = _with_unknown(d["_category"].dropna().astype(str).unique().tolist())
+    types,   NO_TYP = _with_unknown(d["appeal_type"].dropna().astype(str).unique().tolist())
+    issues,  NO_ISS = _with_unknown(d["issue"].dropna().astype(str).unique().tolist())
+    subs,    NO_SUB = _with_unknown(d["_subissue"].dropna().astype(str).unique().tolist())
     # Топ-200 организаций — для поддержки фильтра «Орган-исполнитель»
     top_orgs_full = top_n(df["org_name"], 200)
     org_list = [str(o) for o, _ in top_orgs_full]
-    OTHER = len(org_list)
+    OTHER = len(org_list)  # орг уже имеет корректный бакет «Прочие» (не index 0)
 
     ri = {v: i for i, v in enumerate(regions)}
     ci = {v: i for i, v in enumerate(cats)}
@@ -1917,13 +1929,18 @@ def make_appeals_compact(df, top_orgs):
     oi = {v: i for i, v in enumerate(org_list)}
     st = {"work": 0, "done": 1, "late": 2, "latedone": 3}
 
-    reg_i = d["_region"].astype(str).map(ri).fillna(0).astype("int64")
-    cat_i = d["_category"].astype(str).map(ci).fillna(0).astype("int64")
-    typ_i = d["appeal_type"].astype(str).map(ti).fillna(0).astype("int64")
-    iss_i = d["issue"].astype(str).map(ii).fillna(0).astype("int64")
-    sub_i = d["_subissue"].astype(str).map(si).fillna(0).astype("int64")
+    reg_i = d["_region"].astype(str).map(ri).fillna(NO_REG).astype("int64")
+    cat_i = d["_category"].astype(str).map(ci).fillna(NO_CAT).astype("int64")
+    typ_i = d["appeal_type"].astype(str).map(ti).fillna(NO_TYP).astype("int64")
+    iss_i = d["issue"].astype(str).map(ii).fillna(NO_ISS).astype("int64")
+    sub_i = d["_subissue"].astype(str).map(si).fillna(NO_SUB).astype("int64")
     org_i = d["org_name"].astype(str).map(lambda o: oi.get(o, OTHER)).astype("int64")
     st_i  = d["_status"].astype(str).map(st).fillna(0).astype("int64")
+
+    # Диагностика: сколько строк попало в бакет «Не указан» по каждому полю
+    print(f"  «Не указан» бакеты: регион={int((reg_i==NO_REG).sum()):,} "
+          f"катег={int((cat_i==NO_CAT).sum()):,} тип={int((typ_i==NO_TYP).sum()):,} "
+          f"вопрос={int((iss_i==NO_ISS).sum()):,} подвопрос={int((sub_i==NO_SUB).sum()):,}")
 
     # Министерство по органу
     if "_ministry" not in d.columns:

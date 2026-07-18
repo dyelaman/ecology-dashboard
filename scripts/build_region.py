@@ -319,9 +319,13 @@ def build_accum(cfg, out_dir):
 def build_config(cfg, out_dir):
     dc = {
         "scope": "region", "title": cfg["title"], "subtitle": cfg["subtitle"],
+        "region_name": cfg.get("region_name", ""),
         "geo_level": cfg["geo_level"], "show_region_selector": cfg["show_region_selector"],
         "map_center": cfg["map_center"], "map_zoom": cfg["map_zoom"],
         "region_label": cfg["region_label"], "hidden_tabs": cfg.get("hidden_tabs", []),
+        # для клиентского разреза КГС по районам (вкладка «Районы»)
+        "districts": cfg.get("districts", []),
+        "district_normalize": cfg.get("district_normalize", {}),
     }
     p = write(out_dir, "dashboard_config.json", dc); rep("dashboard_config.json", None, p)
 
