@@ -3417,6 +3417,7 @@ function renderMainCharts() {
     if(typeof _loadIkomek === 'function') _loadIkomek();
     fetch('/data/taza_compact.json').then(r=>r.json()).then(tc=>{
       _TAZA=tc; populateTazaFilters(); try { _updateTazaPeriodSub(); } catch(_){}
+      try { _updateTazaKpi(); } catch(_){}  // первый расчёт KPI (если фильтры уже активны при загрузке)
       if(document.getElementById('panel-taza')?.classList.contains('active') && tazaEngineFilterActive()) rerenderTaza();
     }).catch(e=>console.warn('taza_compact load failed:',e.message));
     fetch('/data/appeals_compact.json').then(r=>r.json()).then(ac=>{
@@ -3666,6 +3667,90 @@ function _updateTazaPeriodSub(){
   setEl('tzPeriod',   `${prefix} ${fmt(min)} — ${fmt(max)}`);
 }
 
+// ─── Таза KPI на главной: реактивен к фильтрам вкладки «Обращения» ───
+// Полный аналог iKomek (_ikMatchRegion / _ikComputeFiltered / _updateIkomekKpi),
+// но поверх уже существующего _TAZA (тот же датасет, что и вкладка «Таза»).
+// Учитывает период (год/месяц/день/диапазон) + регион (мульти-select _mSel.gReg).
+// Локальные фильтры вкладки Таза НЕ трогаем — здесь только глобальные, как у iKomek.
+
+// _TAZA.regions в ПОЛНЫХ формах («Актюбинская область», «Алматы», «Шымкент»).
+// Глобальный фильтр приходит в коротких формах (_AC: «Актюбинская», «ВКО», …).
+function _tazaMatchRegion(name){
+  if(!_TAZA || !name) return null;
+  const R = _TAZA.regions;
+  if(R.includes(name)) return name;
+  // короткая форма → + « область» («Актюбинская» / «Алматинская обл.» → …ская область)
+  const base = name.replace(/\s*(обл\.?|область)$/i, '').trim();
+  const full = base + ' область';
+  if(R.includes(full)) return full;
+  // аббревиатуры двусоставных регионов
+  if(/^вко$|восточно-казах/i.test(name) && R.includes('Восточно-Казахстанская область')) return 'Восточно-Казахстанская область';
+  if(/^зко$|западно-казах/i.test(name) && R.includes('Западно-Казахстанская область')) return 'Западно-Казахстанская область';
+  if(/^ско$|северо-казах/i.test(name) && R.includes('Северо-Казахстанская область')) return 'Северо-Казахстанская область';
+  // «город X» → «X» (Астана/Алматы/Шымкент)
+  const noCity = name.replace(/^город\s+/i, '').trim();
+  if(noCity !== name && R.includes(noCity)) return noCity;
+  return null;
+}
+
+// Считает заявки Таза под текущим набором глобальных фильтров (один проход по _TAZA).
+function _tazaComputeFiltered(){
+  if(!_TAZA) return null;
+  const D=_TAZA.data, W=_TAZA.w, N=_TAZA.n;
+  const yF=document.getElementById('gYear')?.value||'all';
+  const mF=document.getElementById('gMonth')?.value||'all';
+  const dF=document.getElementById('gDay')?.value||'all';
+  const dfStr=document.getElementById('gDateFrom')?.value||'';
+  const dtStr=document.getElementById('gDateTo')?.value||'';
+  const yN=yF==='all'?-1:+yF, mN=mF==='all'?-1:+mF, dN=dF==='all'?-1:+dF;
+  const toYmd = s => s ? +s.slice(0,10).replace(/-/g,'') : 0;
+  const dfInt = toYmd(dfStr), dtInt = toYmd(dtStr) || 99999999;
+
+  // Мульти-регион (тот же _mSel.gReg, что и у iKomek)
+  let allowedReg = null;
+  const wantsReg = (typeof _mSel!=='undefined' && _mSel.gReg && _mSel.gReg.size>0) ? _mSel.gReg : null;
+  if(wantsReg){
+    allowedReg = new Uint8Array(_TAZA.regions.length);
+    let matched = 0;
+    for(const nm of wantsReg){
+      const m = _tazaMatchRegion(nm);
+      if(m){ const i = _TAZA.regions.indexOf(m); if(i>=0){ allowedReg[i]=1; matched++; } }
+    }
+    if(matched === 0) return {total:0, regionUnknown:true};
+  }
+
+  let total=0;
+  for(let i=0;i<N;i++){
+    const o=i*W, ymd=D[o];
+    const yy=(ymd/10000)|0, mm=((ymd/100)|0)%100, dd=ymd%100;
+    if(yN>=0 && yy!==yN) continue;
+    if(mN>=0 && mm!==mN) continue;
+    if(dN>=0 && dd!==dN) continue;
+    if(dfStr && ymd<dfInt) continue;
+    if(dtStr && ymd>dtInt) continue;
+    if(allowedReg && !allowedReg[D[o+1]]) continue;
+    total++;
+  }
+  return {total, regionUnknown:false};
+}
+
+// Обновляет карточку #kpiTaza — зеркало _updateIkomekKpi.
+function _updateTazaKpi(){
+  const val = document.getElementById('kpiTaza');
+  const sub = document.getElementById('kpiTazaSub');
+  if(!val) return;
+  if(typeof ACTIVE_REGION!=='undefined' && ACTIVE_REGION) return; // deep-link режим пишет своё
+  if(!_TAZA){ try { _updateTazaPeriodSub(); } catch(_){} return; } // ещё не загружен — baseline-период
+  const filtersActive = (typeof engineFilterActive==='function') && engineFilterActive();
+  const r = _tazaComputeFiltered();
+  val.textContent = r.total.toLocaleString('ru-RU');
+  if(sub){
+    if(!filtersActive) _updateTazaPeriodSub();                 // baseline: «заявок · дата — дата»
+    else if(r.regionUnknown) sub.textContent = 'нет заявок Таза в этом регионе';
+    else sub.textContent = 'по выбранным фильтрам';
+  }
+}
+
 // Период данных iKomek — макс/мин ymd из _IK.data (per-call YMD, w=5).
 // Возвращает «данные: 01.04.2019 — 19.04.2026». Если _IK не загружен —
 // возвращает fallback «с 01.04.2019».
@@ -3767,6 +3852,7 @@ function applyRealKPIs() {
     setEl('envEmergDelta', `Jan–Apr ${em.cur_year}: ${em.cur_ytd.toLocaleString('ru-RU')} vs ${em.cur_year-1}: ${em.prev_ytd.toLocaleString('ru-RU')} (${sign}${em.delta_ytd})`);
   }
   _updateIkomekKpi();
+  _updateTazaKpi();
 }
 
 const EM_COLORS=['#dc2626','#d97706','#7c3aed','#0891B2','#16a34a','#f97316','#6b7280','#0ea5e9','#84cc16','#e879f9'];
@@ -8653,6 +8739,7 @@ function onGlobalFilter(){
   _g(()=>{ if(engineFilterActive()) applyTimeEngine(); });
   _g(()=>_updateMapPeriodTag());
   _g(()=>_updateIkomekKpi());
+  _g(()=>_updateTazaKpi());
 }
 
 function applyGlobalFiltersToCharts(){
@@ -8885,6 +8972,7 @@ function resetGlobalFilter(){
   // onGlobalFilter после reset, т.к. engineFilterActive=false).
   _gR(()=>{ if(_AC && typeof applyTimeEngine==='function') applyTimeEngine(); });
   _gR(()=>_updateIkomekKpi && _updateIkomekKpi());
+  _gR(()=>_updateTazaKpi && _updateTazaKpi());
   _gR(()=>{ if(typeof renderIkomekMainTab==='function') renderIkomekMainTab(); });
   // свернуть доп. фильтры
   const adv=document.getElementById('fbarAdvanced');
