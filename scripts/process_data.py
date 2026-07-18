@@ -74,6 +74,23 @@ REGION_MAP = {
     "область Ұлытау":                 "Улытауская",
 }
 
+
+def norm_raion(s):
+    """Нормализация написания района (национально-безопасная, для сайдкара
+    appeals_raion.json). Поле raion обращений уже относительно чистое:
+    «Мугалжарский район» / «Актобе Г.А.». Приводим городской маркер «X Г.А.»
+    → «г. X» (работает для любого региона), пустые/прочерки → «» (нет района).
+    Региональные опечатки написаний (если появятся) добавляются точечно ниже."""
+    s = (str(s) if s is not None else "").strip()
+    low = s.lower()
+    if not s or low in ("—", "-", "nan", "none", "null", "не указан", "не указано"):
+        return ""
+    # «Актобе Г.А.» / «Актобе ГА» / «Актобе г.а.» → «г. Актобе»
+    m = re.match(r"^(.+?)\s+г\.?\s*а\.?$", s, re.I)
+    if m:
+        return "г. " + m.group(1).strip()
+    return s
+
 # Укороченные названия категорий обращений
 CATEGORY_SHORT = {
     "ИСПОЛЬЗОВАНИЕ ПРИРОДНО-СЫРЬЕВЫХ, ЗЕМЕЛЬНЫХ И ВОДНЫХ РЕСУРСОВ, ЭКОЛОГИЯ И УТИЛИЗАЦИЯ": "Экология и природные ресурсы",
@@ -1943,6 +1960,33 @@ def make_appeals_compact(df, top_orgs):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, separators=(",", ":"))
     print(f"  appeals_compact.json → {os.path.getsize(path)/1024:,.0f} KB ({out['n']:,} обращений)")
+
+    # ── Сайдкар районов: appeals_raion.json ──────────────────────────────────
+    # Параллельный файл к appeals_compact.json — НЕ меняет сам компакт (w=10).
+    # Национальный дашборд его не грузит; читает только build_region.py
+    # (региональные дашборды), сверяя n. idx[i] выровнен по той же строке d,
+    # что и mat (тот же порядок) → district = districts[idx[i]].
+    # districts[0] всегда "" (район не указан).
+    if "raion" in d.columns:
+        raion_norm = d["raion"].map(norm_raion).fillna("")
+    else:
+        raion_norm = pd.Series([""] * len(d), index=d.index)
+    # Словарь районов: "" всегда индекс 0, дальше по порядку появления (стабильно — sorted)
+    uniq = sorted(set(raion_norm.tolist()) - {""})
+    districts = [""] + uniq
+    didx = {v: i for i, v in enumerate(districts)}
+    raion_i = raion_norm.map(didx).fillna(0).astype("int64")
+    side = {
+        "n": int(mat.shape[0]),
+        "districts": districts,
+        "idx": raion_i.values.tolist(),
+    }
+    spath = os.path.join(OUT_DIR, "appeals_raion.json")
+    with open(spath, "w", encoding="utf-8") as f:
+        json.dump(side, f, ensure_ascii=False, separators=(",", ":"))
+    filled = int((raion_i > 0).sum())
+    print(f"  appeals_raion.json  → {os.path.getsize(spath)/1024:,.0f} KB "
+          f"({len(districts)-1} районов, {filled:,}/{side['n']:,} с районом)")
 
 
 # ── MAIN ─────────────────────────────────────────────────────────────────────
