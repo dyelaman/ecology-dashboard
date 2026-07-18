@@ -3413,6 +3413,12 @@ function _applyConfig(){
     if(_CFG.region_label){
       const c12 = document.getElementById('c12Title'); // на этапе 4 — районный заголовок
     }
+    // mapMain инитится через setTimeout(500) независимо от _loadConfig — гонка:
+    // если карта успела создаться на нац.дефолте до прихода конфига, пере-центрируем.
+    // (Карты остальных вкладок инитятся по клику — всегда после конфига.)
+    if(typeof mapMainInst !== 'undefined' && mapMainInst){
+      try { mapMainInst.setView(_CFG.map_center, _CFG.map_zoom); } catch(_){}
+    }
   }
   // Заготовка под районный разрез (наполняется на этапе 4). Национальный —
   // всегда ветка else, поведение без изменений.
