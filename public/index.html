@@ -2680,7 +2680,10 @@ function switchTab(id, el) {
     if(!_tzInited && window._DATA_TAZA){ _tzInited=true; renderTazaTab(window._DATA_TAZA); _renderTazaMap(window._DATA_TAZA); }
     else if(_tzInited) { _renderTazaMap(); }
     if(typeof populateTazaFilters==='function') populateTazaFilters();
-    if(typeof tazaEngineFilterActive==='function' && tazaEngineFilterActive() && typeof rerenderTaza==='function') rerenderTaza();
+    // Всегда прогоняем движок при открытии: «Динамика заявок» строится из byDay,
+    // который даёт только applyTazaEngine (renderTazaTab(taza_kz) его не содержит).
+    // Без этого график пуст, пока не тронут фильтр. Оба scope.
+    if(_TAZA && typeof rerenderTaza==='function') rerenderTaza();
     // Таблица заявок (ленивая инициализация + загрузка датасета 1 раз)
     try { _tazaTableInit(); if(_TAZA) _loadTazaTable(); } catch(_){}
   }
