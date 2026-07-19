@@ -106,17 +106,27 @@ def build_ikomek(cfg, out_dir):
 
 
 def build_taza(cfg, out_dir):
+    import statistics
+    from collections import defaultdict, Counter
     pats = cfg["region_patterns"]
-    # taza_compact — w=9, region idx 1
+    # taza_compact — w=9: [ymd, region, cat, status, rating, overdue, lat10k, lon10k, closed_days]
     tc = load("taza_compact.json")
     regs = tc["regions"]; ok = {i for i, r in enumerate(regs) if matches(r, pats)}
-    w, data = tc["w"], tc["data"]
-    keep_idx = [i for i in range(tc["n"]) if data[i*w+1] in ok]     # индексы строк
-    out_tc = dict(tc); out_tc["n"] = len(keep_idx)
-    out_tc["data"] = [v for i in keep_idx for v in data[i*w:(i+1)*w]]
-    p = write(out_dir, "taza_compact.json", out_tc); rep("taza_compact.json", len(keep_idx), p)
+    w, data, F = tc["w"], tc["data"], {f: i for i, f in enumerate(tc["fields"])}
+    keep_idx = [i for i in range(tc["n"]) if data[i*w+F["region"]] in ok]
 
-    # taza_table — параллельные массивы, порядок 1:1 с taza_compact → те же keep_idx
+    # Переиндекс регионов на ПРИСУТСТВУЮЩИЕ (иначе селектор Таза показывает все 20).
+    present = sorted({regs[data[i*w+F["region"]]] for i in keep_idx})
+    reg_new = {nm: j for j, nm in enumerate(present)}
+    out_tc = dict(tc); out_tc["regions"] = present; out_tc["n"] = len(keep_idx)
+    flat = []
+    for i in keep_idx:
+        row = list(data[i*w:(i+1)*w]); row[F["region"]] = reg_new[regs[row[F["region"]]]]
+        flat += row
+    out_tc["data"] = flat
+    p = write(out_dir, "taza_compact.json", out_tc); rep("taza_compact.json", len(keep_idx), p, "регионы переиндекс.")
+
+    # taza_table — параллельные массивы, порядок 1:1 → те же keep_idx
     tt = load("taza_table.json")
     out_tt = {"n": len(keep_idx), "fields": tt["fields"]}
     for k in tt["fields"]:
@@ -126,12 +136,51 @@ def build_taza(cfg, out_dir):
             out_tt[k] = tt[k]
     p = write(out_dir, "taza_table.json", out_tt); rep("taza_table.json", len(keep_idx), p, "✓ выровнен")
 
-    # taza_kz — сводка/карта. Пересобираем по-минимуму: фильтруем region-срезы если есть.
-    tk = load("taza_kz.json")
-    out_tk = dict(tk)
-    if isinstance(tk.get("by_region"), dict):
-        out_tk["by_region"] = {k: v for k, v in tk["by_region"].items() if matches(k, pats)}
-    p = write(out_dir, "taza_kz.json", out_tk); rep("taza_kz.json", len(keep_idx), p, "срез by_region")
+    # taza_kz — ПОЛНЫЙ пересчёт из отфильтрованных строк (trap #2): раньше total/агрегаты
+    # оставались национальными (48375 vs 907). status: 0=DONE,1=CANCELLED,2=WORKING,3=CREATED,4=RETURNED.
+    cats = tc["cats"]; rows = [data[i*w:(i+1)*w] for i in keep_idx]
+    total = len(rows); done = cancelled = in_work = overdue = 0; cd = []
+    by_cat = defaultdict(lambda: {"total": 0, "done": 0, "overdue": 0, "days": []}); monthly = Counter()
+    for r in rows:
+        st, ovd, ci, cld, ymd = r[F["status"]], r[F["overdue"]] == 1, r[F["cat"]], r[F["closed_days"]], r[F["ymd"]]
+        if st == 0: done += 1
+        elif st == 1: cancelled += 1
+        elif st in (2, 3, 4): in_work += 1
+        if ovd: overdue += 1
+        if cld >= 0: cd.append(cld)
+        bc = by_cat[ci]; bc["total"] += 1
+        if st == 0: bc["done"] += 1; (cld >= 0) and bc["days"].append(cld)
+        if ovd: bc["overdue"] += 1
+        monthly[f"{ymd//10000}-{(ymd//100)%100:02d}"] += 1
+    med = round(statistics.median(cd), 1) if cd else 0
+    avg = round(statistics.mean(cd), 1) if cd else 0
+    cats_out = []
+    for ci, v in sorted(by_cat.items(), key=lambda x: -x[1]["total"]):
+        c = cats[ci] if 0 <= ci < len(cats) else {}
+        cats_out.append({"id": c.get("id", str(ci)), "name": c.get("name_ru", f"Категория {ci}"),
+                         "total": v["total"], "done": v["done"],
+                         "done_pct": round(v["done"]/v["total"]*100, 1) if v["total"] else 0,
+                         "overdue": v["overdue"],
+                         "avg_days": round(statistics.mean(v["days"]), 1) if v["days"] else None})
+    # by_region + satisfaction берём из нац. taza_kz (там уже посчитаны рейтинг/жалобы по региону)
+    nat = load("taza_kz.json")
+    by_region = [r for r in nat.get("by_region", []) if matches(r.get("name", ""), pats)]
+    satisfaction = [s for s in nat.get("satisfaction", []) if matches(s.get("region", ""), pats)]
+    yms = sorted(monthly)
+    out_tk = {
+        "total": total, "done": done, "done_pct": round(done/total*100, 1) if total else 0,
+        "cancelled": cancelled, "in_work": in_work, "overdue": overdue,
+        "overdue_pct": round(overdue/total*100, 1) if total else 0,
+        "median_days": med, "avg_days": avg,
+        "period_from": yms[0] if yms else "", "period_to": yms[-1] if yms else "",
+        "categories": cats_out, "by_region": by_region,
+        "monthly": [{"ym": k, "total": monthly[k]} for k in yms],
+        "satisfaction": satisfaction,
+        "speed": {"same_day": sum(1 for d in cd if d == 0), "d1_3": sum(1 for d in cd if 1 <= d <= 3),
+                  "d4_7": sum(1 for d in cd if 4 <= d <= 7), "over_7": sum(1 for d in cd if d > 7)},
+    }
+    p = write(out_dir, "taza_kz.json", out_tk)
+    rep("taza_kz.json", total, p, f"полный пересчёт · {done}/{out_tk['done_pct']}% · удовл {satisfaction[0]['rating'] if satisfaction else '—'}")
     return len(keep_idx)
 
 

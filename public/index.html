@@ -3441,6 +3441,11 @@ function _applyConfig(){
       const dtab = document.getElementById('tabDistricts');
       if(dtab) dtab.style.display = '';
     }
+    // KPI «Регионов охвачено» бессмысленны в одном регионе — скрываем карточки.
+    ['tzRegCount', 'nbd2025KpiRegs'].forEach(id => {
+      const el = document.getElementById(id); if(!el) return;
+      const kpi = el.closest('.kpi'); if(kpi) kpi.style.display = 'none';
+    });
   }
   // Районный разрез: наполняется в region+raion. Национальный — всегда else.
   if(_CFG.geo_level === 'raion'){
@@ -10936,6 +10941,9 @@ const CACHE_KEY='eco_news_v6', TTL=2*60*60*1000;
 // v2 содержал прогнозы погоды, корпоративные поздравления Казгидромета и
 // заметки про АЭС в Узбекистане — теперь не пройдут фильтр.
 const ARCH_KEY = 'eco_news_archive_v3';
+// Порог: меньше стольких новостей за период → вердикты «слепого пятна» ненадёжны
+// (архив живёт в localStorage, на новом домене/в инкогнито пуст по определению).
+const NEWS_MIN_FOR_VERDICT = 10;
 // Diagnostic counters — сбрасываются в начале fetchNews, печатаются в конце
 const _newsDiag = { raw:0, ecoFiltered:0, dedup:0, tags:{} };
 const ARCH_MAX_DAYS  = 30;
@@ -12675,9 +12683,9 @@ function _socRenderNewsAnalytics(){
   // 3. Архив маленький → предупреждение
   const warnEl = document.getElementById('socNewsAnaArchiveWarn');
   if(warnEl){
-    if(totalNews < 10){
+    if(totalNews < NEWS_MIN_FOR_VERDICT){
       warnEl.style.display = '';
-      warnEl.innerHTML = `⚠ Архив новостей пока маленький (${totalNews} штук за ${_socAnaRange} дн). Данные станут точнее через несколько дней непрерывного сбора. Аналитика показывается, но индикаторы могут шуметь.`;
+      warnEl.innerHTML = `⚠ Архив новостей накапливается (${totalNews} за ${_socAnaRange} дн). Данных пока недостаточно для выводов — вердикты по освещению СМИ появятся после нескольких дней сбора.`;
     } else {
       warnEl.style.display = 'none';
     }
@@ -12733,9 +12741,13 @@ function _socRenderNewsAnalytics(){
   }
   rowsE.sort((a,b)=>b.appealsCount-a.appealsCount);
 
+  // Мало новостей → не выносим вердиктов «слепого пятна» (ложный вывод при пустом архиве).
+  const _newsReliable = totalNews >= NEWS_MIN_FOR_VERDICT;
   const themesEl = document.getElementById('socNewsTopThemes');
   if(themesEl){
-    if(!rowsE.length){
+    if(!_newsReliable){
+      themesEl.innerHTML = '<div style="color:var(--text3);padding:12px;text-align:center;font-size:11px">📰 Архив новостей накапливается — данных пока недостаточно для выводов о том, что замалчивают СМИ.</div>';
+    } else if(!rowsE.length){
       themesEl.innerHTML = '<div style="color:var(--text3);padding:12px;text-align:center;font-size:11px">Нет данных для анализа за выбранный период</div>';
     } else {
       themesEl.innerHTML = rowsE.map(r => `
@@ -12757,7 +12769,9 @@ function _socRenderNewsAnalytics(){
   // E-insight: топ СМИ, топ-жалобы, слепое пятно
   const insE = document.getElementById('socNewsThemesInsight');
   if(insE){
-    if(!rowsE.length){
+    if(!_newsReliable){
+      insE.innerHTML = '<span style="color:var(--text3)">Вердикты появятся после накопления архива новостей</span>';
+    } else if(!rowsE.length){
       insE.innerHTML = '—';
     } else {
       const topMedia   = [...rowsE].sort((a,b)=>b.newsCount-a.newsCount).find(r=>r.newsCount>0);
