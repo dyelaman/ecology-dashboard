@@ -375,6 +375,8 @@ def build_config(cfg, out_dir):
         # для клиентского разреза КГС по районам (вкладка «Районы»)
         "districts": cfg.get("districts", []),
         "district_normalize": cfg.get("district_normalize", {}),
+        # для разделения новостей на региональные/республиканские (вкладка «Новости»)
+        "news_patterns": cfg.get("news_patterns", []),
     }
     p = write(out_dir, "dashboard_config.json", dc); rep("dashboard_config.json", None, p)
 

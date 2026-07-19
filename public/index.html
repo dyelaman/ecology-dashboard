@@ -11236,10 +11236,49 @@ function setProg(p,show=true){document.getElementById('pbar').style.display=show
 function markSrc(ok){document.querySelectorAll('#srcRow .sc').forEach(e=>e.className='sc'+(ok?' ok':''));}
 function showAlert(txt){document.getElementById('alertTxt').textContent='⚠ ИНЦИДЕНТ: '+txt;document.getElementById('alertBar').classList.add('show');document.getElementById('newsDot').style.display='';}
 function renderSkel(){const s=()=>`<div class="news-item"><div class="skeleton skl" style="width:40%"></div><div class="skeleton skl" style="width:75%"></div><div class="skeleton skl"></div></div>`;document.getElementById('newsList').innerHTML=s().repeat(4);}
+// Региональная ли новость: region-поле указывает на регион ИЛИ текст/заголовок
+// содержит news_pattern. Матч по НАЧАЛУ СЛОВА (актюбин→актюбинской ✓, но не середина),
+// многословные паттерны (напр. «айтеке би») — по подстроке. Против ложных срабатываний.
+function _newsIsRegional(n){
+  const rp = (_CFG.region_patterns)||[];
+  const reg = (n.region||'').toLowerCase();
+  if(rp.some(p=>reg.includes(p))) return true;
+  const np = (_CFG.news_patterns)||[]; if(!np.length) return false;
+  const txt = ((n.head||'')+' '+(n.text||'')).toLowerCase();
+  const words = txt.split(/[^а-яёa-zұқөғүһәі0-9]+/);
+  return np.some(p => p.indexOf(' ')>=0 ? txt.indexOf(p)>=0 : words.some(w=>w.startsWith(p)));
+}
+function _newsCard(n){
+  return `<div class="news-item"><div class="n-meta"><span class="n-date">${n.date||''}</span><span class="n-src">${n.src||''}</span>${(n.tags||[]).map(t=>TAG_META[t]?`<span class="tag ${TAG_META[t].c}">${TAG_META[t].l}</span>`:'').join('')}${n.region&&n.region!=='Казахстан'?`<span class="tag t-reg">${n.region}</span>`:''}</div><div class="n-head"><a href="${n.link||'#'}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${n.head||''}</a></div><div class="n-text">${n.text||''}</div></div>`;
+}
+function _toggleRepublican(){
+  const box=document.getElementById('republicanNews'), tg=document.getElementById('repToggle');
+  if(!box) return;
+  const open = box.style.display!=='none';
+  box.style.display = open?'none':'';
+  if(tg) tg.textContent = open?'развернуть ▾':'свернуть ▴';
+}
 function applyFilter(){
+  // region scope: две ленты — региональная (развёрнута) + республиканская (свёрнута).
+  if(typeof _CFG!=='undefined' && _CFG.scope==='region'){ renderNewsSplit(); return; }
   const reg=document.getElementById('gReg')?.value||'all';
   const f=allNews.filter(n=>reg==='all'||n.region===reg);
   renderNews(f);
+}
+function renderNewsSplit(){
+  const list=document.getElementById('newsList'); if(!list) return;
+  const regional=[], republican=[];
+  (allNews||[]).forEach(n => (_newsIsRegional(n)?regional:republican).push(n));
+  const nc=document.getElementById('nCount'); if(nc) nc.textContent=(allNews||[]).length+' '+t('common.news_short');
+  const regTitle = (_CFG.title||'региона');
+  const emptyMsg = '<div class="empty" style="text-align:left;padding:12px;line-height:1.5">За период новостей по региону не найдено.<br><span style="color:var(--text3)">Это само по себе сигнал: СМИ не освещают экологическую повестку области.</span></div>';
+  list.innerHTML =
+    `<div style="font-weight:700;font-size:13px;color:var(--text2);margin-bottom:8px">📍 Новости · ${regTitle} <span style="color:var(--text3);font-weight:400">· ${regional.length}</span></div>`+
+    `<div>${regional.length?regional.map(_newsCard).join(''):emptyMsg}</div>`+
+    `<div onclick="_toggleRepublican()" style="margin:18px 0 8px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-top:1px solid var(--border);padding-top:12px">`+
+      `<span style="font-weight:700;font-size:13px;color:var(--text2)">🇰🇿 Республиканские новости <span style="color:var(--text3);font-weight:400">· ${republican.length}</span></span>`+
+      `<span id="repToggle" style="font-size:11px;color:var(--brand)">развернуть ▾</span></div>`+
+    `<div id="republicanNews" style="display:none">${republican.map(_newsCard).join('')}</div>`;
 }
 function renderNews(items){document.getElementById('nCount').textContent=items.length+' '+t('common.news_short');if(!items.length){document.getElementById('newsList').innerHTML='<div class="empty">'+t('news.empty.filter')+'</div>';return;}document.getElementById('newsList').innerHTML=items.map(n=>`<div class="news-item"><div class="n-meta"><span class="n-date">${n.date||''}</span><span class="n-src">${n.src||''}</span>${(n.tags||[]).map(t=>TAG_META[t]?`<span class="tag ${TAG_META[t].c}">${TAG_META[t].l}</span>`:'').join('')}${n.region&&n.region!=='Казахстан'?`<span class="tag t-reg">${n.region}</span>`:''}<span class="tag t-new">NEW</span></div><div class="n-head"><a href="${n.link||'#'}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${n.head||''}</a></div><div class="n-text">${n.text||''}</div></div>`).join('');}
 function renderMainNewsFeed(){const el=document.getElementById('mainNewsFeed');if(!el)return;const items=allNews.slice(0,5);if(!items.length){el.innerHTML='<div class="empty">Загрузка новостей...</div>';return;}el.innerHTML=items.map(n=>`<div class="news-item"><div class="n-meta"><span class="n-date">${n.date||''}</span><span class="n-src">${n.src||''}</span>${(n.tags||[]).map(t=>TAG_META[t]?`<span class="tag ${TAG_META[t].c}">${TAG_META[t].l}</span>`:'').join('')}${n.region&&n.region!=='Казахстан'?`<span class="tag t-reg">${n.region}</span>`:''}</div><div class="n-head"><a href="${n.link||'#'}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none;">${n.head||''}</a></div></div>`).join('');}
