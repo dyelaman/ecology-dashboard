@@ -398,7 +398,12 @@ def main():
     cfg_path = os.path.join(ROOT, "regions", args.region, "config.json")
     if not os.path.exists(cfg_path): sys.exit(f"✗ нет конфига: {cfg_path}")
     cfg = json.load(open(cfg_path, encoding="utf-8"))
-    cfg.setdefault("map", {"bounds": {"latMin": 45, "latMax": 52, "lngMin": 53, "lngMax": 62}})
+    # map.bounds (санитайзер КГС/emergency/accum на build-времени) — из top-level
+    # cfg.bounds (lat_min…), а не хардкод. Иначе второй регион фильтровался бы
+    # границами первого. Дефолт — вся КЗ.
+    _b = cfg.get("bounds", {"lat_min": 40, "lat_max": 56, "lng_min": 46, "lng_max": 88})
+    cfg["map"] = {"bounds": {"latMin": _b["lat_min"], "latMax": _b["lat_max"],
+                             "lngMin": _b["lng_min"], "lngMax": _b["lng_max"]}}
     out_dir = os.path.join(ROOT, "regions", args.region, "data")
     os.makedirs(out_dir, exist_ok=True)
 
