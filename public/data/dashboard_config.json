@@ -7,5 +7,6 @@
   "map_center": [48.0, 68.0],
   "map_zoom": 4,
   "region_label": "По регионам",
+  "bounds": { "lat_min": 40, "lat_max": 56, "lng_min": 46, "lng_max": 88 },
   "hidden_tabs": []
 }

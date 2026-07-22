@@ -372,6 +372,8 @@ def build_config(cfg, out_dir):
         "geo_level": cfg["geo_level"], "show_region_selector": cfg["show_region_selector"],
         "map_center": cfg["map_center"], "map_zoom": cfg["map_zoom"],
         "region_label": cfg["region_label"], "hidden_tabs": cfg.get("hidden_tabs", []),
+        # границы зоны для санитайзера координат КГС (клиент читает _CFG.bounds)
+        "bounds": cfg.get("bounds", {"lat_min": 40, "lat_max": 56, "lng_min": 46, "lng_max": 88}),
         # для клиентского разреза КГС по районам (вкладка «Районы»)
         "districts": cfg.get("districts", []),
         "district_normalize": cfg.get("district_normalize", {}),

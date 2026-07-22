@@ -3400,6 +3400,9 @@ const _CFG_DEFAULT = {
   map_center: [48.0, 68.0],
   map_zoom: 4,
   region_label: "По регионам",
+  // Границы зоны для санитайзера координат КГС (_kzInZone/_kgsFixCoord).
+  // Дефолт = весь Казахстан (national работает как раньше по всей стране).
+  bounds: { lat_min: 40, lat_max: 56, lng_min: 46, lng_max: 88 },
   hidden_tabs: [],
 };
 let _CFG = Object.assign({}, _CFG_DEFAULT);
@@ -5941,11 +5944,12 @@ function _kgsShade(hex,t){
 // местами → точки уезжают вертикальной полосой на север, вплоть до Арктики.
 // Валидная зона РК: широта 40–56, долгота 46–88 (с небольшим запасом по краям).
 // Правки только в рендере; kgs_facts.json и process_kgs.py НЕ трогаем.
-const _KZ_ZONE = {latMin:40, latMax:56, lngMin:46, lngMax:88};
+// Границы зоны — из конфига (_CFG.bounds); дефолт = вся КЗ. Регионы задают свою.
 function _kzInZone(lat,lng){
+  const b = (typeof _CFG!=='undefined' && _CFG.bounds) ? _CFG.bounds : _CFG_DEFAULT.bounds;
   return lat!=null && lng!=null
-      && lat>=_KZ_ZONE.latMin && lat<=_KZ_ZONE.latMax
-      && lng>=_KZ_ZONE.lngMin && lng<=_KZ_ZONE.lngMax;
+      && lat>=b.lat_min && lat<=b.lat_max
+      && lng>=b.lng_min && lng<=b.lng_max;
 }
 // Возвращает {lat,lng,fixed} с исправленными координатами, либо null — точку не рисовать.
 function _kgsFixCoord(lat,lng){
