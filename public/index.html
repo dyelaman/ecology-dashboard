@@ -372,6 +372,9 @@ select[data-ms-mounted="1"]{display:none !important}
 .kgs-type-btn{font-size:11px;font-weight:600;padding:5px 12px;border-radius:16px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s;white-space:nowrap}
 .kgs-type-btn:hover{border-color:#1B7A3A;color:var(--text)}
 .kgs-type-btn.active{background:#1B7A3A;border-color:#1B7A3A;color:#fff}
+/* Подложка карты КГС — тусклее (обесцвечена/осветлена), чтобы точки читались.
+   Только для #mapKgsNew; другие карты не затронуты. */
+#mapKgsNew .leaflet-tile-pane{filter:grayscale(0.8) brightness(1.1)}
 /* ── КГС: список регионов (строки кликабельны) ── */
 .kgs-reg-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;transition:background .12s}
 .kgs-reg-row:hover{background:var(--surface2)}
@@ -5853,8 +5856,8 @@ const KGS_POINT_COLORS = {
   all:          '#0F172A',  // почти чёрный — универсальный контраст
   forest:       '#7C3AED',  // фиолет — контраст к зелёной заливке
   nedra:        '#0891B2',  // циан — контраст к коричневой
-  waste:        '#1E40AF',  // тёмно-синий — контраст к красной
-  land_seizure: '#6B21A8',  // пурпур — контраст к оранжевой
+  waste:        '#1E40AF',  // насыщенный синий — контраст к красной
+  land_seizure: '#C026D3',  // маджента — контраст к оранжевой
 };
 const KGS_TYPE_ORDER = ['forest','nedra','waste','land_seizure'];
 
@@ -6251,7 +6254,10 @@ function initKgsMap2(){
   if(_kgsMap){ setTimeout(()=>_kgsMap.invalidateSize(),200); return; }
   if(!document.getElementById('mapKgsNew')) return;
   _kgsMap=L.map('mapKgsNew',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(..._mapView([48.0,67.0],5));
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.5}).addTo(_kgsMap);
+  // Подложка приглушена (обесцвечена/осветлена) через CSS #mapKgsNew .leaflet-tile-pane
+  // — только для этой карты. Точки — в отдельном pane поверх хороплета.
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.55}).addTo(_kgsMap);
+  _kgsMap.createPane('kgsPoints'); _kgsMap.getPane('kgsPoints').style.zIndex = 650;
   L.control.attribution({prefix: KZ_FLAG+'КГС'}).addTo(_kgsMap);
   const loadGeo = window._tzGeoData ? Promise.resolve(window._tzGeoData)
     : fetch('/border_regions.geojson').then(r=>r.json()).then(j=>{window._tzGeoData=j;return j;});
@@ -6290,7 +6296,7 @@ function rerenderKgsMap(facts){
   }
   _kgsGeoLayer.eachLayer(layer=>{
     const reg=layer._kgsReg||''; const cnt=by[reg]||0; const sel=kgsFilters.region===reg;
-    layer.setStyle({fillColor: cnt?_kgsShade(color,cnt/max):'#f5f5f5', fillOpacity: cnt?0.7:0.15, weight: sel?3:1.2, color: sel?'#0d4d24':'#1B7A3A'});
+    layer.setStyle({fillColor: cnt?_kgsShade(color,cnt/max):'#f5f5f5', fillOpacity: cnt?0.28:0.08, weight: sel?3:1.2, color: sel?'#0d4d24':'#1B7A3A'});
     layer.unbindTooltip();
     layer.bindTooltip(`<div style="font-weight:600">${_kgsEsc(tRegion(reg))}</div><div>${_kgsT('Объектов:')} ${_kgsFmt(cnt)}</div><hr style="margin:4px 0;opacity:.3"><div style="font-size:10px;color:#666">${_kgsT('Клик — фильтр')}</div>`,{sticky:true});
   });
@@ -6298,7 +6304,7 @@ function rerenderKgsMap(facts){
     _kgsPointsLayer.clearLayers();
     const show=document.getElementById('kgsLyrPoints');
     if(show&&show.checked){
-      const renderer=L.canvas({padding:0.5});
+      const renderer=L.canvas({padding:0.5, pane:'kgsPoints'});
       // Точки — контрастный цвет к заливке региона + белая обводка, чтобы не сливались.
       // При type='all' каждая точка красится по своему f.type; иначе — один цвет на всю выборку.
       const isAll = kgsFilters.type === 'all';
@@ -6314,7 +6320,7 @@ function rerenderKgsMap(facts){
         if(!c){ dropped++; return; }
         if(c.fixed) swapped++;
         const fc = isAll ? (KGS_POINT_COLORS[f.type] || uniColor) : uniColor;
-        const m=L.circleMarker([c.lat,c.lng],{renderer,radius:4,fillColor:fc,color:'#fff',weight:1,opacity:0.9,fillOpacity:0.95});
+        const m=L.circleMarker([c.lat,c.lng],{renderer,radius:6,fillColor:fc,color:'#fff',weight:2,opacity:1,fillOpacity:1});
         m.bindPopup(_kgsPopup(f)); _kgsPointsLayer.addLayer(m); drawn++;
         validPts.push([c.lat,c.lng]);
       });
