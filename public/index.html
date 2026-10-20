@@ -694,7 +694,7 @@ input[type=file]{display:none}
 
 <div class="hdr">
   <div style="display:flex;align-items:center;gap:12px">
-    <img src="/taza-logo.png" alt="Таза Қазақстан" style="height:56px;width:auto;flex-shrink:0;object-fit:contain">
+    <img src="./taza-logo.png" alt="Таза Қазақстан" style="height:56px;width:auto;flex-shrink:0;object-fit:contain">
     <div>
       <div class="hdr-title" data-i18n="title">Единая Национальная система мониторинга экологии и благоустройства</div>
       <div class="hdr-sub" data-i18n="sub">Smart Data Ukimet · Е-Өтініш · iKomek · Таза Қазақстан · НБД СОС · Қазақстан Ғарыш Сапары</div>
@@ -3417,9 +3417,28 @@ function _mapView(defCenter, defZoom){
   return (_CFG.scope === 'region') ? [_CFG.map_center, _CFG.map_zoom] : [defCenter, defZoom];
 }
 
+// Подложка всех карт — Esri World Light Gray Canvas. CARTO basemaps без ключа
+// с 2026-10 отдаёт вместо тайлов заглушку «API KEY REQUIRED».
+// Нативные тайлы есть до z16, глубже Leaflet растягивает z16 (maxNativeZoom).
+const ESRI_GRAY_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+const ESRI_ATTR = 'Powered by <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> | Esri, HERE, Garmin, &copy; OpenStreetMap contributors, GIS user community';
+function _baseTiles(opts){
+  return L.tileLayer(ESRI_GRAY_URL, Object.assign({maxNativeZoom:16, maxZoom:19, attribution:ESRI_ATTR}, opts||{}));
+}
+
+// fitBounds по закэшированному размеру карты: если контейнер на момент создания
+// карты был 0×0 (вкладка/окно ещё не отрисованы), Leaflet считает зум под пустой
+// вьюпорт и встаёт на maxZoom. Перечитываем размер, а при нуле ждём первый resize.
+function _fitWhenSized(map, bounds, opts){
+  map.invalidateSize(false);
+  const s = map.getSize();
+  if(!s.x || !s.y){ map.once('resize', ()=>_fitWhenSized(map, bounds, opts)); return; }
+  map.fitBounds(bounds, opts);
+}
+
 async function _loadConfig(){
   try {
-    const r = await fetch('/data/dashboard_config.json');
+    const r = await fetch('./data/dashboard_config.json');
     if(r.ok){ const c = await r.json(); if(c && typeof c === 'object') _CFG = Object.assign({}, _CFG_DEFAULT, c); }
   } catch(_){}
   try { _applyConfig(); } catch(_){}
@@ -3474,7 +3493,7 @@ function _raionActive(){ return _CFG.geo_level === 'raion' && _RAION && _AC; }
 function _distName(i){ return _RAION._canon[_RAION.idx[i]]; }
 function _loadRaion(){
   if(_CFG.geo_level !== 'raion' || _RAION) return;
-  fetch('/data/appeals_raion.json').then(r => r.ok ? r.json() : null).then(j => {
+  fetch('./data/appeals_raion.json').then(r => r.ok ? r.json() : null).then(j => {
     if(j && j.idx){ _RAION = j;
       // Предвычисляем сайдкар-район → конфиг-каноническое имя (один раз).
       _RAION._canon = j.districts.map(d => d ? (_distNormalize(d) || d) : _NO_DIST);
@@ -3549,11 +3568,11 @@ let _distKgsTried=false;
   try {
     await _loadConfig();
     const [sRes, pRes, kgsRes, kgsMapRes, tzRes] = await Promise.all([
-      fetch('/data/summary.json'),
-      fetch('/data/preview.json'),
-      fetch('/data/kgs.json'),
-      fetch('/data/kgs_map.json'),
-      fetch('/data/taza_kz.json'),
+      fetch('./data/summary.json'),
+      fetch('./data/preview.json'),
+      fetch('./data/kgs.json'),
+      fetch('./data/kgs_map.json'),
+      fetch('./data/taza_kz.json'),
     ]);
     if (!sRes.ok || !pRes.ok) return;
     const summary = await sRes.json();
@@ -3588,20 +3607,20 @@ let _distKgsTried=false;
       }
     });
     // Фоновые fetch'и — у каждого свой .catch, не блокирующие
-    fetch('/data/chunks/manifest.json').then(r=>r.json()).then(m=>{_CHUNK_MANIFEST=m;}).catch(()=>{});
-    fetch('/data/nbd_2025.json').then(r=>r.json()).then(j=>{
+    fetch('./data/chunks/manifest.json').then(r=>r.json()).then(m=>{_CHUNK_MANIFEST=m;}).catch(()=>{});
+    fetch('./data/nbd_2025.json').then(r=>r.json()).then(j=>{
       window._NBD_2025 = j;
       if(typeof renderNbd2025 === 'function') renderNbd2025();
     }).catch(e=>console.warn('nbd_2025 load failed:', e.message));
     if(typeof _loadNbdFacts === 'function') _loadNbdFacts();
     // iKomek per-call датасет (для полноценной кросс-фильтрации kpiIkom)
     if(typeof _loadIkomek === 'function') _loadIkomek();
-    fetch('/data/taza_compact.json').then(r=>r.json()).then(tc=>{
+    fetch('./data/taza_compact.json').then(r=>r.json()).then(tc=>{
       _TAZA=tc; populateTazaFilters(); try { _updateTazaPeriodSub(); } catch(_){}
       try { _updateTazaKpi(); } catch(_){}  // первый расчёт KPI (если фильтры уже активны при загрузке)
       if(document.getElementById('panel-taza')?.classList.contains('active') && tazaEngineFilterActive()) rerenderTaza();
     }).catch(e=>console.warn('taza_compact load failed:',e.message));
-    fetch('/data/appeals_compact.json').then(r=>r.json()).then(ac=>{
+    fetch('./data/appeals_compact.json').then(r=>r.json()).then(ac=>{
       _AC=ac;
       try { if(typeof _loadRaion==='function') _loadRaion(); } catch(_){}  // район. разрез (region+raion)
       try { if(engineFilterActive()) applyTimeEngine(); } catch(_){}
@@ -3677,7 +3696,7 @@ let _distKgsTried=false;
 let _IK = null;
 async function _loadIkomek(){
   try {
-    const r = await fetch('/data/ikomek_compact.json');
+    const r = await fetch('./data/ikomek_compact.json');
     if(!r.ok) return;
     _IK = await r.json();
     _updateIkomekKpi(); // первый расчёт после загрузки (на случай если фильтры уже активны)
@@ -4251,7 +4270,7 @@ function renderFireEmissions(fire) {
 // ── НАКОПЛЕННЫЕ ОТХОДЫ ────────────────────────────────────────────────────────
 let _wasteC8=null, _wasteC9=null, _wasteInited=false;
 function initWasteTab(){
-  fetch('/data/waste_accumulation.json')
+  fetch('./data/waste_accumulation.json')
     .then(r=>r.json())
     .then(d=>{
       const k=d.kpi||{};
@@ -4721,7 +4740,7 @@ async function _loadTazaTable(){
   const tbody = document.getElementById('tazaTableBody');
   if(tbody) tbody.innerHTML = '<tr><td colspan="9" class="empty-row">Загрузка ~19 МБ (~4 МБ gzip)…</td></tr>';
   try {
-    const r = await fetch('/data/taza_table.json');
+    const r = await fetch('./data/taza_table.json');
     _TAZA_TBL = await r.json();
     renderTazaRequestsTable();
   } catch(e){
@@ -5008,11 +5027,10 @@ function _initTazaMap(){
   _tzMapInitPromise = (async ()=>{
     const el = document.getElementById('mapTaza'); if(!el) return;
     _tzMap = L.map('mapTaza', {zoomControl:true, preferCanvas:true, attributionControl:true}).setView(..._mapView([48.5, 67.5], 5));
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      {subdomains:'abcd', maxZoom:19, attribution: KZ_FLAG+'Таза Казахстан · &copy; OSM/Carto'}).addTo(_tzMap);
+    _baseTiles({attribution: KZ_FLAG+'Таза Казахстан · '+ESRI_ATTR}).addTo(_tzMap);
     _tzCanvas = L.canvas({padding:0.4});
     if(!_tzGeoData){
-      try { const r = await fetch('/border_regions.geojson'); _tzGeoData = await r.json(); } catch(e){ _tzGeoData = null; }
+      try { const r = await fetch('./border_regions.geojson'); _tzGeoData = await r.json(); } catch(e){ _tzGeoData = null; }
     }
     // Постоянный слой границ регионов — создаётся один раз, не удаляется
     if(_tzGeoData) _tzBuildBorderLayer();
@@ -5989,7 +6007,7 @@ async function loadKgsFacts(){
   if(_kgsLoaded||_kgsLoading) return;
   _kgsLoading=true;
   try{
-    const r=await fetch('/data/kgs_facts.json'); const d=await r.json();
+    const r=await fetch('./data/kgs_facts.json'); const d=await r.json();
     const S=d.S, T=d.types, ix={}; d.cols.forEach((c,i)=>ix[c]=i);
     const str=(row,k)=>{ const v=row[ix[k]]; return (v==null||v===-1)?null:S[v]; };
     KGS_FACTS=d.facts.map(row=>({
@@ -6256,11 +6274,11 @@ function initKgsMap2(){
   _kgsMap=L.map('mapKgsNew',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(..._mapView([48.0,67.0],5));
   // Подложка приглушена (обесцвечена/осветлена) через CSS #mapKgsNew .leaflet-tile-pane
   // — только для этой карты. Точки — в отдельном pane поверх хороплета.
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.55}).addTo(_kgsMap);
+  _baseTiles({opacity:0.55}).addTo(_kgsMap);
   _kgsMap.createPane('kgsPoints'); _kgsMap.getPane('kgsPoints').style.zIndex = 650;
   L.control.attribution({prefix: KZ_FLAG+'КГС'}).addTo(_kgsMap);
   const loadGeo = window._tzGeoData ? Promise.resolve(window._tzGeoData)
-    : fetch('/border_regions.geojson').then(r=>r.json()).then(j=>{window._tzGeoData=j;return j;});
+    : fetch('./border_regions.geojson').then(r=>r.json()).then(j=>{window._tzGeoData=j;return j;});
   loadGeo.then(geo=>{
     _kgsGeoLayer=L.geoJSON(geo,{
       style:()=>({fillColor:'#f5f5f5',weight:1.2,color:'#1B7A3A',fillOpacity:0.25,opacity:0.7}),
@@ -6327,7 +6345,7 @@ function rerenderKgsMap(facts){
       if(swapped||dropped) console.log(`[КГС координаты · выборка «${kgsFilters.type}»] отрисовано ${drawn}, swap ${swapped}, отброшено ${dropped}`);
       // Зумим на реальные точки (в пределах РК), чтобы карта не «отъезжала».
       if(validPts.length && _kgsMap){
-        try{ _kgsMap.fitBounds(L.latLngBounds(validPts).pad(0.15), {maxZoom:7, animate:false}); }catch(_){}
+        try{ _fitWhenSized(_kgsMap, L.latLngBounds(validPts).pad(0.15), {maxZoom:7, animate:false}); }catch(_){}
       }
     }
   }
@@ -7359,7 +7377,7 @@ function loadChunkForFilters(){
   // Загрузить с сервера
   const tbody=document.getElementById('appTblPreview');
   if(tbody) tbody.innerHTML='<tr><td colspan="17" style="text-align:center;color:var(--text3);padding:18px;font-size:12px">Загрузка данных…</td></tr>';
-  fetch('/data/chunks/'+file)
+  fetch('./data/chunks/'+file)
     .then(r=>r.json())
     .then(rows=>{
       _CHUNK_CACHE[key]=rows; _chunkBaseRows=rows; _activeChunkKey=key;
@@ -7549,7 +7567,7 @@ setTimeout(()=>{
 }, 800);
 
 // ── MAIN PAGE CHOROPLETH MAP ──
-const KAZ_GEO_URL='/border_regions.geojson';
+const KAZ_GEO_URL='./border_regions.geojson';
 const GEO_TO_ECO={
   '\u0410\u0431\u0430\u0439\u0441\u043a\u0430\u044f \u043e\u0431\u043b\u0430\u0441\u0442\u044c':'\u0410\u0431\u0430\u0439\u0441\u043a\u0430\u044f',
   '\u0410\u043a\u043c\u043e\u043b\u0438\u043d\u0441\u043a\u0430\u044f \u043e\u0431\u043b\u0430\u0441\u0442\u044c':'\u0410\u043a\u043c\u043e\u043b\u0438\u043d\u0441\u043a\u0430\u044f',
@@ -7731,7 +7749,7 @@ function openOilPanel(id){
   const p=document.getElementById('oilPanel'); if(p) p.classList.add('open');
   // Ленивая загрузка объектов ПЭК — если ещё не загружены, подтягиваем и перерисовываем
   if(!_PEK_OBJECTS){
-    fetch('/data/pek_objects.json').then(r=>r.json()).then(d=>{
+    fetch('./data/pek_objects.json').then(r=>r.json()).then(d=>{
       _PEK_OBJECTS=d.objects||[];
       if(document.getElementById('oilPanel')?.classList.contains('open')) openOilPanel(id);
     }).catch(e=>console.warn('PEK load for oilfields failed:',e.message));
@@ -9213,7 +9231,7 @@ function initMainMap(){
   if(mapMainInst||!document.getElementById('mapMain')) return;
   const _rc=ACTIVE_REGION&&REGION_CENTERS[ACTIVE_REGION];
   mapMainInst=L.map('mapMain',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(_rc?[_rc[0],_rc[1]]:_mapView([48.0,66.0],4)[0], _rc?_rc[2]:_mapView([48.0,66.0],4)[1]);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:ACTIVE_REGION?1.0:0.45}).addTo(mapMainInst);
+  _baseTiles({opacity:ACTIVE_REGION?1.0:0.45}).addTo(mapMainInst);
   L.control.attribution({prefix: KZ_FLAG+'Таза Казахстан'}).addTo(mapMainInst);
   const maxVal=Math.max(...Object.values(REAL_ECO).map(d=>d.total),1);
   fetch(KAZ_GEO_URL)
@@ -9264,7 +9282,7 @@ function initMainMap(){
       // Национальный: подгоняем под всю границу РК. Региональный: geojson всё равно
       // национальный (все регионы) → fitBounds дал бы вид на страну; оставляем
       // центр/зум области из конфига.
-      if(_CFG.scope !== 'region') mapMainInst.fitBounds(geoLayerMain.getBounds(),{padding:[8,8]});
+      if(_CFG.scope !== 'region') _fitWhenSized(mapMainInst, geoLayerMain.getBounds(), {padding:[8,8]});
     })
     .catch(err=>console.warn('GeoJSON load failed:',err));
   setTimeout(()=>mapMainInst.invalidateSize(),400);
@@ -9310,7 +9328,7 @@ function addPekLayer(){
   if(!mapMainInst) return;
   if(pekLayerMain){ pekLayerMain.clearLayers(); }
   else { pekLayerMain=L.layerGroup().addTo(mapMainInst); }
-  fetch('/data/pek_objects.json')
+  fetch('./data/pek_objects.json')
     .then(r=>r.json())
     .then(data=>{
       _renderPekLayer(data, pekLayerMain);
@@ -9330,7 +9348,7 @@ function addEmergLayer(){
     if(cb && !cb.checked) mapMainInst.removeLayer(emergLayerMain);
     return;
   }
-  fetch('/data/emergency_emissions.json')
+  fetch('./data/emergency_emissions.json')
     .then(r=>r.json())
     .then(objs=>{
       _EMERG_RAW=objs;
@@ -9431,7 +9449,7 @@ function setNbd2025Tab(t){
 async function _loadNbdFacts(){
   if(NBD_FACTS.length) return;
   try{
-    const r = await fetch('/data/nbd_facts.json');
+    const r = await fetch('./data/nbd_facts.json');
     const d = await r.json();
     (d.schema||[]).forEach((n,i)=>{ NBD_SCHEMA[n]=i; });
     NBD_FACTS = d.facts || [];
@@ -10659,14 +10677,14 @@ function _matchRegionToGeo(s){
 function initNbdMap(){
   if(mapNbdInst||!document.getElementById('mapNbd')) return;
   mapNbdInst=L.map('mapNbd',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(..._mapView([48.5, 67.5], 5));
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.6}).addTo(mapNbdInst);
+  _baseTiles({opacity:0.6}).addTo(mapNbdInst);
   L.control.attribution({prefix: KZ_FLAG+'НБД СОС'}).addTo(mapNbdInst);
 
   // Слой границ регионов (на самом нижнем уровне, под маркерами ПЭК)
   // Переиспользуем кэшированный GeoJSON если он уже загружен Тазой
   const loadGeo = window._tzGeoData
     ? Promise.resolve(window._tzGeoData)
-    : fetch('/border_regions.geojson').then(r=>r.json()).then(j=>{ window._tzGeoData = j; return j; });
+    : fetch('./border_regions.geojson').then(r=>r.json()).then(j=>{ window._tzGeoData = j; return j; });
   loadGeo.then(geo=>{
     _nbdChoroLayer = L.geoJSON(geo, {
       style: ()=>({fillColor:'#f5f5f5', weight:1.2, color:'#1B7A3A', fillOpacity:0.25, opacity:0.7}),
@@ -10738,7 +10756,7 @@ function _restyleNbdChoro(){
 function initKgsMap(){
   if(mapKgsInst||!document.getElementById('mapKgs')) return;
   mapKgsInst=L.map('mapKgs',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(..._mapView([48.0,66.0],4));
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.45}).addTo(mapKgsInst);
+  _baseTiles({opacity:0.45}).addTo(mapKgsInst);
   L.control.attribution({prefix: KZ_FLAG+'КГС'}).addTo(mapKgsInst);
   kgsMapWaste=L.layerGroup().addTo(mapKgsInst);
   kgsMapLand=L.layerGroup().addTo(mapKgsInst);
@@ -10763,7 +10781,7 @@ function initKgsMap(){
     });
   };
   if(_KGS_MAP) loadAndRender(_KGS_MAP);
-  else fetch('/data/kgs_map.json').then(r=>r.json()).then(loadAndRender).catch(()=>{});
+  else fetch('./data/kgs_map.json').then(r=>r.json()).then(loadAndRender).catch(()=>{});
   setTimeout(()=>mapKgsInst.invalidateSize(),400);
 }
 function toggleKgsLayer(type,on){
@@ -10931,7 +10949,7 @@ function loadMapCSV(event, type){
 function initLeafletMap(){
   mapInit=true;
   mapLeaflet = L.map('mapLeaflet',{zoomControl:true,attributionControl:false}).setView(..._mapView([48.0,66.0],5));
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:12}).addTo(mapLeaflet);
+  _baseTiles({maxZoom:12}).addTo(mapLeaflet);
   L.control.attribution({prefix: KZ_FLAG+'Таза Казахстан'}).addTo(mapLeaflet);
 
   // Стиль для подписей пузырьков
@@ -13011,15 +13029,17 @@ async function initCorrelation(){
   // Карты
   const geo = window._tzGeoData
     ? Promise.resolve(window._tzGeoData)
-    : fetch('/border_regions.geojson').then(r=>r.json()).then(j=>{window._tzGeoData=j; return j;});
+    : fetch('./border_regions.geojson').then(r=>r.json()).then(j=>{window._tzGeoData=j; return j;});
   const g = await geo.catch(()=>null);
   if(!g) return;
 
-  const tile = ()=>L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{maxZoom:19,opacity:0.6});
+  const tile = ()=>_baseTiles({opacity:0.6});
 
   _corrMapL = L.map('corrMapEmissions',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(..._mapView([48.5,67.5],4));
+  L.control.attribution({prefix: KZ_FLAG+'Таза Казахстан'}).addTo(_corrMapL);
   tile().addTo(_corrMapL);
   _corrMapR = L.map('corrMapComplaints',{zoomControl:true,scrollWheelZoom:true,attributionControl:false}).setView(..._mapView([48.5,67.5],4));
+  L.control.attribution({prefix: KZ_FLAG+'Таза Казахстан'}).addTo(_corrMapR);
   tile().addTo(_corrMapR);
 
   // Sync zoom/pan

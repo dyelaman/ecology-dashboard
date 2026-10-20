@@ -25,6 +25,9 @@ ROOT = os.path.dirname(HERE)
 # Статика из public/, нужная дашборду (data/ заменяется региональной; служебное не тащим)
 STATIC_ASSETS = ["border_regions.geojson", "kaz.geojson", "taza-logo.png"]
 SKIP = {"index.html", "index.html.backup", "map.html", "data"}
+# Привязка dist/<slug> к Vercel-проекту региона (vercel link): при пересборке не трогаем,
+# иначе следующий `vercel deploy` спросит проект заново или создаст новый.
+KEEP_IN_DIST = {".vercel", ".gitignore"}
 
 
 def main():
@@ -36,9 +39,12 @@ def main():
         sys.exit(f"✗ нет данных региона: {region_data}\n  Сначала: python3 scripts/build_region.py --region {slug}")
 
     dist = os.path.join(ROOT, "dist", slug)
-    if os.path.exists(dist):
-        shutil.rmtree(dist)
     os.makedirs(dist, exist_ok=True)
+    for name in os.listdir(dist):
+        if name in KEEP_IN_DIST:
+            continue
+        p = os.path.join(dist, name)
+        shutil.rmtree(p) if os.path.isdir(p) and not os.path.islink(p) else os.remove(p)
 
     # 1. index.html — байт-в-байт
     src_html = os.path.join(ROOT, "public", "index.html")
